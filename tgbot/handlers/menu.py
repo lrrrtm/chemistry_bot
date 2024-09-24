@@ -26,23 +26,4 @@ async def cmd_menu(message: Message, state: FSMContext):
             reply_markup=get_menu_kb()
         )
 
-@router.message(Command("stats"))
-@router.message(F.text == btns_lexicon['main_menu']['stats'])
-async def cmd_stats(message: Message, state: FSMContext):
-    msg = await message.answer(
-        text="Собираем твою статистику..."
-    )
 
-    works_list = get_user_works(message.from_user.id)
-    works_list = works_list[::-1]
-
-    if works_list:
-        await message.answer(
-            text=f"works list finded"
-        )
-
-    else:
-        await msg.delete()
-        await message.answer(
-            text=f"У тебя ещё ни одного завершённого задания, чтобы мы могли собрать статистику. \n\nНачни решать, нажав на кнопку <b>«{btns_lexicon['main_menu']['new_work']}»</b>"
-        )
