@@ -14,12 +14,12 @@ def get_session():
     session.expire_on_commit = False
     try:
         yield session
-        session.commit()  # Коммитить изменения после завершения работы с сессией
+        session.commit()
     except Exception:
-        session.rollback()  # Откат изменений в случае ошибки
+        session.rollback()
         raise
     finally:
-        session.close()  # Закрыть сессию
+        session.close()
 
 
 def create_user(name: str, tid: int) -> User:
