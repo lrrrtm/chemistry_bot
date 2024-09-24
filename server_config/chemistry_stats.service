@@ -1,12 +1,12 @@
 [Unit]
-Description=Chemistry Control Panel
+Description=Chemistry Statistic Viewer
 After=network.target
 
 [Service]
 User=lartem
 WorkingDirectory=/home/lartem/repos/chemistry_bot
 Environment="PYTHONPATH=/home/lartem/repos/chemistry_bot"
-ExecStart=/home/lartem/repos/chemistry_bot/venv/bin/python /home/lartem/repos/chemistry_bot/flet_apps/control/app.py
+ExecStart=/home/lartem/repos/chemistry_bot/venv/bin/python /home/lartem/repos/chemistry_bot/flet_apps/stats/app.py
 
 [Install]
 WantedBy=multi-user.target
