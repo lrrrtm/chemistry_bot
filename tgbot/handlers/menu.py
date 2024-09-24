@@ -26,7 +26,7 @@ async def cmd_menu(message: Message, state: FSMContext):
             reply_markup=get_menu_kb()
         )
 
-
+@router.message(Command("stats"))
 @router.message(F.text == btns_lexicon['main_menu']['stats'])
 async def cmd_stats(message: Message, state: FSMContext):
     msg = await message.answer(
