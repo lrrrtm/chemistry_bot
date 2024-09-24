@@ -1,0 +1,14 @@
+[Unit]
+Description=Chemistry Bot Service
+After=network.target
+
+[Service]
+User=lartem
+WorkingDirectory=/home/lartem/repos/chemistry_bot
+ExecStart=/home/lartem/repos/chemistry_bot/venv/bin/python /home/lartem/repos/chemistry_bot/tgbot/start.py
+Restart=always
+RestartSec=5
+Environment="PYTHONPATH=/home/lartem/repos/chemistry_bot"
+
+[Install]
+WantedBy=multi-user.target

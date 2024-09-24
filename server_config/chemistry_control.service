@@ -1,0 +1,12 @@
+[Unit]
+Description=Chemistry
+After=network.target
+
+[Service]
+User=lartem
+WorkingDirectory=/home/lartem/repos/chemistry_bot
+Environment="PYTHONPATH=/home/lartem/repos/chemistry_bot"
+ExecStart=/home/lartem/repos/chemistry_bot/venv/bin/python /home/lartem/repos/chemistry_bot/panel/app.py
+
+[Install]
+WantedBy=multi-user.target
