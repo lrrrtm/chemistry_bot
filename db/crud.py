@@ -107,3 +107,8 @@ def get_question_from_pool(question_id: int) -> Pool:
     with get_session() as session:
         question = session.query(Pool).filter_by(id=question_id).first()
         return question
+
+def get_work_by_url_data(user_id: int, telegram_id: int, work_id: int) -> Work:
+    with get_session() as session:
+        work = session.query(Work).filter_by(id=work_id, user_id=user_id).first()
+        return work
