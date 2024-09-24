@@ -8,12 +8,13 @@ def get_menu_kb() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
 
     builder.row(
-        KeyboardButton(text=lexicon['main_menu']['new_work'])
-    )
-    builder.row(
+        KeyboardButton(text=lexicon['main_menu']['new_work']),
         KeyboardButton(text=lexicon['main_menu']['stats']),
-        KeyboardButton(text=lexicon['main_menu']['settings'])
     )
+    # builder.row(
+    #     KeyboardButton(text=lexicon['main_menu']['stats']),
+    #     KeyboardButton(text=lexicon['main_menu']['settings'])
+    # )
 
     return builder.as_markup(resize_keyboard=True)
 
