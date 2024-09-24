@@ -43,7 +43,6 @@ async def fback_process(message: Message, state: FSMContext):
         await message.answer(
             text=lexicon['feedback']['user_cancelled_fback']
         )
-        await cmd_start(message, state)
     else:
         user_text = html.escape(message.text)
         user = f"@{message.from_user.username} ({message.from_user.first_name})" or message.from_user.first_name
@@ -56,6 +55,7 @@ async def fback_process(message: Message, state: FSMContext):
         await message.answer(
             text=lexicon['feedback']['ask_sended'].format(user_text)
         )
+    await cmd_start(message, state)
 
 
 @router.callback_query(AnswerToUserCallbackFactory.filter())
@@ -86,7 +86,8 @@ async def answer_to_user_step_2(message: types.Message, state: FSMContext):
             text=lexicon['feedback']['answer_recieved'].format(admin_text),
         )
         await message.answer(
-            text=lexicon['feedback']['answer_sended_to_user'].format(admin_text)
+            text=lexicon['feedback']['answer_sended_to_user'].format(admin_text),
+            reply_markup=ReplyKeyboardRemove()
         )
         try:
             await bot.edit_message_reply_markup(
