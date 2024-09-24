@@ -1,7 +1,11 @@
+from os import getenv
 from urllib.parse import urlparse, parse_qs
 import flet as ft
 
 from db.crud import get_work_by_url_data
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def main(page: ft.Page):
@@ -121,7 +125,7 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     ft.app(
         target=main,
-        assets_dir="D:/repos/chemistry_bot/flet_apps/assets",
+        assets_dir=f"{getenv('ROOT_FOLDER')}/repos/chemistry_bot/flet_apps/assets",
         view=None,
         port=6002
     )
