@@ -62,16 +62,43 @@ def get_general_info_card(stats: dict, page: ft.Page):
                             title=ft.Text(f"{stats['results']['final_mark']}/{stats['results']['max_mark']}"),
                             subtitle=ft.Text("результат"),
                         ),
-                        padding=ft.padding.only(left=-15, bottom=-25)
+                        padding=ft.padding.only(left=-15, bottom=-10)
                     ),
-                    ft.Container(
-                        content=ft.ListTile(
-                            leading=ft.Icon(ft.icons.FORMAT_LIST_NUMBERED),
-                            title=ft.Text(
-                                f"{len(stats['questions']['fully'])} | {len(stats['questions']['semi'])} | {len(stats['questions']['zero'])}"),
-                            subtitle=ft.Text("полностью | частично | не решено"),
-                        ),
-                        padding=ft.padding.only(left=-15, bottom=0)
+                    # ft.Container(
+                    #     content=ft.ListTile(
+                    #         leading=ft.Icon(ft.icons.FORMAT_LIST_NUMBERED),
+                    #         title=ft.Text(
+                    #             f"{len(stats['questions']['fully'])} | {len(stats['questions']['semi'])} | {len(stats['questions']['zero'])}"),
+                    #         subtitle=ft.Text("полностью | частично | не решено"),
+                    #     ),
+                    #     padding=ft.padding.only(left=-15, bottom=0)
+                    # )
+                    ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Text("полностью"),
+                                    ft.Text(f"{len(stats['questions']['fully'])}"),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Text("частично"),
+                                    ft.Text(f"{len(stats['questions']['semi'])}"),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Text("не решено"),
+                                    ft.Text(f"{len(stats['questions']['zero'])}"),
+                                ],
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                        ],
+                        expand=True,
+                        alignment=ft.MainAxisAlignment.CENTER,
                     )
                 ],
 
@@ -138,8 +165,15 @@ def main(page: ft.Page):
         work_stats = [s for s in all_stats if s['general']['work_id'] == url_params['work']][-1]
         questions_list = get_work_questions_joined_pool(int(url_params['work']))
 
-        page.add(get_general_info_card(work_stats, page))
-        page.add(get_questions_info_card(questions_list, page))
+        main_col = ft.Column(
+            controls=[
+                get_general_info_card(work_stats, page),
+                get_questions_info_card(questions_list, page)
+            ],
+            width=700
+        )
+
+        page.add(main_col)
     else:
         col = get_error_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback")
         page.add(col)
