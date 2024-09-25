@@ -24,7 +24,7 @@ def get_error_column(caption: str) -> ft.Column:
                 width=150
             ),
             ft.Text(caption, size=16,
-                    text_align=ft.TextAlign.CENTER),
+                    text_align=ft.TextAlign.LEFT),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
