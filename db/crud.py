@@ -108,9 +108,10 @@ def get_all_topics() -> List[Topic]:
 def get_work_questions(work_id: int) -> List[WorkQuestion]:
     with get_session() as session:
         questions = (
-            session.query(WorkQuestion).
-            filter_by(work_id=work_id).
-            all()
+            session.query(WorkQuestion)
+            .filter_by(work_id=work_id)
+            .order_by(WorkQuestion.position.asc())
+            .all()
         )
         return questions
 
@@ -125,3 +126,30 @@ def get_work_by_url_data(user_id: int, telegram_id: int, work_id: int) -> Work:
     with get_session() as session:
         work = session.query(Work).filter_by(id=work_id, user_id=user_id).first()
         return work
+
+
+def get_work_questions_joined_pool(work_id: int) -> List[WorkQuestion]:
+    with get_session() as session:
+        results = (
+            session.query(
+                WorkQuestion.question_id,
+                Pool.question_image,
+                Pool.text,
+                WorkQuestion.position,
+                WorkQuestion.user_answer,
+                Pool.answer,
+                Pool.answer_image,
+                WorkQuestion.user_mark,
+                Pool.full_mark,
+                WorkQuestion.start_datetime,
+                WorkQuestion.end_datetime,
+
+            )
+            .join(Pool, WorkQuestion.question_id == Pool.id)
+            .filter(WorkQuestion.work_id == work_id)
+            .order_by(WorkQuestion.position.asc())
+            .all()
+        )
+        return results
+
+print(get_work_questions_joined_pool(10))
