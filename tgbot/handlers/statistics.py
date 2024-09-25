@@ -24,7 +24,6 @@ async def cmd_stats(message: Message, state: FSMContext):
     )
 
     works_list = get_user_works(message.from_user.id)
-    works_list = works_list[::-1]
 
     await msg.delete()
 
