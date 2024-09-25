@@ -1,4 +1,5 @@
 from datetime import datetime
+from pydoc_data.topics import topics
 from typing import List
 from contextlib import contextmanager
 
@@ -78,6 +79,7 @@ def add_work_questions(work_id: int, questions_ids: List[int]) -> List[int]:
         session.commit()
         return ids
 
+
 def get_user_works(tid: int) -> List[Work]:
     with get_session() as session:
         users_alias = aliased(User)
@@ -85,14 +87,23 @@ def get_user_works(tid: int) -> List[Work]:
             session.query(Work)
             .join(users_alias, Work.user_id == users_alias.id)
             .filter(users_alias.telegram_id == tid)
+            .order_by(Work.start_datetime.desc())
             .all()
         )
         return works
+
 
 def get_topic(topic_id: int):
     with get_session as session:
         topic = session.query(Topic).filter_by(id=topic_id).first()
         return topic
+
+
+def get_all_topics() -> List[Topic]:
+    with get_session() as session:
+        topics = session.query(Topic).all()
+        return topics
+
 
 def get_work_questions(work_id: int) -> List[WorkQuestion]:
     with get_session() as session:
@@ -103,10 +114,12 @@ def get_work_questions(work_id: int) -> List[WorkQuestion]:
         )
         return questions
 
+
 def get_question_from_pool(question_id: int) -> Pool:
     with get_session() as session:
         question = session.query(Pool).filter_by(id=question_id).first()
         return question
+
 
 def get_work_by_url_data(user_id: int, telegram_id: int, work_id: int) -> Work:
     with get_session() as session:
