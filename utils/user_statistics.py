@@ -41,15 +41,15 @@ def get_user_statistics(telegram_id: int):
         work_questions = get_work_questions(work.id)
         work_stats['general']['questions_amount'] = len(work_questions)
 
-        work_stats['results']['recieved_mark'] = sum([q.mark for q in work_questions])
+        work_stats['results']['recieved_mark'] = sum([q.user_mark for q in work_questions])
         work_stats['results']['final_mark'] = work_stats['results']['recieved_mark']
 
         for question in work_questions:
             original_question = get_question_from_pool(question.id)
-            work_stats['results']['max_mark'] += original_question.mark
-            if question.mark == original_question.mark:
+            work_stats['results']['max_mark'] += original_question.full_mark
+            if question.user_mark == original_question.full_mark:
                 work_stats['questions']['fully'].append(question)
-            elif 0 < question.mark < original_question.mark:
+            elif 0 < question.user_mark < original_question.full_mark:
                 work_stats['questions']['semi'].append(question)
             else:
                 work_stats['questions']['zero'].append(question)
