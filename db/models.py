@@ -26,7 +26,7 @@ class Pool(Base):
     question_image = Column(TINYINT, nullable=False, default=0, comment='Наличие изображения вопроса')
     answer = Column(Text, nullable=False, comment='Текст ответа')
     answer_image = Column(TINYINT, nullable=False, default=0, comment='Наличие изображения ответа')
-    mark = Column(TINYINT, nullable=False, default=0, comment='Максимальный первичный балл')
+    full_mark = Column(TINYINT, nullable=False, default=0, comment='Максимальный первичный балл')
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
 
 # Таблица 'stats'
@@ -80,9 +80,10 @@ class WorkQuestion(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='id статуса вопроса')
     work_id = Column(BigInteger, ForeignKey('works.id'), nullable=False, default=0, comment='id задания')
     question_id = Column(BigInteger, ForeignKey('pool.id'), nullable=False, comment='id вопроса из пула вопросов')
+    position = Column(Integer, nullable=False)
     status = Column(Text, nullable=False)
     user_answer = Column(Text, nullable=False)
-    mark = Column(Integer, nullable=False)
+    user_mark = Column(Integer, nullable=False)
     start_datetime = Column(DateTime, nullable=False)
     end_datetime = Column(DateTime, nullable=False)
 
