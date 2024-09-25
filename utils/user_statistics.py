@@ -8,6 +8,7 @@ def get_user_statistics(telegram_id: int):
     result = []
 
     user_works = get_user_works(telegram_id)
+    user_works = [w for w in user_works if w.end_datetime is not None]
 
     for work in user_works:
         work_stats = {
