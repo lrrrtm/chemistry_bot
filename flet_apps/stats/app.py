@@ -153,7 +153,8 @@ def main(page: ft.Page):
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
 
-    # page.route = "/stats?uuid=8&tid=409801981&work=10"
+    page.theme_mode = ft.ThemeMode.DARK
+
     url_params = {key: int(value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
     if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
