@@ -8,7 +8,11 @@ load_dotenv()
 print(getenv('DB_USER'))
 DATABASE_URL = f"mysql+mysqlconnector://{getenv('DB_USER')}:{getenv('DB_PASSWORD')}@{getenv('DB_HOST')}:{getenv('DB_PORT')}/{getenv('DB_NAME')}"
 
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,
+    pool_pre_ping=True
+)
 Session = scoped_session(sessionmaker(bind=engine))
 
 Base.metadata.create_all(engine)
