@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from db.crud import (get_user, get_user_works, get_topic, get_work_questions)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions)
 from tgbot.keyboards.menu import get_menu_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon

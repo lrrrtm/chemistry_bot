@@ -1,4 +1,4 @@
-from db.crud import (get_user, get_user_works, get_topic, get_work_questions, get_question_from_pool)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool)
 
 
 def convert_ege_mark(input_mark: int):
