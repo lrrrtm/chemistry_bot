@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 from pydoc_data.topics import topics
 from typing import List
@@ -7,6 +8,7 @@ from sqlalchemy.orm import aliased
 
 from db.models import Pool, Stats, Topic, User, Work, WorkQuestion
 from db.database import Session
+from utils.tags_helper import get_ege_tag_list
 
 
 @contextmanager
@@ -93,9 +95,15 @@ def get_user_works(tid: int) -> List[Work]:
         return works
 
 
-def get_topic(topic_id: int):
+def get_topic_by_id(topic_id: int):
     with get_session as session:
         topic = session.query(Topic).filter_by(id=topic_id).first()
+        return topic
+
+
+def get_topic_by_name(topic_name: str):
+    with get_session as session:
+        topic = session.query(Topic).filter_by(name=topic_name).first()
         return topic
 
 
@@ -152,4 +160,89 @@ def get_work_questions_joined_pool(work_id: int) -> List[WorkQuestion]:
         )
         return results
 
-print(get_work_questions_joined_pool(10))
+
+def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
+    with get_session() as session:
+        selected_questions = []
+
+        for tag_data in tag_list:
+            tag = tag_data['tag']
+            limit = tag_data['limit']
+
+            # todo: исправить костыль в выборке данных
+            t = tag
+            if "ege" in tag:
+                t = [tag]
+
+            questions = session.query(Pool).filter(Pool.tags_list.contains(t)).all()
+            print(len(questions))
+            if tag_data['limit'] is not None:
+                if len(questions) <= limit:
+                    return None
+                else:
+                    selected_questions.extend(random.sample(questions, limit))
+
+            else:
+                print('NONE')
+                selected_questions.extend(questions)
+
+        return selected_questions
+
+
+def create_new_work(user_id: int, work_type: str, topic_id: int) -> Work:
+    with get_session() as session:
+        work = Work(
+            user_id=user_id,
+            work_type=work_type,
+            topic_id=topic_id
+        )
+        session.add(work)
+        session.commit()
+
+        return work
+
+
+def insert_work_questions(work: Work, questions_list: list[Pool]):
+    with get_session() as session:
+        for question in questions_list:
+            q = WorkQuestion(
+                work_id=work.id,
+                question_id=question.id
+            )
+            session.add(q)
+        session.commit()
+
+
+# topic_tag_list = [{'tag': "topic_tag_1", 'limit': None}, {'tag': "topic_tag_5", 'limit': None}]
+# data = get_random_questions_by_tag_list(topic_tag_list)
+# for a in data:
+#     print(a.id, a.text, a.full_mark, a.level)
+#
+# print("\n"*5)
+#
+# ege_tag_list = get_ege_tag_list()
+# data = get_random_questions_by_tag_list(ege_tag_list)
+# print(ege_tag_list)
+# # for a in data:
+# #     print(a.id, a.text, a.full_mark, a.level)
+# # print(len(data))
+#
+# w = create_new_work(user_id=8, work_type='ege', topic_id=-1)
+# insert_work_questions(w, data)
+# init_new_work(user_id=8, work_type="ege", topic_id=-1, questions_list=data)
+
+# for num in range(1, 20):
+#     with get_session() as session:
+#         lst = random.sample(["topic_tag_1", "topic_tag_2", "topic_tag_3", "topic_tag_4", "topic_tag_5"], 2)
+#         q = Pool(
+#             type="ege",
+#             level=random.randint(1, 6),
+#             text=f"[Тип 4] Это вопрос типа topic с таким набором тегов: {lst}",
+#             question_image=0,
+#             answer_image=0,
+#             answer=f"Это ответ на вопрос типа topic",
+#             full_mark=random.randint(1, 3),
+#             tags_list=lst,
+#         )
+#         session.add(q)
+#         session.commit()
