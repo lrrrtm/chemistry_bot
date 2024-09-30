@@ -8,7 +8,7 @@ from aiogram.utils.formatting import (
     Bold, as_list, as_marked_section, as_key_value, HashTag
 )
 
-from db.crud import (get_user, get_user_works, get_topic, get_work_questions)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions)
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from utils.user_statistics import get_user_statistics
