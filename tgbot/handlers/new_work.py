@@ -1,9 +1,12 @@
+from typing import List
+
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from db.crud import (get_user, get_user_works, get_topic, get_work_questions, get_all_topics)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics)
+from db.models import Pool
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb
 from tgbot.lexicon.messages import lexicon
