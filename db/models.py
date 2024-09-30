@@ -81,7 +81,7 @@ class WorkQuestion(Base):
     work_id = Column(BigInteger, ForeignKey('works.id'), nullable=False, default=0, comment='id задания')
     question_id = Column(BigInteger, ForeignKey('pool.id'), nullable=False, comment='id вопроса из пула вопросов')
     position = Column(Integer, nullable=False)
-    status = Column(Text, nullable=False)
+    status = Column(Text, nullable=False, default='waiting')
     user_answer = Column(Text, nullable=False)
     user_mark = Column(Integer, nullable=False)
     start_datetime = Column(DateTime, nullable=False)
