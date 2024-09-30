@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from db.crud import (get_user, get_user_works, get_topic, get_work_questions, get_question_from_pool)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool)
 from utils.mark_converter import convert_ege_mark
 
 
@@ -33,7 +33,7 @@ def get_user_statistics(telegram_id: int):
             }
         }
         if work.work_type == "topic":
-            topic = get_topic(work.topic_id)
+            topic = get_topic_by_id(work.topic_id)
             work_stats['general']['name'] = topic.name
         else:
             work_stats['general']['name'] = "КИМ ЕГЭ"
