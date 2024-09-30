@@ -55,7 +55,7 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
         builder.button(
             text=topic.name,
         )
-    builder.adjust(1)
+    builder.adjust(2)
 
     return builder.as_markup(resize_keyboard=True)
 
