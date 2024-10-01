@@ -27,6 +27,7 @@ class Pool(Base):
     answer = Column(Text, nullable=False, comment='Текст ответа')
     answer_image = Column(TINYINT, nullable=False, default=0, comment='Наличие изображения ответа')
     full_mark = Column(TINYINT, nullable=False, default=0, comment='Максимальный первичный балл')
+    is_rotate = Column(Integer, nullable=False)
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
 
 # Таблица 'stats'

@@ -21,10 +21,13 @@ def check_answer(qusetion_data: Pool, user_answer: str) -> int:
                 return 0
 
         elif qusetion_data.full_mark == 1:
-            if user_answer == qusetion_data.answer:
-                return 1
+            if qusetion_data.is_rotate:
+                if qusetion_data.answer in [user_answer, user_answer[::-1]]:
+                    return 1
             else:
-                return 0
+                if qusetion_data.answer in user_answer:
+                    return 1
+            return 0
 
 
     elif qusetion_data.type == "topic":
