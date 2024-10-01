@@ -1,10 +1,9 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from db.models import User
 from tgbot.lexicon.buttons import lexicon
 
-from typing import Optional
 from aiogram.filters.callback_data import CallbackData
 
 
@@ -18,6 +17,8 @@ class SelectNewWorkTypeCallbackFactory(CallbackData, prefix="new_work_type"):
 
 class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
+    work_type: str
+    topic_id: int
 
 
 def get_user_work_way_kb() -> InlineKeyboardMarkup:
@@ -62,15 +63,15 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_start_work_kb() -> InlineKeyboardMarkup:
+def get_start_work_kb(work_type: str, topic_id: int = -1) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['start'],
-        callback_data=StartNewWorkCallbackFactory(action="start"),
+        callback_data=StartNewWorkCallbackFactory(action="start", work_type=work_type, topic_id=topic_id),
     )
     builder.button(
         text=lexicon['new_work']['cancel'],
-        callback_data=StartNewWorkCallbackFactory(action="cancel")
+        callback_data=StartNewWorkCallbackFactory(action="cancel", work_type=work_type, topic_id=topic_id)
     )
     builder.adjust(1)
     return builder.as_markup()

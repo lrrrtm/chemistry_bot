@@ -10,24 +10,24 @@ from aiogram.types import Message, InputFile, FSInputFile, ReplyKeyboardMarkup, 
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
                      get_random_questions_by_tag_list, insert_work_questions, remove_last_user_work,
-                     get_question_from_pool, close_question, open_next_question, end_work)
+                     get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name)
 from db.models import Pool
+from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
     get_skip_question_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
+from tgbot.states.picking_topic import UserTopicChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.tags_helper import get_ege_tag_list
+from utils.tags_helper import get_ege_tags_list
 
 router = Router()
 
 
 # todo: добавить самопроверку второй части
-# todo: не работает отправка фото
-# todo: флаг перестановки цифр в ответе добавить в бд
 
 @router.message(Command("new_work"))
 @router.message(F.text == btns_lexicon['main_menu']['new_work'])
@@ -87,7 +87,7 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
                  f"\n\nКак только ты будешь готов(-а), нажми на кнопку под этим сообщением."
         )
         await callback.message.edit_reply_markup(
-            reply_markup=get_start_work_kb()
+            reply_markup=get_start_work_kb(work_type="ege")
         )
 
     elif action == "topic":
@@ -97,9 +97,43 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
         # todo: установка state на прослушку выбора темы на клавиатуре, после чего get_start_work_kb()
         await callback.message.answer(
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
-                 "\n\nВыбери из списка тему, на которую ты хочешь решать задания",
+                 "\n\nВыбери из списка тему, на которую ты хочешь решать задания."
+                 "\n\nМы составим для тебя вариант из 20 заданий. После каждого задания будет необходимо отправить ответ в таком виде, который требуется в задании. Решения некоторых заданий тебе нужно будет оценить самостоятельно.",
             reply_markup=get_topics_kb(topics_list)
         )
+        await state.set_state(UserTopicChoice.waiting_for_answer)
+
+
+@router.message(UserTopicChoice.waiting_for_answer)
+async def process_user_topic_choice(message: Message, state: FSMContext):
+    await state.clear()
+
+    if message.text == btns_lexicon['service']['back']:
+        await message.answer(
+            text="<b>Выбор темы отменён</b>",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await cmd_new_work(message, state)
+    else:
+        topic_name = message.text.strip()
+        topic_data = get_topic_by_name(topic_name)
+        if topic_data is not None:
+            await message.answer(
+                text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
+                     f"\n\nВыбрана тема «{topic_data.name}»",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            await message.answer(
+                text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
+                     f"\n\nКак только ты будешь готов(-а), нажми на кнопку под этим сообщением.",
+                reply_markup=get_start_work_kb(work_type="topic", topic_id=topic_data.id)
+            )
+        else:
+            await message.answer(
+                text=f"<b>Такой темы нет среди предложенных. Выбери одну из доступных тем, нажав на нужную кнопку.</b>"
+            )
+            await state.set_state(UserTopicChoice.waiting_for_answer)
+
 
 
 @router.callback_query(StartNewWorkCallbackFactory.filter())
@@ -107,19 +141,24 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
                                 state: FSMContext):
     await callback.answer()
     action = callback_data.action
+    work_type = callback_data.work_type
+    topic_id = callback_data.topic_id
 
     if action == "start":
         await callback.message.delete()
         msg = await bot.send_message(
             chat_id=callback.from_user.id,
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
-                 f"\n\nПодбираем задачки специально для тебя...",
+                 f"\n\nПодбираем задачи специально для тебя...",
             reply_markup=ReplyKeyboardRemove()
         )
 
         user = get_user(callback.from_user.id)
-        work = create_new_work(user_id=user.id, work_type="ege", topic_id=-1)
-        questions_list = get_random_questions_by_tag_list(get_ege_tag_list())
+        work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id)
+
+        tags_list = get_ege_tags_list() if work_type == "ege" else [{'tag': t, 'limit': None} for t in get_topic_by_id(topic_id).tags_list]
+
+        questions_list = get_random_questions_by_tag_list(tags_list)
         insert_work_questions(work, questions_list)
 
         await bot.send_message(
@@ -137,6 +176,7 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
         await callback.message.edit_text(
             text=f"Отменили создание нового варианта. Когда снова захочешь порешать задачки, нажимай на <b>{btns_lexicon['main_menu']['new_work']}</b>"
         )
+        #todo: отправка меню
 
 
 async def go_next_question(user_tid: int, state: FSMContext):
