@@ -1,19 +1,31 @@
+import os.path
+from datetime import datetime
 from typing import List
 
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import Message, InputFile, FSInputFile, ReplyKeyboardMarkup, ReplyKeyboardRemove
 
-from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
+                     get_random_questions_by_tag_list, insert_work_questions, remove_last_user_work,
+                     get_question_from_pool, close_question, open_next_question, end_work)
 from db.models import Pool
+from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
-    SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb
+    SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
+    get_skip_question_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
+from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
+from utils.answer_checker import check_answer
+from utils.root_folder import find_project_root
+from utils.tags_helper import get_ege_tag_list
 
 router = Router()
 
+
+# todo: добавить самопроверку второй части
 
 @router.message(Command("new_work"))
 @router.message(F.text == btns_lexicon['main_menu']['new_work'])
@@ -46,6 +58,7 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
     action = callback_data.action
 
     if action == 'start_new_work':
+        remove_last_user_work(get_user(callback.from_user.id))
         await callback.message.edit_text(
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</>"
                  f"\n\nВыбери, что ты хочешь начать решать"
@@ -54,7 +67,8 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
             reply_markup=get_new_work_types_kb()
         )
     elif action == 'continue_last_work':
-        pass
+        await callback.message.delete()
+        await go_next_question(get_user(callback.from_user.id).telegram_id, state)
 
 
 @router.callback_query(SelectNewWorkTypeCallbackFactory.filter())
@@ -84,3 +98,110 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
                  "\n\nВыбери из списка тему, на которую ты хочешь решать задания",
             reply_markup=get_topics_kb(topics_list)
         )
+
+
+@router.callback_query(StartNewWorkCallbackFactory.filter())
+async def process_user_work_way(callback: types.CallbackQuery, callback_data: StartNewWorkCallbackFactory,
+                                state: FSMContext):
+    await callback.answer()
+    action = callback_data.action
+
+    if action == "start":
+        await callback.message.delete()
+        msg = await callback.message.answer(
+            text="<b>{btns_lexicon['main_menu']['new_work']}</b>"
+                 f"\n\nПодбираем задачки специально для тебя...",
+            reply_markup=ReplyKeyboardRemove()
+        )
+
+        user = get_user(callback.from_user.id)
+        work = create_new_work(user_id=user.id, work_type="ege", topic_id=-1)
+        questions_list = get_random_questions_by_tag_list(get_ege_tag_list())
+        insert_work_questions(work, questions_list)
+
+        await msg.edit_text(
+            text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
+                 f"\n\nВариант готов, можешь приступать к решению, желаем удачи!"
+        )
+
+        await go_next_question(user.telegram_id, state)
+
+    elif action == "cancel":
+        await callback.message.edit_reply_markup(
+            reply_markup=None
+        )
+        await callback.message.edit_text(
+            text=f"Отменили создание нового варианта. Когда снова захочешь порешать задачки, нажимай на <b>{btns_lexicon['main_menu']['new_work']}</b>"
+        )
+
+
+async def go_next_question(user_tid: int, state: FSMContext):
+    user = get_user(user_tid)
+    work = get_user_works(user.telegram_id)[0]
+    questions_list = get_work_questions(work_id=work.id)
+
+    for q in questions_list:
+        if q.status in ["current", "waiting"]:
+            q_info = get_question_from_pool(q.question_id)
+
+            if bool(q_info.question_image):
+                if os.path.exists(
+                        f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\{q_info.id}.png"):
+                    src = f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\{q_info.id}.png"
+                else:
+                    src = f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\error.png"
+
+                await bot.send_photo(
+                    chat_id=user.telegram_id,
+                    photo=FSInputFile(src),
+                    caption=f"№{q.position} <code>(id{q_info.id})</code>"
+                            f"\n\n{q_info.text}",
+                    reply_markup=get_skip_question_kb()
+                )
+            else:
+                await bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=f"№{q.position} <code>(id{q_info.id})</code>"
+                         f"\n\n{q_info.text}",
+                    reply_markup=get_skip_question_kb()
+                )
+            await state.set_state(UserAnswerToQuestion.waiting_for_answer)
+            await state.set_data(
+                {'work_id': work.id, 'question_id': q.id, 'question_data': q_info, 'position': q.position})
+            break
+
+
+@router.message(UserAnswerToQuestion.waiting_for_answer)
+async def save_and_check_user_answer(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    if message.text.strip() == btns_lexicon['new_work']['skip_question']:
+        await message.answer(f"Вопрос №{data['position']} пропущен, переходим к следующему")
+        close_question(
+            q_id=data['question_id'],
+            user_answer="---",
+            user_mark=0,
+            end_datetime=datetime.now()
+        )
+    else:
+        close_question(
+            q_id=data['question_id'],
+            user_answer=message.text.strip(),
+            user_mark=check_answer(data['question_data'], message.text.strip()),  # todo: ЗАМЕНИТЬ НА ОБРАБОТЧИК ОТВЕТА,
+            end_datetime=datetime.now()
+        )
+
+    result = open_next_question(data['work_id'])
+
+    if result is None:
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=f"<b>📊 Результаты</b>"
+                 f"\n\nЭто был последний вопрос, теперь можем перейти к твоим результатам!"
+                 f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
+            reply_markup=get_view_result_kb(get_user(message.chat.id), data['work_id'])
+        )
+        end_work(data['work_id'])
+        await state.clear()
+    else:
+        await go_next_question(message.from_user.id, state)

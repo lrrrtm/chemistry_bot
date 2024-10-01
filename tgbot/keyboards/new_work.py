@@ -1,6 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
+from db.models import User
 from tgbot.lexicon.buttons import lexicon
 
 from typing import Optional
@@ -13,6 +14,7 @@ class SelectWorkWayCallbackFactory(CallbackData, prefix="work_way"):
 
 class SelectNewWorkTypeCallbackFactory(CallbackData, prefix="new_work_type"):
     work_type: str
+
 
 class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
@@ -59,6 +61,7 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
 
     return builder.as_markup(resize_keyboard=True)
 
+
 def get_start_work_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -71,3 +74,25 @@ def get_start_work_kb() -> InlineKeyboardMarkup:
     )
     builder.adjust(1)
     return builder.as_markup()
+
+
+def get_view_result_kb(user: User, work_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(
+        text="Смотреть результат",
+        url=f"http://31.134.153.162:7002/stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
+    )
+
+    builder.adjust(1)
+
+    return builder.as_markup()
+
+
+def get_skip_question_kb() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+    builder.button(
+        text=lexicon['new_work']['skip_question'],
+    )
+    builder.adjust(1)
+
+    return builder.as_markup(resize_keyboard=True)

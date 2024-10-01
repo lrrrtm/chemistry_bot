@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import aliased
 
-from db.models import Pool, Stats, Topic, User, Work, WorkQuestion
+from db.models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
 from db.database import Session
 from utils.tags_helper import get_ege_tag_list
 
@@ -47,20 +47,20 @@ def remove_user(telegram_id: int):
         return user
 
 
-def add_work(user_id: int, work_type: str, topic_id: int) -> Work:
-    with get_session() as session:
-        work = Work(user_id=user_id, work_type=work_type, topic_id=topic_id)
-        session.add(work)
-        session.commit()
-        return work
-
-
 def end_work(work_id: int) -> Work:
     with get_session() as session:
         work = session.query(Work).filter_by(id=work_id).first()
         work.end_datetime = datetime.now()
         session.commit()
         return work
+
+
+def remove_last_user_work(user: User):
+    with get_session() as session:
+        work = session.query(Work).filter_by(user_id=user.id).order_by(Work.id.desc()).first()
+        # print(work.start_datetime, '!!!!!!!!')
+        session.delete(work)
+        session.commit()
 
 
 def remove_work(work_id: int) -> Work:
@@ -175,7 +175,6 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
                 t = [tag]
 
             questions = session.query(Pool).filter(Pool.tags_list.contains(t)).all()
-            print(len(questions))
             if tag_data['limit'] is not None:
                 if len(questions) <= limit:
                     return None
@@ -183,7 +182,6 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
                     selected_questions.extend(random.sample(questions, limit))
 
             else:
-                print('NONE')
                 selected_questions.extend(questions)
 
         return selected_questions
@@ -205,13 +203,43 @@ def create_new_work(user_id: int, work_type: str, topic_id: int) -> Work:
 def insert_work_questions(work: Work, questions_list: list[Pool]):
     with get_session() as session:
         for question in questions_list:
+            pos = int(question.tags_list[-1].split("_")[-1]) if question.type == "ege" else -1
+
             q = WorkQuestion(
                 work_id=work.id,
-                question_id=question.id
+                question_id=question.id,
+                position=pos,
             )
             session.add(q)
         session.commit()
 
+
+def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime):
+    with get_session() as session:
+        q = session.query(WorkQuestion).filter_by(id=q_id).first()
+        q.status = "answered"
+        q.user_answer = user_answer
+        q.user_mark = user_mark
+        q.end_datetime = end_datetime
+
+        session.commit()
+
+
+def open_next_question(work_id: int) -> WorkQuestion:
+    with get_session() as session:
+        q = session.query(WorkQuestion).filter_by(work_id=work_id, status="waiting").first()
+        if q is not None:
+            q.status = "current"
+            q.start_datetime = datetime.now()
+
+            session.commit()
+            return q
+        return None
+
+def get_output_mark(input_mark: int):
+    with get_session() as session:
+        data = session.query(Converting).filter_by(input_mark=input_mark).first()
+        return data.output_mark
 
 # topic_tag_list = [{'tag': "topic_tag_1", 'limit': None}, {'tag': "topic_tag_5", 'limit': None}]
 # data = get_random_questions_by_tag_list(topic_tag_list)
