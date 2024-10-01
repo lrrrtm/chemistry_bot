@@ -1,5 +1,6 @@
 import os.path
 from datetime import datetime
+from os import getenv
 from typing import List
 
 from aiogram import Router, F, types
@@ -19,13 +20,14 @@ from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.root_folder import find_project_root
 from utils.tags_helper import get_ege_tag_list
 
 router = Router()
 
 
 # todo: добавить самопроверку второй части
+# todo: не работает отправка фото
+# todo: флаг перестановки цифр в ответе добавить в бд
 
 @router.message(Command("new_work"))
 @router.message(F.text == btns_lexicon['main_menu']['new_work'])
@@ -108,7 +110,8 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
 
     if action == "start":
         await callback.message.delete()
-        msg = await callback.message.answer(
+        msg = await bot.send_message(
+            chat_id=callback.from_user.id,
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
                  f"\n\nПодбираем задачки специально для тебя...",
             reply_markup=ReplyKeyboardRemove()
@@ -119,7 +122,8 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
         questions_list = get_random_questions_by_tag_list(get_ege_tag_list())
         insert_work_questions(work, questions_list)
 
-        await msg.edit_text(
+        await bot.send_message(
+            chat_id=callback.from_user.id,
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
                  f"\n\nВариант готов, можешь приступать к решению, желаем удачи!"
         )
@@ -145,11 +149,10 @@ async def go_next_question(user_tid: int, state: FSMContext):
             q_info = get_question_from_pool(q.question_id)
 
             if bool(q_info.question_image):
-                if os.path.exists(
-                        f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\{q_info.id}.png"):
-                    src = f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\{q_info.id}.png"
+                if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
+                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")
                 else:
-                    src = f"{find_project_root(os.path.abspath(__file__))}\\data\\questions_images\\error.png"
+                    src = os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png"))
 
                 await bot.send_photo(
                     chat_id=user.telegram_id,
@@ -187,17 +190,23 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
         close_question(
             q_id=data['question_id'],
             user_answer=message.text.strip(),
-            user_mark=check_answer(data['question_data'], message.text.strip()),  # todo: ЗАМЕНИТЬ НА ОБРАБОТЧИК ОТВЕТА,
+            user_mark=check_answer(data['question_data'], message.text.strip()),
             end_datetime=datetime.now()
         )
 
     result = open_next_question(data['work_id'])
 
     if result is None:
+        msg = await message.answer(
+            text="<b>Обрабатываем твои ответы...</b>",
+            reply_markup=ReplyKeyboardRemove()
+        )
+
+        await msg.delete()
+
         await bot.send_message(
             chat_id=message.chat.id,
             text=f"<b>📊 Результаты</b>"
-                 f"\n\nЭто был последний вопрос, теперь можем перейти к твоим результатам!"
                  f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
             reply_markup=get_view_result_kb(get_user(message.chat.id), data['work_id'])
         )
