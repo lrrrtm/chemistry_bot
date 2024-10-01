@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool)
+from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool,
+                     get_output_mark)
 from utils.mark_converter import convert_ege_mark
 
 
@@ -45,7 +46,7 @@ def get_user_statistics(telegram_id: int):
         work_stats['results']['final_mark'] = work_stats['results']['recieved_mark']
 
         for question in work_questions:
-            original_question = get_question_from_pool(question.id)
+            original_question = get_question_from_pool(question.question_id)
             work_stats['results']['max_mark'] += original_question.full_mark
             if question.user_mark == original_question.full_mark:
                 work_stats['questions']['fully'].append(question)
@@ -55,12 +56,8 @@ def get_user_statistics(telegram_id: int):
                 work_stats['questions']['zero'].append(question)
 
         if work.work_type == "ege":
-            work_stats['results']['final_mark'] = convert_ege_mark(work_stats['results']['recieved_mark'])
+            work_stats['results']['final_mark'] = get_output_mark(work_stats['results']['recieved_mark'])
             work_stats['results']['max_mark'] = 100
 
         result.append(work_stats)
     return result
-
-
-x = get_user_statistics(409801981)
-print(x)
