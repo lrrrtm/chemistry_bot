@@ -11,14 +11,20 @@ def count_matches(correct_answer, user_answer):
 
 def check_answer(qusetion_data: Pool, user_answer: str) -> int:
     if qusetion_data.type == "ege":
-        matches = count_matches(qusetion_data.answer, user_answer)
+        if qusetion_data.full_mark == 2:
+            matches = count_matches(qusetion_data.answer, user_answer)
+            if matches == len(qusetion_data.answer):
+                return 2
+            elif matches == len(user_answer) - 1:
+                return 1
+            else:
+                return 0
 
-        if matches == 4:
-            return 2
-        elif matches == 3:
-            return 1
-        else:
-            return 0
+        elif qusetion_data.full_mark == 1:
+            if user_answer == qusetion_data.answer:
+                return 1
+            else:
+                return 0
 
 
     elif qusetion_data.type == "topic":
