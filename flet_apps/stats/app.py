@@ -2,6 +2,8 @@ import sys
 import os
 from typing import List
 
+from utils.image_converter import image_to_base64
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from os import getenv
@@ -125,11 +127,21 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
         card_controls.append(
             ft.Card(
                 content=ft.Container(
-                    content=ft.ListTile(
-                        title=ft.Text(f"{index + 1}. {question.text}"),
-                        subtitle=ft.Text(f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}"),
+                    content=ft.Column(
+                        controls=[
+                            ft.Image(
+                                src_base64=image_to_base64(question.question_id) if question.question_image == 1 else None,
+                                error_content=ft.Text("Не удалось загрузить изображение с заданием", size=14),
+                                border_radius=10
+                            ),
+                            ft.ListTile(
+                                title=ft.Text(f"{index + 1}. {question.text}"),
+                                subtitle=ft.Text(
+                                    f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}"),
+                            )
+                        ]
                     ),
-                    padding=ft.padding.only(left=-5, bottom=10, top=10, right=10)
+                    # padding=ft.padding.only(left=-5, bottom=10, top=10, right=10)
                 ),
                 surface_tint_color=card_color,
             )
@@ -184,7 +196,7 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     ft.app(
         target=main,
-        assets_dir=f"{getenv('ROOT_FOLDER')}/repos/chemistry_bot/flet_apps/assets",
+        assets_dir=os.path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
         view=None,
         port=6002
     )
