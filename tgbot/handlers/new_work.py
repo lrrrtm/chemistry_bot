@@ -109,7 +109,7 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
     if action == "start":
         await callback.message.delete()
         msg = await callback.message.answer(
-            text="<b>{btns_lexicon['main_menu']['new_work']}</b>"
+            text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
                  f"\n\nПодбираем задачки специально для тебя...",
             reply_markup=ReplyKeyboardRemove()
         )
