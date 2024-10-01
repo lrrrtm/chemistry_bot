@@ -8,7 +8,6 @@ from sqlalchemy.orm import aliased
 
 from db.models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
 from db.database import Session
-from utils.tags_helper import get_ege_tag_list
 
 
 @contextmanager
@@ -96,13 +95,13 @@ def get_user_works(tid: int) -> List[Work]:
 
 
 def get_topic_by_id(topic_id: int):
-    with get_session as session:
+    with get_session() as session:
         topic = session.query(Topic).filter_by(id=topic_id).first()
         return topic
 
 
-def get_topic_by_name(topic_name: str):
-    with get_session as session:
+def get_topic_by_name(topic_name: str) -> Topic:
+    with get_session() as session:
         topic = session.query(Topic).filter_by(name=topic_name).first()
         return topic
 
