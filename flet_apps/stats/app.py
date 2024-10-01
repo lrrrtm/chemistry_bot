@@ -111,7 +111,7 @@ def get_general_info_card(stats: dict, page: ft.Page):
 
 
 def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -> ft.Card:
-    card_controls = [ft.Text("Подробности", size=20)]
+    card_controls = [ft.Container(ft.Text("Подробности", size=20), padding=ft.padding.only(left=10, top=10))]
 
     for index, question in enumerate(questions_list):
 
@@ -127,7 +127,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
                 content=ft.Container(
                     content=ft.ListTile(
                         title=ft.Text(f"{index + 1}. {question.text}"),
-                        subtitle=ft.Text(f"Верный ответ: {question.answer}\nТвой ответ: {question.user_answer}"),
+                        subtitle=ft.Text(f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}"),
                     ),
                     padding=ft.padding.only(left=-5, bottom=10, top=10, right=10)
                 ),
@@ -141,7 +141,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
                 controls=card_controls
 
             ),
-            padding=15
+            padding=5
         )
     )
 
@@ -150,6 +150,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
 
 def main(page: ft.Page):
     page.title = "ХимБот"
+    page.padding = 0
     page.horizontal_alignment = "center"
     page.vertical_alignment = "center"
 
