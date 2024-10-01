@@ -17,16 +17,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def get_error_column(caption: str) -> ft.Column:
+def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
     error_column = ft.Column(
         controls=[
             ft.Image(
-                src="/images/error.png",
+                src=f"/images/{icon_filename}",
                 error_content=ft.Icon(ft.icons.ERROR, size=50),
                 width=150
             ),
             ft.Text(caption, size=16,
                     text_align=ft.TextAlign.LEFT),
+            ft.ProgressBar(
+                visible=progress_bar_visible,
+                width=100
+            )
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -173,6 +177,9 @@ def main(page: ft.Page):
     if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
                                                                                           url_params['tid'],
                                                                                           url_params['work']):
+        col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
+        page.add(col)
+
         page.scroll = ft.ScrollMode.AUTO
 
         all_stats = get_user_statistics(url_params['tid'])
@@ -187,9 +194,10 @@ def main(page: ft.Page):
             width=700
         )
 
-        page.add(main_col)
+        page.controls = [main_col]
+        page.update()
     else:
-        col = get_error_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback")
+        col = get_info_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback", icon_filename='error.png')
         page.add(col)
 
 
