@@ -176,7 +176,7 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
 
             questions = session.query(Pool).filter(Pool.tags_list.contains(t)).all()
             if tag_data['limit'] is not None:
-                if len(questions) <= limit:
+                if len(questions) < limit:
                     return None
                 else:
                     selected_questions.extend(random.sample(questions, limit))
