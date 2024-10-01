@@ -32,7 +32,8 @@ async def cmd_stats(message: Message, state: FSMContext):
         stats_list = get_user_statistics(message.from_user.id)
         for index, stats_el in enumerate(stats_list):
             text_to_send += lexicon['statistics']['stats_block'].format(
-                index + 1,
+                # index + 1,
+                '',
                 stats_el['general']['name'],
                 get_user(message.from_user.id).id,
                 message.from_user.id,
