@@ -79,26 +79,27 @@ def get_general_info_card(stats: dict, page: ft.Page):
                     #     ),
                     #     padding=ft.padding.only(left=-15, bottom=0)
                     # )
+                    ft.Divider(thickness=1),
                     ft.Row(
                         controls=[
                             ft.Column(
                                 controls=[
                                     ft.Text("полностью"),
-                                    ft.Text(f"{len(stats['questions']['fully'])}"),
+                                    ft.Text(f"{len(stats['questions']['fully'])}", size=16),
                                 ],
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                             ft.Column(
                                 controls=[
                                     ft.Text("частично"),
-                                    ft.Text(f"{len(stats['questions']['semi'])}"),
+                                    ft.Text(f"{len(stats['questions']['semi'])}", size=16),
                                 ],
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
                             ft.Column(
                                 controls=[
                                     ft.Text("не решено"),
-                                    ft.Text(f"{len(stats['questions']['zero'])}"),
+                                    ft.Text(f"{len(stats['questions']['zero'])}", size=16),
                                 ],
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
@@ -128,20 +129,37 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
         else:
             card_color = ft.colors.RED
 
+
+
         card_controls.append(
             ft.Card(
                 content=ft.Container(
                     content=ft.Column(
                         controls=[
+                            # ft.Container(
+                            #     ft.ListTile(
+                            #         leading=ft.Icon(ft.icons.CIRCLE, color=card_color),
+                            #         title=ft.Text(f"№{index + 1}"),
+                            #     ),
+                            #     padding=ft.padding.only(top=-25)
+                            # ),
+                            ft.Container(ft.Row([ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1}", size=18)]), padding=ft.padding.only(left=10, top=10)),
                             ft.Image(
-                                src_base64=image_to_base64(question.question_id) if question.question_image == 1 else None,
+                                src_base64=image_to_base64(
+                                    question.question_id) if bool(question.question_image) else None,
                                 error_content=ft.Text("Не удалось загрузить изображение с заданием", size=14),
-                                border_radius=10
+                                # border_radius=10,
+                                visible=bool(question.question_image)
                             ),
                             ft.ListTile(
-                                title=ft.Text(f"{index + 1}. {question.text}"),
-                                subtitle=ft.Text(
-                                    f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}"),
+                                title=ft.Text(f"{question.text}"),
+                                subtitle=ft.Column(
+                                    [
+                                        ft.Divider(thickness=1),
+                                        ft.Text(
+                                            f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}")
+                                    ]
+                                ),
                             )
                         ]
                     ),
@@ -197,7 +215,8 @@ def main(page: ft.Page):
         page.controls = [main_col]
         page.update()
     else:
-        col = get_info_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback", icon_filename='error.png')
+        col = get_info_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback",
+                              icon_filename='error.png')
         page.add(col)
 
 
