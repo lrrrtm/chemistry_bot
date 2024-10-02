@@ -168,7 +168,6 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
             tag = tag_data['tag']
             limit = tag_data['limit']
 
-            # todo: исправить костыль в выборке данных
             t = tag
             if "ege" in tag:
                 t = [tag]

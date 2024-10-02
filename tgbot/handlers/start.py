@@ -21,7 +21,8 @@ async def cmd_start(message: Message, state: FSMContext):
     if user is None:
         await state.set_state(InputUserName.waiting_for_msg)
         await message.answer(
-            text=lexicon['start']['hello']
+            text=lexicon['start']['hello'],
+            reply_markup=ReplyKeyboardRemove()
         )
     else:
         await cmd_menu(message, state)

@@ -94,7 +94,6 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
         await callback.message.delete()
 
         topics_list = get_all_topics()
-        # todo: установка state на прослушку выбора темы на клавиатуре, после чего get_start_work_kb()
         await callback.message.answer(
             text=f"<b>{btns_lexicon['main_menu']['new_work']}</b>"
                  "\n\nВыбери из списка тему, на которую ты хочешь решать задания."
@@ -176,7 +175,6 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
         await callback.message.edit_text(
             text=f"Отменили создание нового варианта. Когда снова захочешь порешать задачки, нажимай на <b>{btns_lexicon['main_menu']['new_work']}</b>"
         )
-        #todo: отправка меню
 
 
 async def go_next_question(user_tid: int, state: FSMContext):
