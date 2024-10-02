@@ -15,7 +15,7 @@ def check_answer(qusetion_data: Pool, user_answer: str) -> int:
             matches = count_matches(qusetion_data.answer, user_answer)
             if matches == len(qusetion_data.answer):
                 return 2
-            elif matches == len(user_answer) - 1:
+            elif matches == len(qusetion_data.answer) - 1:
                 return 1
             else:
                 return 0
