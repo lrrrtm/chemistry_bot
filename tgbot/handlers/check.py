@@ -47,7 +47,7 @@ async def check_services(message: types.Message):
 
     await bot.send_message(
         chat_id=message.chat.id,
-        text=f"Состояние сервисов:\n{result}",
+        text=f"<b>Состояние системы</b>\n\n{result}",
     )
 
 
