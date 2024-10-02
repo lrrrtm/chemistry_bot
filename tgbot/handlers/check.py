@@ -14,12 +14,20 @@ services = [
         'filename': "mysql.service"
     },
     {
+        'name': "Сервер Nginx",
+        'filename': "chemistry_control.service"
+    },
+    {
         'name': "Telegram-бот",
-        'filename': "mysql.service"
+        'filename': "chemistry_bot.service"
     },
     {
         'name': "Панель статистики",
-        'filename': "mysql.service"
+        'filename': "chemistry_stats.service"
+    },
+    {
+        'name': "Панель управления",
+        'filename': "chemistry_control.service"
     }
 ]
 
@@ -32,7 +40,6 @@ service_status_translation = {
     "reloading": "🔄 перезагружается",
     "unknown": "⛔ неизвестное состояние"
 }
-
 
 
 async def check_services(message: types.Message):
