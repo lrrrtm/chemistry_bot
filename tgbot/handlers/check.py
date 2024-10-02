@@ -15,10 +15,10 @@ services = [
     },
     {
         'name': "Сервер Nginx",
-        'filename': "chemistry_control.service"
+        'filename': "nginx.service"
     },
     {
-        'name': "Telegram-бот",
+        'name': "\nTelegram-бот",
         'filename': "chemistry_bot.service"
     },
     {
