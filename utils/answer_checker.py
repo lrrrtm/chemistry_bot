@@ -11,6 +11,8 @@ def count_matches(correct_answer, user_answer):
 
 def check_answer(qusetion_data: Pool, user_answer: str) -> int:
     if qusetion_data.type == "ege":
+        if question_data.answer == "self":
+            return 0
         if qusetion_data.full_mark == 2:
             matches = count_matches(qusetion_data.answer, user_answer)
             if matches == len(qusetion_data.answer):
