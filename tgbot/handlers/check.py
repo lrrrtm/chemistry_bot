@@ -22,19 +22,19 @@ services = [
         'filename': "chemistry_bot.service"
     },
     {
-        'name': "Панель статистики",
+        'name': "Статистика",
         'filename': "chemistry_stats.service"
     },
     {
-        'name': "Панель управления",
+        'name': "Управление",
         'filename': "chemistry_control.service"
     }
 ]
 
 service_status_translation = {
     "active": "✅ работает",
-    "inactive": "⛔ остановлен",
-    "failed": "⛔ завершён с ошибкой",
+    "inactive": "⛔ остановлено",
+    "failed": "⛔ завершено",
     "activating": "🟡 активируется",
     "deactivating": "🔴 останавливается",
     "reloading": "🔄 перезагружается",
