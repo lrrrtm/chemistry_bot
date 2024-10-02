@@ -41,7 +41,7 @@ async def check_services(message: types.Message):
         try:
             status = subprocess.run(['systemctl', 'is-active', service['filename']], capture_output=True, text=True)
             service_status = status.stdout.strip()
-            result += f"<b>{service['name']}:</b> {service_status_translation['service_status']}\n"
+            result += f"<b>{service['name']}:</b> {service_status_translation[service_status]}\n"
         except Exception as e:
             result += f"{service['filename']}: {e}\n"
 
