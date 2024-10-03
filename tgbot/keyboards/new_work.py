@@ -89,11 +89,31 @@ def get_view_result_kb(user: User, work_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_skip_question_kb() -> ReplyKeyboardMarkup:
+def get_skip_question_kb(self_check_btn_visible: bool = False) -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
+
+    if self_check_btn_visible:
+        builder.button(
+            text=lexicon['new_work']['self_check'],
+        )
+
     builder.button(
         text=lexicon['new_work']['skip_question'],
     )
     builder.adjust(1)
 
     return builder.as_markup(resize_keyboard=True)
+
+
+def get_self_check_kb(max_mark: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    for i in range(max_mark + 1):
+        builder.button(
+            text=str(i),
+            callback_data=f"set_mark_{i}"
+        )
+
+    builder.adjust(max_mark + 1)
+
+    return builder.as_markup()

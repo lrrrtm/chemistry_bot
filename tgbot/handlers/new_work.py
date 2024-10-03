@@ -16,13 +16,13 @@ from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
-    get_skip_question_kb
+    get_skip_question_kb, get_self_check_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from tgbot.states.picking_topic import UserTopicChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.tags_helper import get_ege_tags_list
+from utils.tags_helper import get_ege_tags_list, get_ege_self_check_tags_list
 
 router = Router()
 
@@ -134,7 +134,6 @@ async def process_user_topic_choice(message: Message, state: FSMContext):
             await state.set_state(UserTopicChoice.waiting_for_answer)
 
 
-
 @router.callback_query(StartNewWorkCallbackFactory.filter())
 async def process_user_work_way(callback: types.CallbackQuery, callback_data: StartNewWorkCallbackFactory,
                                 state: FSMContext):
@@ -155,7 +154,8 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: St
         user = get_user(callback.from_user.id)
         work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id)
 
-        tags_list = get_ege_tags_list() if work_type == "ege" else [{'tag': t, 'limit': None} for t in get_topic_by_id(topic_id).tags_list]
+        tags_list = get_ege_tags_list() if work_type == "ege" else [{'tag': t, 'limit': None} for t in
+                                                                    get_topic_by_id(topic_id).tags_list]
 
         questions_list = get_random_questions_by_tag_list(tags_list)
         insert_work_questions(work, questions_list)
@@ -182,9 +182,14 @@ async def go_next_question(user_tid: int, state: FSMContext):
     work = get_user_works(user.telegram_id)[0]
     questions_list = get_work_questions(work_id=work.id)
 
+    self_check_note = f"<blockquote>Ответ и решение этого задания тебе нужно проверить самостоятельно. Для этого нажми на кнопку «{btns_lexicon['new_work']['self_check']}» после того, как получишь ответ.</blockquote>"
+
     for q in questions_list:
         if q.status in ["current", "waiting"]:
             q_info = get_question_from_pool(q.question_id)
+
+            question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if any(
+                elem in q_info.tags_list for elem in get_ege_self_check_tags_list()) else f"\n\n{q_info.text}"
 
             if bool(q_info.question_image):
                 if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
@@ -196,15 +201,19 @@ async def go_next_question(user_tid: int, state: FSMContext):
                     chat_id=user.telegram_id,
                     photo=FSInputFile(src),
                     caption=f"№{q.position} <code>(id{q_info.id})</code>"
-                            f"\n\n{q_info.text}",
-                    reply_markup=get_skip_question_kb()
+                            f"{question_text_block}",
+                    reply_markup=get_skip_question_kb(
+                        self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                    )
                 )
             else:
                 await bot.send_message(
                     chat_id=user.telegram_id,
                     text=f"№{q.position} <code>(id{q_info.id})</code>"
-                         f"\n\n{q_info.text}",
-                    reply_markup=get_skip_question_kb()
+                         f"{question_text_block}",
+                    reply_markup=get_skip_question_kb(
+                        self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                    )
                 )
             await state.set_state(UserAnswerToQuestion.waiting_for_answer)
             await state.set_data(
@@ -224,7 +233,25 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
             user_mark=0,
             end_datetime=datetime.now()
         )
+    elif message.text.strip() == btns_lexicon['new_work']['self_check']:
+        # todo: генерация сообщения для проверки решения
+        await message.answer(
+            text="<b>Текст или картинка с решением</b>",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await message.answer(
+            text="Поставь себе балл за это задание",
+            reply_markup=get_self_check_kb(data['question_data'].full_mark)
+        )
+        return
+
     else:
+        if any(elem in data['question_data'].tags_list for elem in get_ege_self_check_tags_list()):
+            await message.answer(
+                text=f"Это задание требует самостоятельной проверки твоего решения. Пожалуйста, нажми на кнопку «{btns_lexicon['new_work']['self_check']}»"
+            )
+            return
+
         close_question(
             q_id=data['question_id'],
             user_answer=message.text.strip(),
