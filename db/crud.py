@@ -212,6 +212,15 @@ def insert_work_questions(work: Work, questions_list: list[Pool]):
         session.commit()
 
 
+def update_question_status(q_id: int, status: str):
+    with get_session() as session:
+        q = session.query(WorkQuestion).filter_by(id=q_id).first()
+        q.status = status
+        q.start_datetime = None
+
+        session.commit()
+
+
 def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime):
     with get_session() as session:
         q = session.query(WorkQuestion).filter_by(id=q_id).first()
@@ -234,41 +243,15 @@ def open_next_question(work_id: int) -> WorkQuestion:
             return q
         return None
 
+
+def get_skipped_questions(work_id: int) -> List[WorkQuestion]:
+    with get_session() as session:
+        data = session.query(WorkQuestion).filter_by(work_id=work_id, status="skipped").all()
+
+        return data
+
+
 def get_output_mark(input_mark: int):
     with get_session() as session:
         data = session.query(Converting).filter_by(input_mark=input_mark).first()
         return data.output_mark
-
-# topic_tag_list = [{'tag': "topic_tag_1", 'limit': None}, {'tag': "topic_tag_5", 'limit': None}]
-# data = get_random_questions_by_tag_list(topic_tag_list)
-# for a in data:
-#     print(a.id, a.text, a.full_mark, a.level)
-#
-# print("\n"*5)
-#
-# ege_tag_list = get_ege_tag_list()
-# data = get_random_questions_by_tag_list(ege_tag_list)
-# print(ege_tag_list)
-# # for a in data:
-# #     print(a.id, a.text, a.full_mark, a.level)
-# # print(len(data))
-#
-# w = create_new_work(user_id=8, work_type='ege', topic_id=-1)
-# insert_work_questions(w, data)
-# init_new_work(user_id=8, work_type="ege", topic_id=-1, questions_list=data)
-
-# for num in range(1, 20):
-#     with get_session() as session:
-#         lst = random.sample(["topic_tag_1", "topic_tag_2", "topic_tag_3", "topic_tag_4", "topic_tag_5"], 2)
-#         q = Pool(
-#             type="ege",
-#             level=random.randint(1, 6),
-#             text=f"[Тип 4] Это вопрос типа topic с таким набором тегов: {lst}",
-#             question_image=0,
-#             answer_image=0,
-#             answer=f"Это ответ на вопрос типа topic",
-#             full_mark=random.randint(1, 3),
-#             tags_list=lst,
-#         )
-#         session.add(q)
-#         session.commit()

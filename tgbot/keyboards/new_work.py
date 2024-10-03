@@ -27,6 +27,11 @@ class SelfCheckCallbackFactory(CallbackData, prefix="self_check"):
     work_question_id: int
 
 
+class ReDoSkippedQuestionCallbackFactory(CallbackData, prefix="redo_skipped"):
+    action: str
+    work_id: int
+
+
 def get_user_work_way_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
@@ -123,7 +128,22 @@ def get_self_check_kb(max_mark: int, work_id: int, work_question_id: int) -> Inl
                 work_question_id=work_question_id
             )
         )
-
     builder.adjust(max_mark + 1)
+
+    return builder.as_markup()
+
+
+def get_redo_skipped_questions_kb(work_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=lexicon['new_work']['redo_skipped'],
+        callback_data=ReDoSkippedQuestionCallbackFactory(work_id=work_id, action="redo")
+    )
+    builder.button(
+        text=lexicon['new_work']['cancel_skipped'],
+        callback_data=ReDoSkippedQuestionCallbackFactory(work_id=work_id, action="skip")
+    )
+    builder.adjust(1)
 
     return builder.as_markup()

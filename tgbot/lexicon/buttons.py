@@ -20,6 +20,8 @@ lexicon = {
         'start': "Начнём!",
         'cancel': "Я передумал(-а)",
         'skip_question': "Пропустить вопрос",
-        'self_check': "Проверить решение"
+        'self_check': "Проверить решение",
+        'redo_skipped': "Да, попробую",
+        'cancel_skipped': "Нет, хочу закончить"
     }
 }

@@ -10,13 +10,15 @@ from aiogram.types import Message, InputFile, FSInputFile, ReplyKeyboardMarkup, 
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
                      get_random_questions_by_tag_list, insert_work_questions, remove_last_user_work,
-                     get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name)
+                     get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name,
+                     update_question_status, get_skipped_questions)
 from db.models import Pool
 from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
-    get_skip_question_kb, get_self_check_kb, SelfCheckCallbackFactory
+    get_skip_question_kb, get_self_check_kb, SelfCheckCallbackFactory, get_redo_skipped_questions_kb, \
+    ReDoSkippedQuestionCallbackFactory
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from tgbot.states.picking_topic import UserTopicChoice
@@ -226,12 +228,16 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
 
     if message.text.strip() == btns_lexicon['new_work']['skip_question']:
         await message.answer(f"Вопрос №{data['position']} пропущен, переходим к следующему")
-        close_question(
+        update_question_status(
             q_id=data['question_id'],
-            user_answer="вопрос пропущен",
-            user_mark=0,
-            end_datetime=datetime.now()
+            status="skipped"
         )
+        # close_question(
+        #     q_id=data['question_id'],
+        #     user_answer="вопрос пропущен",
+        #     user_mark=0,
+        #     end_datetime=datetime.now()
+        # )
     elif message.text.strip() == btns_lexicon['new_work']['self_check']:
         # todo: генерация сообщения для проверки решения
         question_data = data['question_data']
@@ -280,28 +286,36 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
     result = open_next_question(data['work_id'])
 
     if result is None:
-        msg = await message.answer(
-            text="<b>Обрабатываем твои ответы...</b>",
-            reply_markup=ReplyKeyboardRemove()
-        )
+        skipped_questions = get_skipped_questions(data['work_id'])
+        if skipped_questions:
+            await message.answer(
+                text=f"У тебя остались пропущенные вопросы ({len(skipped_questions)}), хочешь вернуться к ним и попробовать решить их ещё раз?",
+                reply_markup=get_redo_skipped_questions_kb(data['work_id'])
+            )
+            await state.clear()
+        else:
+            msg = await message.answer(
+                text="<b>Обрабатываем твои ответы...</b>",
+                reply_markup=ReplyKeyboardRemove()
+            )
 
-        await msg.delete()
+            await msg.delete()
 
-        await bot.send_message(
-            chat_id=message.chat.id,
-            text=f"<b>📊 Результаты</b>"
-                 f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
-            reply_markup=get_view_result_kb(get_user(message.chat.id), data['work_id'])
-        )
-        end_work(data['work_id'])
-        await state.clear()
+            await bot.send_message(
+                chat_id=message.chat.id,
+                text=f"<b>📊 Результаты</b>"
+                     f"\n\nНажми на кнопку под сообщением, чтобы посмотреть результаты выполнения работы",
+                reply_markup=get_view_result_kb(get_user(message.chat.id), data['work_id'])
+            )
+            end_work(data['work_id'])
+            await state.clear()
     else:
         await go_next_question(message.from_user.id, state)
 
 
 @router.callback_query(SelfCheckCallbackFactory.filter())
 async def process_self_check(callback: types.CallbackQuery, callback_data: SelfCheckCallbackFactory,
-                                state: FSMContext):
+                             state: FSMContext):
     await callback.message.edit_reply_markup(
         reply_markup=None
     )
@@ -324,20 +338,65 @@ async def process_self_check(callback: types.CallbackQuery, callback_data: SelfC
     result = open_next_question(work_id)
 
     if result is None:
-        msg = await callback.message.answer(
-            text="<b>Обрабатываем твои ответы...</b>",
-            reply_markup=ReplyKeyboardRemove()
-        )
+        skipped_questions = get_skipped_questions(work_id)
+        if skipped_questions:
+            await callback.message.answer(
+                text=f"У тебя остались пропущенные вопросы ({len(skipped_questions)}), хочешь вернуться к ним и попробовать решить их ещё раз?",
+                reply_markup=get_redo_skipped_questions_kb(work_id)
+            )
+            await state.clear()
+        else:
+            msg = await callback.message.answer(
+                text="<b>Обрабатываем твои ответы...</b>",
+                reply_markup=ReplyKeyboardRemove()
+            )
 
-        await msg.delete()
+            await msg.delete()
 
-        await bot.send_message(
-            chat_id=callback.from_user.id,
+            await bot.send_message(
+                chat_id=callback.from_user.id,
+                text=f"<b>📊 Результаты</b>"
+                     f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
+                reply_markup=get_view_result_kb(get_user(callback.from_user.id), work_id)
+            )
+            end_work(work_id)
+            await state.clear()
+    else:
+        await go_next_question(callback.from_user.id, state)
+
+
+@router.callback_query(ReDoSkippedQuestionCallbackFactory.filter())
+async def process_user_work_way(callback: types.CallbackQuery, callback_data: ReDoSkippedQuestionCallbackFactory,
+                                state: FSMContext):
+    await callback.answer()
+    action = callback_data.action
+    work_id = callback_data.work_id
+    skipped_questions_list = get_skipped_questions(work_id)
+
+    await callback.message.delete()
+
+    if action == "skip":
+        for question in skipped_questions_list:
+            close_question(
+                q_id=question.id,
+                user_answer="---",
+                user_mark=0,
+                end_datetime=datetime.now()
+            )
+        await callback.message.answer(
             text=f"<b>📊 Результаты</b>"
-                 f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
+                 f"\n\nНажми на кнопку под сообщением, чтобы посмотреть результаты выполнения работы",
             reply_markup=get_view_result_kb(get_user(callback.from_user.id), work_id)
         )
         end_work(work_id)
         await state.clear()
     else:
-        await go_next_question(callback.from_user.id, state)
+        for question in skipped_questions_list:
+            update_question_status(
+                q_id=question.id,
+                status="waiting"
+            )
+        await go_next_question(
+            user_tid=callback.from_user.id,
+            state=state
+        )
