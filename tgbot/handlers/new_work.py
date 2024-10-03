@@ -254,7 +254,7 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
                 reply_markup=ReplyKeyboardRemove()
             )
         await message.answer(
-            text="Поставь себе балл за это задание",
+            text=f"Оцени свой ответ, поставив нужный балл за вопрос №{data['position']}",
             reply_markup=get_self_check_kb(
                 max_mark=question_data.full_mark,
                 work_id=data['work_id'],
@@ -300,7 +300,7 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
 
 
 @router.callback_query(SelfCheckCallbackFactory.filter())
-async def process_user_work_way(callback: types.CallbackQuery, callback_data: SelfCheckCallbackFactory,
+async def process_self_check(callback: types.CallbackQuery, callback_data: SelfCheckCallbackFactory,
                                 state: FSMContext):
     await callback.message.edit_reply_markup(
         reply_markup=None
@@ -310,9 +310,13 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
     work_question_id = callback_data.work_question_id
     work_id = callback_data.work_id
 
+    await callback.message.edit_text(
+        text=f"<b>Выставленно баллов: {mark}</b>"
+    )
+
     close_question(
         q_id=work_question_id,
-        user_answer="Самостоятельная проверка",
+        user_answer="самостоятельная проверка",
         user_mark=mark,
         end_datetime=datetime.now()
     )
