@@ -27,8 +27,6 @@ from utils.tags_helper import get_ege_tags_list, get_ege_self_check_tags_list
 router = Router()
 
 
-# todo: добавить самопроверку второй части
-
 @router.message(Command("new_work"))
 @router.message(F.text == btns_lexicon['main_menu']['new_work'])
 async def cmd_new_work(message: Message, state: FSMContext):
