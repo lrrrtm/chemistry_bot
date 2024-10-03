@@ -1,7 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from db.models import User
+from db.models import User, Pool, WorkQuestion
 from tgbot.lexicon.buttons import lexicon
 
 from aiogram.filters.callback_data import CallbackData
@@ -19,6 +19,12 @@ class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
     work_type: str
     topic_id: int
+
+
+class SelfCheckCallbackFactory(CallbackData, prefix="self_check"):
+    mark: int
+    work_id: int
+    work_question_id: int
 
 
 def get_user_work_way_kb() -> InlineKeyboardMarkup:
@@ -105,13 +111,17 @@ def get_skip_question_kb(self_check_btn_visible: bool = False) -> ReplyKeyboardM
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_self_check_kb(max_mark: int) -> InlineKeyboardMarkup:
+def get_self_check_kb(max_mark: int, work_id: int, work_question_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     for i in range(max_mark + 1):
         builder.button(
             text=str(i),
-            callback_data=f"set_mark_{i}"
+            callback_data=SelfCheckCallbackFactory(
+                mark=i,
+                work_id=work_id,
+                work_question_id=work_question_id
+            )
         )
 
     builder.adjust(max_mark + 1)

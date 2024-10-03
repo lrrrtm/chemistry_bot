@@ -16,7 +16,7 @@ from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
-    get_skip_question_kb, get_self_check_kb
+    get_skip_question_kb, get_self_check_kb, SelfCheckCallbackFactory
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from tgbot.states.picking_topic import UserTopicChoice
@@ -202,6 +202,7 @@ async def go_next_question(user_tid: int, state: FSMContext):
                     photo=FSInputFile(src),
                     caption=f"№{q.position} <code>(id{q_info.id})</code>"
                             f"{question_text_block}",
+                    show_caption_above_media=True,
                     reply_markup=get_skip_question_kb(
                         self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
                     )
@@ -229,19 +230,38 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
         await message.answer(f"Вопрос №{data['position']} пропущен, переходим к следующему")
         close_question(
             q_id=data['question_id'],
-            user_answer="---",
+            user_answer="вопрос пропущен",
             user_mark=0,
             end_datetime=datetime.now()
         )
     elif message.text.strip() == btns_lexicon['new_work']['self_check']:
         # todo: генерация сообщения для проверки решения
-        await message.answer(
-            text="<b>Текст или картинка с решением</b>",
-            reply_markup=ReplyKeyboardRemove()
-        )
+        question_data = data['question_data']
+        if bool(question_data.answer_image):
+            if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")):
+                src = os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")
+            else:
+                src = os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png"))
+
+            await message.answer_photo(
+                photo=FSInputFile(src),
+                show_caption_above_media=True,
+                caption=f"Ответ на вопрос №{data['position']} <code>(id{question_data.id})</code>",
+                reply_markup=ReplyKeyboardRemove()
+            )
+        else:
+            await message.answer(
+                text=f"Ответ на вопрос №{data['position']} <code>(id{question_data.id})</code>"
+                     f"\n\n{question_data.answer}",
+                reply_markup=ReplyKeyboardRemove()
+            )
         await message.answer(
             text="Поставь себе балл за это задание",
-            reply_markup=get_self_check_kb(data['question_data'].full_mark)
+            reply_markup=get_self_check_kb(
+                max_mark=question_data.full_mark,
+                work_id=data['work_id'],
+                work_question_id=data['question_id'],
+            )
         )
         return
 
@@ -279,3 +299,43 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
         await state.clear()
     else:
         await go_next_question(message.from_user.id, state)
+
+
+@router.callback_query(SelfCheckCallbackFactory.filter())
+async def process_user_work_way(callback: types.CallbackQuery, callback_data: SelfCheckCallbackFactory,
+                                state: FSMContext):
+    await callback.message.edit_reply_markup(
+        reply_markup=None
+    )
+
+    mark = callback_data.mark
+    work_question_id = callback_data.work_question_id
+    work_id = callback_data.work_id
+
+    close_question(
+        q_id=work_question_id,
+        user_answer="Самостоятельная проверка",
+        user_mark=mark,
+        end_datetime=datetime.now()
+    )
+
+    result = open_next_question(work_id)
+
+    if result is None:
+        msg = await callback.message.answer(
+            text="<b>Обрабатываем твои ответы...</b>",
+            reply_markup=ReplyKeyboardRemove()
+        )
+
+        await msg.delete()
+
+        await bot.send_message(
+            chat_id=callback.from_user.id,
+            text=f"<b>📊 Результаты</b>"
+                 f"\n\nНажми на кнопку под этим сообщением, чтобы их посмотреть.",
+            reply_markup=get_view_result_kb(get_user(callback.from_user.id), work_id)
+        )
+        end_work(work_id)
+        await state.clear()
+    else:
+        await go_next_question(callback.from_user.id, state)
