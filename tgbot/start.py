@@ -5,12 +5,14 @@ from os import getenv
 from config import bot, dp
 from threading import Thread
 
+from tgbot.lexicon.messages import lexicon
+
 logging.basicConfig(level=logging.INFO)
 
 async def on_startup():
     await bot.send_message(
         chat_id=getenv('FBACK_GROUP_ID'),
-        text="Бот перезагружен. Для проверки состояния других элементов отправьте /check"
+        text=lexicon['service']['after_reboot']
     )
 
 async def main():

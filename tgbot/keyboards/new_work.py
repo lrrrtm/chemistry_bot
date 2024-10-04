@@ -69,7 +69,7 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
         builder.button(
             text=topic.name,
         )
-    builder.adjust(2)
+    builder.adjust(1)
 
     return builder.as_markup(resize_keyboard=True)
 
@@ -91,7 +91,7 @@ def get_start_work_kb(work_type: str, topic_id: int = -1) -> InlineKeyboardMarku
 def get_view_result_kb(user: User, work_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
-        text="Смотреть результат",
+        text=lexicon['new_work']['view_results'],
         url=f"http://31.134.153.162:7002/stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
     )
 
