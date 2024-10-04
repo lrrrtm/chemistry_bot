@@ -1,11 +1,21 @@
 from datetime import datetime
+from typing import List
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool,
                      get_output_mark)
+from db.models import WorkQuestion
 from utils.mark_converter import convert_ege_mark
 
+def remove_none(work_questions_list: List[WorkQuestion]):
+    for q in work_questions_list:
+        if q.user_mark is None:
+            q.user_mark = 0
+
+    return work_questions_list
 
 def get_user_statistics(telegram_id: int):
+    # todo: разнести статистику по всем тренировкам и статистику по одной тренировке
+    # todo: убрать костыль, связанный с None в user_answer
     result = []
 
     user_works = get_user_works(telegram_id)
@@ -40,6 +50,7 @@ def get_user_statistics(telegram_id: int):
             work_stats['general']['name'] = "КИМ ЕГЭ"
 
         work_questions = get_work_questions(work.id)
+        work_questions = remove_none(work_questions)
         work_stats['general']['questions_amount'] = len(work_questions)
 
         work_stats['results']['recieved_mark'] = sum([q.user_mark for q in work_questions])
