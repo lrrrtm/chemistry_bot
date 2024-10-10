@@ -46,7 +46,7 @@ def get_users_col(users: List[User], after_user_btn_clicked) -> ft.Column:
 
     for user in users:
         col.controls.append(
-            ft.Text("enrkjgnerger", size=16)
+            ft.Text(f"len(users): {len(users)}", size=16)
             # ft.Card(
             #     content=ft.Column(
             #         controls=[
