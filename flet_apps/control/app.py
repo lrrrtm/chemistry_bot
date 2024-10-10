@@ -159,5 +159,5 @@ if __name__ == "__main__":
         use_color_emoji=True,
         assets_dir=os.path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
         view=None,
-        port=6002
+        port=6001
     )
