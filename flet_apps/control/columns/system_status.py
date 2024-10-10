@@ -1,7 +1,13 @@
 import flet as ft
 
 
-def get_system_status_col(data: list, on_restart_button_click) -> ft.Column:
+def get_system_status_col(data: list, after_reboot_btn_clicked) -> ft.Column:
+    """
+    Создание column для страницы с состоянием системы
+    :param data: List(Dict) с информацией о каждом сервисе
+    :param after_reboot_btn_clicked: действие при нажатии на кнопку перезагрузки сервиса
+    :return:
+    """
     col = ft.Column(
         horizontal_alignment="center",
     )
@@ -20,16 +26,14 @@ def get_system_status_col(data: list, on_restart_button_click) -> ft.Column:
                                     ),
                                     subtitle=ft.Text(
                                         value=el['status']
-                                    ),
-                                    # width=280
+                                    )
                                 ),
-                                # margin=ft.margin.only(right=-500)
                                 expand=True,
                             ),
                             ft.Container(
                                 content=ft.IconButton(
                                     icon=ft.icons.RESTART_ALT,
-                                    on_click=on_restart_button_click,
+                                    on_click=after_reboot_btn_clicked,
                                     data=el
                                 ),
                                 padding=ft.padding.only(right=10)

@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 from typing import List
 
 from utils.image_converter import image_to_base64
@@ -10,7 +11,7 @@ from os import getenv
 from urllib.parse import urlparse, parse_qs
 import flet as ft
 from utils.user_statistics import get_user_statistics
-from db.crud import get_work_by_url_data, get_work_questions_joined_pool
+from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_user
 from db.models import Work, WorkQuestion
 from dotenv import load_dotenv
 
@@ -40,73 +41,91 @@ def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool
     return error_column
 
 
-def get_general_info_card(stats: dict, page: ft.Page):
+def get_general_info_card(stats: dict, detailed: bool = False):
+    card_conrols_list = [
+        ft.Container(
+            content=ft.ListTile(
+                leading=ft.Icon(ft.icons.SCHOOL),
+                title=ft.Text(stats['general']['name']),
+                subtitle=ft.Text("название работы"),
+            ),
+            padding=ft.padding.only(left=-15, bottom=-25)
+        ),
+        ft.Container(
+            content=ft.ListTile(
+                leading=ft.Icon(ft.icons.ACCESS_TIME),
+                title=ft.Text(f"{stats['general']['time']['end'] - stats['general']['time']['start']}"),
+                subtitle=ft.Text("затраченное время"),
+            ),
+            padding=ft.padding.only(left=-15, bottom=-25)
+        ),
+        ft.Container(
+            content=ft.ListTile(
+                leading=ft.Icon(ft.icons.INSERT_CHART),
+                title=ft.Text(f"{stats['results']['final_mark']} из {stats['results']['max_mark']}"),
+                subtitle=ft.Text("результат"),
+            ),
+            padding=ft.padding.only(left=-15, bottom=-10)
+        ),
+        ft.Divider(thickness=1),
+        ft.Row(
+            controls=[
+                ft.Column(
+                    controls=[
+                        ft.Text("полностью"),
+                        ft.Text(f"{len(stats['questions']['fully'])}", size=16),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Text("частично"),
+                        ft.Text(f"{len(stats['questions']['semi'])}", size=16),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Text("не решено"),
+                        ft.Text(f"{len(stats['questions']['zero'])}", size=16),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+            ],
+            expand=True,
+            alignment=ft.MainAxisAlignment.CENTER,
+        )
+    ]
+
+    if detailed:
+        card_conrols_list.insert(
+            0,
+            ft.Container(
+                content=ft.ListTile(
+                    leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+                    title=ft.Text(stats['general']['user'].name),
+                    subtitle=ft.Text("ученик"),
+                ),
+                padding=ft.padding.only(left=-15, bottom=-25)
+            ),
+        )
+        card_conrols_list.insert(
+            1,
+            ft.Container(
+                content=ft.ListTile(
+                    leading=ft.Icon(ft.icons.CALENDAR_TODAY),
+                    title=ft.Text(stats['general']['time']['end'].strftime('%d.%m.%Y в %H:%M')),
+                    subtitle=ft.Text("дата выполнения"),
+                ),
+                padding=ft.padding.only(left=-15, bottom=-25)
+            ),
+        )
+
     card = ft.Card(
         content=ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Text("Общий обзор", size=20),
-                    ft.Container(
-                        content=ft.ListTile(
-                            leading=ft.Icon(ft.icons.SCHOOL, color=ft.colors.AMBER),
-                            title=ft.Text(stats['general']['name']),
-                            subtitle=ft.Text("название работы"),
-                        ),
-                        padding=ft.padding.only(left=-15, bottom=-25)
-                    ),
-                    ft.Container(
-                        content=ft.ListTile(
-                            leading=ft.Icon(ft.icons.ACCESS_TIME, color=ft.colors.CYAN),
-                            title=ft.Text(f"{stats['general']['time']['end'] - stats['general']['time']['start']}"),
-                            subtitle=ft.Text("затраченное время"),
-                        ),
-                        padding=ft.padding.only(left=-15, bottom=-25)
-                    ),
-                    ft.Container(
-                        content=ft.ListTile(
-                            leading=ft.Icon(ft.icons.INSERT_CHART, color=ft.colors.GREEN),
-                            title=ft.Text(f"{stats['results']['final_mark']}/{stats['results']['max_mark']}"),
-                            subtitle=ft.Text("результат"),
-                        ),
-                        padding=ft.padding.only(left=-15, bottom=-10)
-                    ),
-                    # ft.Container(
-                    #     content=ft.ListTile(
-                    #         leading=ft.Icon(ft.icons.FORMAT_LIST_NUMBERED),
-                    #         title=ft.Text(
-                    #             f"{len(stats['questions']['fully'])} | {len(stats['questions']['semi'])} | {len(stats['questions']['zero'])}"),
-                    #         subtitle=ft.Text("полностью | частично | не решено"),
-                    #     ),
-                    #     padding=ft.padding.only(left=-15, bottom=0)
-                    # )
-                    ft.Divider(thickness=1),
-                    ft.Row(
-                        controls=[
-                            ft.Column(
-                                controls=[
-                                    ft.Text("полностью"),
-                                    ft.Text(f"{len(stats['questions']['fully'])}", size=16),
-                                ],
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("частично"),
-                                    ft.Text(f"{len(stats['questions']['semi'])}", size=16),
-                                ],
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("не решено"),
-                                    ft.Text(f"{len(stats['questions']['zero'])}", size=16),
-                                ],
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            ),
-                        ],
-                        expand=True,
-                        alignment=ft.MainAxisAlignment.CENTER,
-                    )
                 ],
 
             ),
@@ -114,10 +133,12 @@ def get_general_info_card(stats: dict, page: ft.Page):
         )
     )
 
+    card.content.content.controls += card_conrols_list
+
     return card
 
 
-def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -> ft.Card:
+def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool = False) -> ft.Card:
     card_controls = [ft.Container(ft.Text("Подробности", size=20), padding=ft.padding.only(left=10, top=10))]
 
     for index, question in enumerate(questions_list):
@@ -128,8 +149,6 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
             card_color = ft.colors.AMBER
         else:
             card_color = ft.colors.RED
-
-
 
         card_controls.append(
             ft.Card(
@@ -143,7 +162,9 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
                             #     ),
                             #     padding=ft.padding.only(top=-25)
                             # ),
-                            ft.Container(ft.Row([ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1}", size=18)]), padding=ft.padding.only(left=10, top=10)),
+                            ft.Container(ft.Row(
+                                [ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1}", size=18)]),
+                                padding=ft.padding.only(left=10, top=10)),
                             ft.Image(
                                 src_base64=image_to_base64(
                                     question.question_id) if bool(question.question_image) else None,
@@ -157,7 +178,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], page: ft.Page) -
                                     [
                                         ft.Divider(thickness=1),
                                         ft.Text(
-                                            f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\nТвой ответ: {question.user_answer}")
+                                            f"Баллы: {question.user_mark} из {question.full_mark}\nВерный ответ: {question.answer}\n{'Твой ответ' if not detailed else 'Ответ ученика'}: {question.user_answer}")
                                     ]
                                 ),
                             )
@@ -197,6 +218,7 @@ def main(page: ft.Page):
                                                                                           url_params['work']):
         col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
         page.add(col)
+        time.sleep(1)
 
         page.scroll = ft.ScrollMode.AUTO
 
@@ -204,10 +226,14 @@ def main(page: ft.Page):
         work_stats = [s for s in all_stats if s['general']['work_id'] == url_params['work']][-1]
         questions_list = get_work_questions_joined_pool(int(url_params['work']))
 
+        detailed = False
+        if 'detailed' in url_params:
+            detailed = bool(url_params['detailed'])
+
         main_col = ft.Column(
             controls=[
-                get_general_info_card(work_stats, page),
-                get_questions_info_card(questions_list, page)
+                get_general_info_card(work_stats, detailed=detailed),
+                get_questions_info_card(questions_list, detailed=detailed)
             ],
             width=700
         )

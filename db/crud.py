@@ -32,12 +32,6 @@ def create_user(name: str, tid: int) -> User:
         return user
 
 
-def get_user(telegram_id: int) -> User:
-    with get_session() as session:
-        user = session.query(User).filter_by(telegram_id=telegram_id).first()
-        return user
-
-
 def remove_user(telegram_id: int):
     with get_session() as session:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
@@ -111,6 +105,16 @@ def get_all_topics() -> List[Topic]:
         topics = session.query(Topic).all()
         return topics
 
+
+def get_all_users() -> List[User]:
+    with get_session() as session:
+        users = session.query(User).all()
+        return users
+
+def get_user(telegram_id: int) -> User:
+    with get_session() as session:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        return user
 
 def get_work_questions(work_id: int) -> List[WorkQuestion]:
     with get_session() as session:

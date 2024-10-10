@@ -4,6 +4,10 @@ from utils.image_converter import image_to_base64_2
 
 
 def get_app_info_col() -> ft.Column:
+    """
+    Создание страницы с информацией о приложении
+    :return:
+    """
     col = ft.Column(
         controls=[
             ft.Container(

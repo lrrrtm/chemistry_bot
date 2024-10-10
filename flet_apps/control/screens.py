@@ -17,7 +17,7 @@ screens_config = {
         'scroll': ScrollMode.AUTO,
         'appbar': {
             'visible': True,
-            'title': "Пользователи",
+            'title': "Ученики",
             'leading': {
                 'visible': True,
                 'action': "drawer",
@@ -49,8 +49,8 @@ screens_config = {
             }
         }
     },
-    'ege': {
-        'scroll': None,
+    'ege_questions': {
+        'scroll': ScrollMode.AUTO,
         'appbar': {
             'visible': True,
             'title': "Вопросы КИМ ЕГЭ",
@@ -61,8 +61,8 @@ screens_config = {
             }
         }
     },
-    'topics': {
-        'scroll': None,
+    'topics_questions': {
+        'scroll': ScrollMode.AUTO,
         'appbar': {
             'visible': True,
             'title': "Вопросы тренировок",
@@ -70,6 +70,42 @@ screens_config = {
                 'visible': True,
                 'action': "drawer",
                 'action_context': None
+            }
+        }
+    },
+    'change_password': {
+        'scroll': True,
+        'appbar': {
+            'visible': True,
+            'title': "Изменение пароля",
+            'leading': {
+                'visible': True,
+                'action': "drawer",
+                'action_context': None
+            }
+        }
+    },
+    'user_info': {
+        'scroll': ScrollMode.AUTO,
+        'appbar': {
+            'visible': True,
+            'title': "Профиль ученика",
+            'leading': {
+                'visible': True,
+                'action': "change_screen",
+                'action_context': "users"
+            }
+        }
+    },
+    'topics_list': {
+        'scroll': ScrollMode.AUTO,
+        'appbar': {
+            'visible': True,
+            'title': "Темы тренировок",
+            'leading': {
+                'visible': True,
+                'action': "change_screen",
+                'action_context': "users"
             }
         }
     },
