@@ -150,7 +150,7 @@ def main(page: ft.Page):
 
         page.update()
 
-    change_screen('system_status')
+    change_screen('login')
 
 
 if __name__ == "__main__":
