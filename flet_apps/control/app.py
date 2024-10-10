@@ -43,7 +43,7 @@ def main(page: ft.Page):
         page.update()
 
     page.floating_action_button = ft.FloatingActionButton(
-        icon=ft.icons.TEXT_SNIPPET,
+        icon=ft.icons.MENU,
         on_click=lambda _: show_main_drawer(page)
     )
 
