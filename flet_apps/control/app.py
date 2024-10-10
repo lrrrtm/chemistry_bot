@@ -286,7 +286,7 @@ def main(page: ft.Page):
 
         page.update()
 
-    change_screen('users')
+    change_screen('login')
 
 
 if __name__ == "__main__":

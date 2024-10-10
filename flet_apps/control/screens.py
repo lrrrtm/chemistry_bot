@@ -16,12 +16,12 @@ screens_config = {
     'users': {
         'scroll': ScrollMode.AUTO,
         'appbar': {
-            'visible': False,
+            'visible': True,
             'title': "Ученики",
             'leading': {
                 'visible': True,
-                'action': "change_screen",
-                'action_context': "system_status"
+                'action': "drawer",
+                'action_context': None
             }
         }
     },
