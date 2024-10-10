@@ -54,7 +54,7 @@ def main(page: ft.Page):
         if not input_password:
             show_snack_bar(text_snack_bar, "Введите пароль", page)
         elif input_password == getenv('PANEL_PASSWORD'):
-            change_screen("users")
+            change_screen("system_status")
         else:
             show_snack_bar(text_snack_bar, "Неверный пароль", page)
 
@@ -286,7 +286,7 @@ def main(page: ft.Page):
 
         page.update()
 
-    change_screen('login')
+    change_screen('system_status')
 
 
 if __name__ == "__main__":
