@@ -161,7 +161,7 @@ def main(page: ft.Page):
                 )
 
         else:
-            page.appbar.value = False
+            page.appbar.visible = False
 
         if target == "login":
             page.add(get_login_col(
