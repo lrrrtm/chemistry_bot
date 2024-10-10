@@ -225,7 +225,7 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-        ft.fastapi.flet_app(
+        ft.app(
         target=main,
         use_color_emoji=True,
         assets_dir=path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
