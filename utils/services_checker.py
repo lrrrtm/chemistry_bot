@@ -1,5 +1,6 @@
 import subprocess
 from flet import icons
+
 services = [
     {
         'name': "База данных",
@@ -63,3 +64,10 @@ def get_system_status():
                 }
             )
     return result
+
+
+def restart_service(filename: str):
+    try:
+        subprocess.run(['systemctl', 'restart', filename], capture_output=True, text=True)
+    except Exception as e:
+        print(e)

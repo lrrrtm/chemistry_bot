@@ -12,7 +12,7 @@ from flet_apps.control.elements.main_drawer import get_main_drawer
 from flet_apps.control.elements.system_status import get_system_status_col
 from flet_apps.control.screens import screens_config
 from utils.image_converter import image_to_base64, image_to_base64_2
-from utils.services_checker import get_system_status
+from utils.services_checker import get_system_status, restart_service
 
 load_dotenv()
 
@@ -103,7 +103,7 @@ def main(page: ft.Page):
 
     def on_restart_button_click(e: ft.ControlEvent):
         show_snack_bar(text_snack_bar, "Сервис перезагружается", page)
-        print(e.control.data)
+        restart_service(e.control.data)
 
     def change_screen(target: str):
         screen = screens_config[target]
@@ -150,7 +150,7 @@ def main(page: ft.Page):
 
         page.update()
 
-    change_screen('login')
+    change_screen('system_status')
 
 
 if __name__ == "__main__":
