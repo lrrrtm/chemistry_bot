@@ -14,7 +14,7 @@ screens_config = {
         }
     },
     'users': {
-        'scroll': ScrollMode.AUTO,
+        'scroll': None,
         'appbar': {
             'visible': True,
             'title': "Ученики",
