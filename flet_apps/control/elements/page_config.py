@@ -10,9 +10,9 @@ def set_page_config(page: ft.Page):
 
     page.theme_mode = ft.ThemeMode.DARK
 
-    page.appbar = ft.AppBar(
-        title=ft.Text(
-            size=18
-        ),
-        bgcolor=ft.colors.SURFACE_VARIANT
-    )
+    # page.appbar = ft.AppBar(
+    #     title=ft.Text(
+    #         size=18
+    #     ),
+    #     bgcolor=ft.colors.SURFACE_VARIANT
+    # )
