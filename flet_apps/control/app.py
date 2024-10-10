@@ -38,6 +38,15 @@ def main(page: ft.Page):
     set_page_config(page)
     add_elements_to_overlay(page)
 
+    def show_main_drawer(page: ft.Page):
+        page.drawer.open = True
+        page.update()
+
+    page.floating_action_button = ft.FloatingActionButton(
+        icon=ft.icons.TEXT_SNIPPET,
+        on_click=lambda _: show_main_drawer(page)
+    )
+
     def show_content_after_loading(content):
         switch_progress_bar(False, page)
         page.add(content)
@@ -91,10 +100,6 @@ def main(page: ft.Page):
         elif data['sec'] == "app":
             if data['act'] == "exit":
                 change_screen("login")
-
-    def show_main_drawer(page: ft.Page):
-        page.drawer.open = True
-        page.update()
 
     page.drawer = ft.NavigationDrawer(
         controls=[
@@ -215,29 +220,29 @@ def main(page: ft.Page):
 
         page.scroll = screen['scroll']
 
-        if screen['appbar']['visible']:
-            page.appbar.title.value = screen['appbar']['title']
-
-            leading = screen['appbar']['leading']
-            if leading['visible']:
-
-                if leading['action'] == "change_screen":
-                    page.appbar.leading = ft.IconButton(
-                        icon=ft.icons.ARROW_BACK,
-                        on_click=lambda _: change_screen(leading['action_context'])
-                    )
-                elif leading['action'] == "drawer":
-                    page.appbar.leading = ft.IconButton(
-                        icon=ft.icons.MENU,
-                        on_click=lambda _: show_main_drawer(page)
-                    )
-            else:
-                page.appbar.leading = ft.IconButton(
-                    icon=ft.icons.CIRCLE
-                )
-
-        else:
-            page.appbar.visible = False
+        # if screen['appbar']['visible']:
+        #     page.appbar.title.value = screen['appbar']['title']
+        #
+        #     leading = screen['appbar']['leading']
+        #     if leading['visible']:
+        #
+        #         if leading['action'] == "change_screen":
+        #             page.appbar.leading = ft.IconButton(
+        #                 icon=ft.icons.ARROW_BACK,
+        #                 on_click=lambda _: change_screen(leading['action_context'])
+        #             )
+        #         elif leading['action'] == "drawer":
+        #             page.appbar.leading = ft.IconButton(
+        #                 icon=ft.icons.MENU,
+        #                 on_click=lambda _: show_main_drawer(page)
+        #             )
+        #     else:
+        #         page.appbar.leading = ft.IconButton(
+        #             icon=ft.icons.CIRCLE
+        #         )
+        #
+        # else:
+        #     page.appbar.visible = False
 
         if target == "login":
             page.add(get_login_col(
