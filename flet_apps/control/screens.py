@@ -104,8 +104,8 @@ screens_config = {
             'title': "Темы тренировок",
             'leading': {
                 'visible': True,
-                'action': "change_screen",
-                'action_context': "users"
+                'action': "drawer",
+                'action_context': None
             }
         }
     },
