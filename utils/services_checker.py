@@ -68,6 +68,6 @@ def get_system_status():
 
 def restart_service(filename: str):
     try:
-        subprocess.run(['systemctl', 'restart', filename], capture_output=True, text=True)
+        subprocess.run(['sudo', 'systemctl', 'restart', filename], capture_output=True, text=True)
     except Exception as e:
         print(e)
