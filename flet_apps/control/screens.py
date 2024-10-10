@@ -16,7 +16,7 @@ screens_config = {
     'users': {
         'scroll': ScrollMode.AUTO,
         'appbar': {
-            'visible': True,
+            'visible': False,
             'title': "Ученики",
             'leading': {
                 'visible': True,
