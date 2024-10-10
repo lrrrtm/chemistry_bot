@@ -6,8 +6,8 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import aliased
 
-from db.models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
-from db.database import Session
+from models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
+from database import Session
 
 
 @contextmanager
