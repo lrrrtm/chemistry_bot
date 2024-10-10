@@ -26,8 +26,11 @@ from utils.env_updater import update_env_variable
 from utils.services_checker import get_system_status, restart_service
 from utils.user_statistics import get_user_statistics
 
+import logging
+
 load_dotenv()
 
+logging.basicConfig(level=logging.DEBUG)
 
 def main(page: ft.Page):
     set_page_config(page)
@@ -214,6 +217,6 @@ if __name__ == "__main__":
         target=main,
         use_color_emoji=True,
         assets_dir=path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
-        view=None,
+        # view=None,
         port=6001
     )
