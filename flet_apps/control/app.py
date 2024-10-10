@@ -219,7 +219,7 @@ def main(page: ft.Page):
 
         page.update()
 
-    change_screen('system_status')
+    change_screen('users')
 
 
 if __name__ == "__main__":
