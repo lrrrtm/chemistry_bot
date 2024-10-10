@@ -42,10 +42,10 @@ def main(page: ft.Page):
     set_page_config(page)
     add_elements_to_overlay(page)
 
-    page.floating_action_button = ft.FloatingActionButton(
-        icon=ft.icons.MENU,
-        on_click=lambda _: show_main_drawer(page)
-    )
+    # page.floating_action_button = ft.FloatingActionButton(
+    #     icon=ft.icons.MENU,
+    #     on_click=lambda _: show_main_drawer(page)
+    # )
 
     def show_content_after_loading(content):
         switch_progress_bar(False, page)
@@ -101,9 +101,7 @@ def main(page: ft.Page):
             if data['act'] == "exit":
                 change_screen("login")
 
-    page.drawer = get_main_drawer(
-        drawer_element_selected
-    )
+    page.drawer = None
 
     def on_restart_button_clicked(e: ft.ControlEvent):
         show_snack_bar(text_snack_bar, "Сервис перезагружается", page)
