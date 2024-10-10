@@ -26,8 +26,8 @@ def add_elements_to_overlay(page: ft.Page):
 
 def switch_progress_bar(value: bool, page: ft.Page):
     # return
-    if value:
-        page.controls.clear()
+    # if value:
+    #     page.controls.clear()
     global_progress_bar.visible = value
     page.update()
 
