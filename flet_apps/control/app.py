@@ -1,3 +1,7 @@
+import sys
+sys.path.append("/root/repos/chemistry_bot")
+
+
 import time
 from math import pi
 from os import getenv, path
@@ -32,6 +36,8 @@ import logging
 load_dotenv()
 
 logging.basicConfig(level=logging.DEBUG)
+
+
 
 
 def main(page: ft.Page):
