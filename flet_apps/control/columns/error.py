@@ -12,7 +12,7 @@ def get_error_col(page: ft.Page, text: str, disable_scroll: bool, icon_filename:
     col = ft.Column(
         controls=[
             ft.Image(
-                src_base64=image_to_base64_2(f'{getenv('ROOT_FOLDER')}/flet_apps/assets/images/{icon_filename}'),
+                src_base64=image_to_base64_2(f"{getenv('ROOT_FOLDER')}/flet_apps/assets/images/{icon_filename}"),
                 error_content=ft.Icon(ft.icons.ERROR, size=50),
                 height=100,
             ),
