@@ -1,6 +1,6 @@
 import sys
-sys.path.append("/root/repos/chemistry_bot")
 
+sys.path.append("/root/repos/chemistry_bot")
 
 import time
 from math import pi
@@ -18,7 +18,7 @@ from columns.system_status import get_system_status_col
 from columns.user_info import get_user_info_col
 from columns.users_col import get_users_col
 
-# from elements.main_drawer import get_main_drawer, show_main_drawer
+from elements.main_drawer import get_main_drawer, show_main_drawer
 from elements.overlays import add_elements_to_overlay, text_snack_bar, switch_progress_bar
 from elements.page_config import set_page_config
 from elements.snack_bar import show_snack_bar
@@ -38,15 +38,9 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 
-
-
 def main(page: ft.Page):
     set_page_config(page)
     add_elements_to_overlay(page)
-
-    def show_main_drawer(page: ft.Page):
-        page.drawer.open = True
-        page.update()
 
     page.floating_action_button = ft.FloatingActionButton(
         icon=ft.icons.MENU,
@@ -107,78 +101,8 @@ def main(page: ft.Page):
             if data['act'] == "exit":
                 change_screen("login")
 
-    page.drawer = ft.NavigationDrawer(
-        controls=[
-            ft.Container(height=12),
-            ft.ListTile(
-                title=ft.Text("ХимБот", weight=ft.FontWeight.W_400, size=20),
-                leading=ft.Image(src='icons/loading-animation.png', height=30)
-            ),
-            ft.Divider(thickness=1),
-
-            ft.ListTile(
-                title=ft.Text("Ученики"),
-                leading=ft.Icon(ft.icons.GROUPS),
-                data={'sec': "users", 'act': "users"},
-                on_click=drawer_element_selected),
-
-            ft.ExpansionTile(
-                title=ft.Text("База вопросов"),
-                leading=ft.Icon(ft.icons.QUESTION_MARK),
-                expanded_cross_axis_alignment=ft.CrossAxisAlignment.START,
-                controls=[
-                    ft.ListTile(
-                        title=ft.Text("КИМ ЕГЭ"),
-                        # subtitle=ft.Text("Загрузка таблицы с информацией о детях"),
-                        leading=ft.Icon(ft.icons.SCHOOL),
-                        data={'sec': "questions", 'act': "ege"},
-                        on_click=drawer_element_selected),
-                    ft.ListTile(
-                        title=ft.Text("Тренировки"),
-                        # subtitle=ft.Text("Перевод ребёнка в другую группу"),
-                        leading=ft.Icon(ft.icons.CONTENT_PASTE),
-                        data={'sec': "questions", 'act': "topics"},
-                        on_click=drawer_element_selected),
-                ],
-            ),
-            ft.ListTile(
-                title=ft.Text("Темы тренировок"),
-                leading=ft.Icon(ft.icons.TOPIC),
-                data={'sec': "topics", 'act': "topics"},
-                on_click=drawer_element_selected),
-            ft.ExpansionTile(
-                title=ft.Text("Настройки"),
-                leading=ft.Icon(ft.icons.SETTINGS),
-
-                controls=[
-                    ft.ListTile(
-                        title=ft.Text("Изменить пароль"),
-                        leading=ft.Icon(ft.icons.PASSWORD),
-                        data={'sec': "settings", 'act': "change_password"},
-                        on_click=drawer_element_selected
-                    ),
-                    ft.ListTile(
-                        title=ft.Text("Состояние системы"),
-                        leading=ft.Icon(ft.icons.RESTART_ALT),
-                        data={'sec': "settings", 'act': "system_status"},
-                        on_click=drawer_element_selected
-                    ),
-                    ft.ListTile(
-                        title=ft.Text("О приложении"),
-                        leading=ft.Icon(ft.icons.INFO),
-                        data={'sec': "settings", 'act': "app_info"},
-                        on_click=drawer_element_selected
-                    ),
-                ],
-            ),
-            ft.Divider(thickness=1),
-            ft.ListTile(
-                title=ft.Text("Выйти"),
-                leading=ft.Icon(ft.icons.LOGOUT, rotate=pi),
-                data={'sec': "app", 'act': "exit"},
-                on_click=drawer_element_selected),
-
-        ],
+    page.drawer = get_main_drawer(
+        drawer_element_selected
     )
 
     def on_restart_button_clicked(e: ft.ControlEvent):
@@ -226,29 +150,29 @@ def main(page: ft.Page):
 
         page.scroll = screen['scroll']
 
-        # if screen['appbar']['visible']:
-        #     page.appbar.title.value = screen['appbar']['title']
-        #
-        #     leading = screen['appbar']['leading']
-        #     if leading['visible']:
-        #
-        #         if leading['action'] == "change_screen":
-        #             page.appbar.leading = ft.IconButton(
-        #                 icon=ft.icons.ARROW_BACK,
-        #                 on_click=lambda _: change_screen(leading['action_context'])
-        #             )
-        #         elif leading['action'] == "drawer":
-        #             page.appbar.leading = ft.IconButton(
-        #                 icon=ft.icons.MENU,
-        #                 on_click=lambda _: show_main_drawer(page)
-        #             )
-        #     else:
-        #         page.appbar.leading = ft.IconButton(
-        #             icon=ft.icons.CIRCLE
-        #         )
-        #
-        # else:
-        #     page.appbar.visible = False
+        if screen['appbar']['visible']:
+            page.appbar.title.value = screen['appbar']['title']
+
+            leading = screen['appbar']['leading']
+            if leading['visible']:
+
+                if leading['action'] == "change_screen":
+                    page.appbar.leading = ft.IconButton(
+                        icon=ft.icons.ARROW_BACK,
+                        on_click=lambda _: change_screen(leading['action_context'])
+                    )
+                elif leading['action'] == "drawer":
+                    page.appbar.leading = ft.IconButton(
+                        icon=ft.icons.MENU,
+                        on_click=lambda _: show_main_drawer(page)
+                    )
+            else:
+                page.appbar.leading = ft.IconButton(
+                    icon=ft.icons.CIRCLE
+                )
+
+        else:
+            page.appbar.visible = False
 
         if target == "login":
             page.add(get_login_col(
@@ -305,6 +229,6 @@ if __name__ == "__main__":
         target=main,
         use_color_emoji=True,
         assets_dir=path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
-        view=None,
+        # view=None,
         port=6001
     )

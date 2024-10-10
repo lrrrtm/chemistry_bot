@@ -12,7 +12,7 @@ def image_to_base64(question_id):
 
 
 def image_to_base64_2(src: str):
-    return "error"
+    print(src)
     image_path = os.path.join(os.getenv('ROOT_FOLDER'), src)
 
     with open(image_path, "rb") as image_file:
