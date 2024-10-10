@@ -49,7 +49,8 @@ def main(page: ft.Page):
 
     def show_content_after_loading(content):
         switch_progress_bar(False, page)
-        page.add(content)
+        page.controls = [content]
+        page.update()
 
     def update_user_input_password(e: ft.ControlEvent):
         page.session.set(
