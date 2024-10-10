@@ -20,8 +20,8 @@ screens_config = {
             'title': "Ученики",
             'leading': {
                 'visible': True,
-                'action': "drawer",
-                'action_context': None
+                'action': "change_screen",
+                'action_context': "system_status"
             }
         }
     },
