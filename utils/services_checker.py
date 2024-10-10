@@ -1,25 +1,30 @@
 import subprocess
-
+from flet import icons
 services = [
     {
         'name': "База данных",
-        'filename': "mysql.service"
+        'filename': "mysql.service",
+        'flet_icon': icons.DATASET
     },
     {
         'name': "Сервер Nginx",
-        'filename': "nginx.service"
+        'filename': "nginx.service",
+        'flet_icon': icons.COMPUTER
     },
     {
-        'name': "\nTelegram-бот",
-        'filename': "chemistry_bot.service"
+        'name': "Telegram-бот",
+        'filename': "chemistry_bot.service",
+        'flet_icon': icons.TELEGRAM
     },
     {
         'name': "Статистика",
-        'filename': "chemistry_stats.service"
+        'filename': "chemistry_stats.service",
+        'flet_icon': icons.QUERY_STATS
     },
     {
-        'name': "Управление",
-        'filename': "chemistry_control.service"
+        'name': "Панель управления",
+        'filename': "chemistry_control.service",
+        'flet_icon': icons.CONTROL_CAMERA
     }
 ]
 
@@ -42,6 +47,8 @@ def get_system_status():
             service_status = status.stdout.strip()
             result.append(
                 {
+                    'flet_icon': service['flet_icon'],
+                    'filename': service['filename'],
                     'name': service['name'],
                     'status': service_status_translation[service_status]
                 }
@@ -49,6 +56,8 @@ def get_system_status():
         except Exception as e:
             result.append(
                 {
+                    'flet_icon': service['flet_icon'],
+                    'filename': service['filename'],
                     'name': service['name'],
                     'status': service_status_translation['unknown']
                 }
