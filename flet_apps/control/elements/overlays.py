@@ -19,7 +19,7 @@ def add_elements_to_overlay(page: ft.Page):
     :param page:
     :return:
     """
-    page.overlay.append(global_progress_bar)
+    # page.overlay.append(global_progress_bar)
     page.overlay.append(text_snack_bar)
 
 
