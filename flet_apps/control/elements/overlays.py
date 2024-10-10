@@ -19,11 +19,13 @@ def add_elements_to_overlay(page: ft.Page):
     :param page:
     :return:
     """
+    page.snack_bar = text_snack_bar
     # page.overlay.append(global_progress_bar)
-    page.overlay.append(text_snack_bar)
+    # page.overlay.append(text_snack_bar)
 
 
 def switch_progress_bar(value: bool, page: ft.Page):
+    return
     if value:
         page.controls.clear()
     global_progress_bar.visible = value
