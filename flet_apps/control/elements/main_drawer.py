@@ -3,10 +3,10 @@ from math import pi
 import flet as ft
 
 
-def get_main_drawer(on_drawer_el_selected) -> ft.NavigationDrawer:
+def get_main_drawer(drawer_element_selected) -> ft.NavigationDrawer:
     """
     Создание основного drawer с элементами меню
-    :param on_drawer_el_selected: действие при нажатии на элемент drawer
+    :param drawer_element_selected: действие при нажатии на элемент drawer
     :return:
     """
     return ft.NavigationDrawer(
@@ -22,7 +22,7 @@ def get_main_drawer(on_drawer_el_selected) -> ft.NavigationDrawer:
                 title=ft.Text("Ученики"),
                 leading=ft.Icon(ft.icons.GROUPS),
                 data={'sec': "users", 'act': "users"},
-                on_click=on_drawer_el_selected),
+                on_click=drawer_element_selected),
 
             ft.ExpansionTile(
                 title=ft.Text("База вопросов"),
@@ -34,20 +34,20 @@ def get_main_drawer(on_drawer_el_selected) -> ft.NavigationDrawer:
                         # subtitle=ft.Text("Загрузка таблицы с информацией о детях"),
                         leading=ft.Icon(ft.icons.SCHOOL),
                         data={'sec': "questions", 'act': "ege"},
-                        on_click=on_drawer_el_selected),
+                        on_click=drawer_element_selected),
                     ft.ListTile(
                         title=ft.Text("Тренировки"),
                         # subtitle=ft.Text("Перевод ребёнка в другую группу"),
                         leading=ft.Icon(ft.icons.CONTENT_PASTE),
                         data={'sec': "questions", 'act': "topics"},
-                        on_click=on_drawer_el_selected),
+                        on_click=drawer_element_selected),
                 ],
             ),
             ft.ListTile(
                 title=ft.Text("Темы тренировок"),
                 leading=ft.Icon(ft.icons.TOPIC),
                 data={'sec': "topics", 'act': "topics"},
-                on_click=on_drawer_el_selected),
+                on_click=drawer_element_selected),
             ft.ExpansionTile(
                 title=ft.Text("Настройки"),
                 leading=ft.Icon(ft.icons.SETTINGS),
@@ -57,19 +57,19 @@ def get_main_drawer(on_drawer_el_selected) -> ft.NavigationDrawer:
                         title=ft.Text("Изменить пароль"),
                         leading=ft.Icon(ft.icons.PASSWORD),
                         data={'sec': "settings", 'act': "change_password"},
-                        on_click=on_drawer_el_selected
+                        on_click=drawer_element_selected
                     ),
                     ft.ListTile(
                         title=ft.Text("Состояние системы"),
                         leading=ft.Icon(ft.icons.RESTART_ALT),
                         data={'sec': "settings", 'act': "system_status"},
-                        on_click=on_drawer_el_selected
+                        on_click=drawer_element_selected
                     ),
                     ft.ListTile(
                         title=ft.Text("О приложении"),
                         leading=ft.Icon(ft.icons.INFO),
                         data={'sec': "settings", 'act': "app_info"},
-                        on_click=on_drawer_el_selected
+                        on_click=drawer_element_selected
                     ),
                 ],
             ),
@@ -78,7 +78,7 @@ def get_main_drawer(on_drawer_el_selected) -> ft.NavigationDrawer:
                 title=ft.Text("Выйти"),
                 leading=ft.Icon(ft.icons.LOGOUT, rotate=pi),
                 data={'sec': "app", 'act': "exit"},
-                on_click=on_drawer_el_selected),
+                on_click=drawer_element_selected),
 
         ],
     )
