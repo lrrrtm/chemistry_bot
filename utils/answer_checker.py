@@ -12,6 +12,10 @@ def count_matches(correct_answer, user_answer):
 def check_answer(question_data: Pool, user_answer: str) -> int:
     if question_data.type == "ege":
         if question_data.full_mark == 2:
+            
+            if len(user_answer) < len(question_data.answer):
+                user_answer += "*"*(len(user_answer) - len(question_data.answer))
+
             matches = count_matches(question_data.answer, user_answer)
             if matches == len(question_data.answer):
                 return 2
