@@ -20,14 +20,14 @@ def get_users_col(users: List[User], after_user_btn_clicked) -> ft.Column:
                 content=ft.Container(
                     content=ft.Row(
                         controls=[
-                            ft.Container(
-                                content=ft.ListTile(
-                                    leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
-                                    title=ft.Text(user.name),
-                                    subtitle=ft.Text(f"id{user.telegram_id}"),
-                                ),
-                                expand=True,
-                            ),
+                            # ft.Container(
+                            #     content=ft.ListTile(
+                            #         leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+                            #         title=ft.Text(user.name),
+                            #         subtitle=ft.Text(f"id{user.telegram_id}"),
+                            #     ),
+                            #     expand=True,
+                            # ),
                             ft.Container(
                                 content=ft.IconButton(
                                     icon=ft.icons.KEYBOARD_ARROW_RIGHT,
