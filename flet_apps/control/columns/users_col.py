@@ -12,7 +12,12 @@ def get_users_col(users: List[User], after_user_btn_clicked) -> ft.Column:
     :param after_user_btn_clicked: действие при нажатии кнопки перехода к пользователю
     :return: 
     """
-    col = ft.Column()
+    col = ft.Column(
+        controls=[
+            ft.Text("Проверка", size=18)
+        ]
+    )
+    return col
 
     for user in users:
         col.controls.append(
