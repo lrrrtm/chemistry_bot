@@ -202,7 +202,7 @@ def create_new_work(user_id: int, work_type: str, topic_id: int) -> Work:
         return work
 
 
-def insert_work_questions(work: Work, questions_list: list[Pool]):
+def insert_work_questions(work: Work, questions_list: List[Pool]):
     with get_session() as session:
         for question in questions_list:
             pos = int(question.tags_list[-1].split("_")[-1]) if question.type == "ege" else -1
