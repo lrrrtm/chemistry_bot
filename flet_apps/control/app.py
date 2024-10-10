@@ -144,7 +144,7 @@ def main(page: ft.Page):
 
     def change_screen(target: str):
         screen = screens_config[target]
-        page.controls.clear()
+        page.clean()
 
         page.scroll = screen['scroll']
 
