@@ -40,8 +40,6 @@ class Stats(Base):
     last_attempt = Column(Integer, nullable=False, comment='Кол-во баллов за последнюю попытку')
     max_attempt = Column(Integer, nullable=False, comment='Лучший результат')
 
-    # user = relationship("Users", back_populates="stats")
-
 # Таблица 'topics'
 class Topic(Base):
     __tablename__ = 'topics'
@@ -58,8 +56,6 @@ class User(Base):
     telegram_id = Column(BigInteger, nullable=False)
     name = Column(Text, nullable=False)
 
-    # stats = relationship("Stats", back_populates="user")
-
 # Таблица 'works'
 class Work(Base):
     __tablename__ = 'works'
@@ -70,9 +66,6 @@ class Work(Base):
     topic_id = Column(BigInteger, ForeignKey('topics.id'), nullable=False, default=0, comment='id темы, если work_type = topic')
     start_datetime = Column(DateTime, nullable=False, comment='Начало выполнения задания', default=datetime.now)
     end_datetime = Column(DateTime, nullable=False, comment='Окончание выполнения задания')
-
-    # user = relationship("Users")
-    # topic = relationship("Topics")
 
 # Таблица 'work_questions_list'
 class WorkQuestion(Base):
@@ -87,6 +80,3 @@ class WorkQuestion(Base):
     user_mark = Column(Integer, nullable=False)
     start_datetime = Column(DateTime, nullable=False)
     end_datetime = Column(DateTime, nullable=False)
-
-    # work = relationship("Works")
-    # question = relationship("Pool")

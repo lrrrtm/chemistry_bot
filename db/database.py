@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 from os import getenv
 
 load_dotenv()
-print(getenv('DB_USER'))
 DATABASE_URL = f"mysql+mysqlconnector://{getenv('DB_USER')}:{getenv('DB_PASSWORD')}@{getenv('DB_HOST')}:{getenv('DB_PORT')}/{getenv('DB_NAME')}"
 
 engine = create_engine(

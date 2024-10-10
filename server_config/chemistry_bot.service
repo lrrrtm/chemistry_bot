@@ -1,6 +1,7 @@
 [Unit]
 Description=Chemistry Bot Service
-After=network.target
+After=network.target mysql.service
+Requires=mysql.service
 
 [Service]
 User=lartem
