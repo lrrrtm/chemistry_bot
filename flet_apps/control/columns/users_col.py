@@ -50,11 +50,11 @@ def get_users_col(users: List[User], after_user_btn_clicked) -> ft.Column:
                 content=ft.Column(
                     controls=[
                         ft.Text(user.name),
-                        # ft.ElevatedButton(
-                        #     text="Открыть",
-                        #     data=user,
-                        #     on_click=after_user_btn_clicked,
-                        # )
+                        ft.ElevatedButton(
+                            text="Открыть",
+                            data=user,
+                            on_click=after_user_btn_clicked,
+                        )
                     ]
                 ),
                 width=600
