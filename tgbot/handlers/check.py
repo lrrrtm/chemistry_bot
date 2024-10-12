@@ -14,7 +14,7 @@ async def cmd_check(message: types.Message):
         data = get_system_status()
         text_to_send = ""
         for el in data:
-            text_to_send += f"<b>{el['name']}</b>: {el['status']}\n"
+            text_to_send += f"{el['status']}<b>{el['name']}</b>\n"
 
         await message.answer(
             text=f"<b>Состояние системы</b>\n\n{text_to_send}",

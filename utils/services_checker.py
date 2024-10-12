@@ -30,13 +30,13 @@ services = [
 ]
 
 service_status_translation = {
-    "active": "✅ работает",
-    "inactive": "⛔ остановлено",
-    "failed": "⛔ завершено",
-    "activating": "🟡 активируется",
-    "deactivating": "🔴 останавливается",
-    "reloading": "🔄 перезагружается",
-    "unknown": "⛔ неизвестное состояние"
+    "active": "🟢",
+    "inactive": "⛔",
+    "failed": "⛔",
+    "activating": "🟡",
+    "deactivating": "🔴",
+    "reloading": "🔄",
+    "unknown": "⛔"
 }
 
 

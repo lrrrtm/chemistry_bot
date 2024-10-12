@@ -133,9 +133,9 @@ def get_question_from_pool(question_id: int) -> Pool:
         return question
 
 
-def get_work_by_url_data(user_id: int, telegram_id: int, work_id: int) -> Work:
+def get_work_by_url_data(user_id: str, telegram_id: str, work_id: str) -> Work:
     with get_session() as session:
-        work = session.query(Work).filter_by(id=work_id, user_id=user_id).first()
+        work = session.query(Work).filter_by(id=int(work_id), user_id=int(user_id)).first()
         return work
 
 

@@ -11,8 +11,8 @@ from os import getenv
 from urllib.parse import urlparse, parse_qs
 import flet as ft
 from utils.user_statistics import get_user_statistics
-from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_user
-from db.models import Work, WorkQuestion
+from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_user, get_all_users
+from db.models import Work, WorkQuestion, User
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -155,13 +155,6 @@ def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool =
                 content=ft.Container(
                     content=ft.Column(
                         controls=[
-                            # ft.Container(
-                            #     ft.ListTile(
-                            #         leading=ft.Icon(ft.icons.CIRCLE, color=card_color),
-                            #         title=ft.Text(f"№{index + 1}"),
-                            #     ),
-                            #     padding=ft.padding.only(top=-25)
-                            # ),
                             ft.Container(ft.Row(
                                 [ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1}", size=18)]),
                                 padding=ft.padding.only(left=10, top=10)),
@@ -183,8 +176,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool =
                                 ),
                             )
                         ]
-                    ),
-                    # padding=ft.padding.only(left=-5, bottom=10, top=10, right=10)
+                    )
                 ),
                 surface_tint_color=card_color,
             )
@@ -211,7 +203,146 @@ def main(page: ft.Page):
 
     page.theme_mode = ft.ThemeMode.DARK
 
-    url_params = {key: int(value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
+    loading_bar = ft.ProgressBar(visible=False)
+    page.overlay.append(loading_bar)
+
+    def switch_loading(value: bool):
+        loading_bar.visible = value
+
+        page.update()
+
+    def open_users_list():
+        page.controls.clear()
+        switch_loading(True)
+
+        users = get_all_users()
+
+        col = ft.Column(
+            width=600
+        )
+        for user in users:
+            col.controls.append(
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Container(
+                                    content=ft.ListTile(
+                                        leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+                                        title=ft.Text(user.name),
+                                        subtitle=ft.Text(f"id{user.id}"),
+                                    ),
+                                    padding=ft.padding.only(left=-15),
+                                    expand=True
+                                ),
+                                ft.IconButton(
+                                    icon=ft.icons.KEYBOARD_ARROW_RIGHT,
+                                    data=user,
+                                    on_click=open_user_info,
+                                    tooltip="Профиль пользователя"
+                                ),
+                            ]
+                        ),
+                        padding=15
+                    )
+                )
+            )
+
+        page.add(col)
+        switch_loading(False)
+
+    def open_user_info(e: ft.ControlEvent):
+        page.controls.clear()
+        switch_loading(True)
+
+        user = e.control.data
+        stats = get_user_statistics(user.telegram_id)
+
+        col = ft.Column(
+            controls=[
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.IconButton(
+                                    icon=ft.icons.KEYBOARD_ARROW_LEFT,
+                                    tooltip="Назад",
+                                    on_click=lambda _: open_users_list()
+                                ),
+                                ft.Container(
+                                    content=ft.ListTile(
+                                        leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+                                        title=ft.Text(user.name),
+                                        subtitle=ft.Text(f"всего тренировок: {len(stats)}"),
+                                    ),
+                                    padding=ft.padding.only(left=-15),
+                                    expand=True
+                                )
+                            ]
+                        ),
+                        padding=15
+                    )
+                ),
+                ft.Divider(thickness=1)
+            ],
+            width=600
+        )
+
+        if stats:
+            for el in stats:
+                col.controls.append(
+                    ft.Card(
+                        content=ft.Container(
+                            content=ft.Row(
+                                controls=[
+                                    ft.Container(
+                                        content=ft.ListTile(
+                                            leading=ft.Icon(ft.icons.TOPIC),
+                                            title=ft.Text(el['general']['name']),
+                                            subtitle=ft.Text(
+                                                f"{el['general']['time']['end'].strftime('%d.%m.%Y в %H:%M')}"),
+                                        ),
+                                        padding=ft.padding.only(left=-15),
+                                        expand=True
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.icons.KEYBOARD_ARROW_RIGHT,
+                                        url_target="_self",
+                                        url=f"{getenv('STATS_HOST')}/stats?uuid={user.id}&tid={user.telegram_id}&work={el['general']['work_id']}&detailed=1",
+                                        tooltip="Перейти к статистике",
+                                    ),
+                                ]
+                            ),
+                            padding=15
+                        )
+                    )
+                )
+
+        else:
+            col.controls.append(
+                ft.Column(
+                    alignment="center",
+                    horizontal_alignment="center",
+                    controls=[
+                        ft.Image(
+                            src=f"/images/tubes.png",
+                            error_content=ft.Icon(ft.icons.ERROR, size=50),
+                            height=120
+                        ),
+                        ft.Text("Завершённых тренировок пока нет", size=16)
+                    ],
+                    width=600
+                )
+            )
+
+        page.add(col)
+        switch_loading(False)
+
+    # page.route = "/stats?uuid=1&tid=409801981&work=11"
+    # page.route = "/stats?uuid=1&tid=409801981&work=11&detailed=1"
+    # page.route = "/stats?akey=developer"
+
+    url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
     if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
                                                                                           url_params['tid'],
@@ -222,8 +353,8 @@ def main(page: ft.Page):
 
         page.scroll = ft.ScrollMode.AUTO
 
-        all_stats = get_user_statistics(url_params['tid'])
-        work_stats = [s for s in all_stats if s['general']['work_id'] == url_params['work']][-1]
+        all_stats = get_user_statistics(int(url_params['tid']))
+        work_stats = [s for s in all_stats if s['general']['work_id'] == int(url_params['work'])][-1]
         questions_list = get_work_questions_joined_pool(int(url_params['work']))
 
         detailed = False
@@ -240,6 +371,16 @@ def main(page: ft.Page):
 
         page.controls = [main_col]
         page.update()
+
+    elif 'akey' in url_params:
+        auth_key = url_params['akey']
+
+        # todo: логика создания и проверки ключа авторизации
+        if auth_key == "developer":
+            page.scroll = ft.ScrollMode.AUTO
+
+            open_users_list()
+
     else:
         col = get_info_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback",
                               icon_filename='error.png')
@@ -250,6 +391,6 @@ if __name__ == "__main__":
     ft.app(
         target=main,
         assets_dir=os.path.join(getenv('ROOT_FOLDER'), "flet_apps/assets"),
-        view=None,
+        view=ft.AppView.WEB_BROWSER,
         port=6002
     )
