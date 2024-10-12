@@ -307,7 +307,6 @@ def main(page: ft.Page):
                                     ),
                                     ft.IconButton(
                                         icon=ft.icons.KEYBOARD_ARROW_RIGHT,
-                                        url_target="_self",
                                         url=f"{getenv('STATS_HOST')}/stats?uuid={user.id}&tid={user.telegram_id}&work={el['general']['work_id']}&detailed=1",
                                         tooltip="Перейти к статистике",
                                     ),
