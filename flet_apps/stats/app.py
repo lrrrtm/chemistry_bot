@@ -264,10 +264,13 @@ def main(page: ft.Page):
                     content=ft.Container(
                         content=ft.Row(
                             controls=[
-                                ft.IconButton(
-                                    icon=ft.icons.KEYBOARD_ARROW_LEFT,
-                                    tooltip="Назад",
-                                    on_click=lambda _: open_users_list()
+                                ft.Container(
+                                    ft.IconButton(
+                                        icon=ft.icons.KEYBOARD_ARROW_LEFT,
+                                        tooltip="Назад",
+                                        on_click=lambda _: open_users_list()
+                                    ),
+                                    padding=ft.padding.only(left=-15)
                                 ),
                                 ft.Container(
                                     content=ft.ListTile(
