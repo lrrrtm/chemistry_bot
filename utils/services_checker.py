@@ -22,11 +22,11 @@ services = [
         'filename': "chemistry_stats.service",
         'flet_icon': icons.QUERY_STATS
     },
-    {
-        'name': "Панель управления",
-        'filename': "chemistry_control.service",
-        'flet_icon': icons.CONTROL_CAMERA
-    }
+    # {
+    #     'name': "Панель управления",
+    #     'filename': "chemistry_control.service",
+    #     'flet_icon': icons.CONTROL_CAMERA
+    # }
 ]
 
 service_status_translation = {
