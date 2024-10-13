@@ -1,3 +1,5 @@
+from os import getenv
+
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
@@ -92,7 +94,7 @@ def get_view_result_kb(user: User, work_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['view_results'],
-        url=f"http://31.134.153.162:7002/stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
+        url=f"{getenv('STATS_HOST')}/stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
     )
 
     builder.adjust(1)

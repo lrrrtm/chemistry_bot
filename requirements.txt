@@ -3,3 +3,4 @@ aiogram~=3.13.1
 python-dotenv~=1.0.1
 mysql-connector-python~=9.0.0
 flet~=0.24.1
+redis~=5.1.1

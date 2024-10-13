@@ -3,6 +3,7 @@ import os
 import time
 from typing import List
 
+from redis_db.crud import get_value
 from utils.image_converter import image_to_base64
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -27,7 +28,7 @@ def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool
                 width=150
             ),
             ft.Text(caption, size=16,
-                    text_align=ft.TextAlign.LEFT),
+                    text_align=ft.TextAlign.CENTER),
             ft.ProgressBar(
                 visible=progress_bar_visible,
                 width=100
@@ -230,10 +231,11 @@ def main(page: ft.Page):
                                     content=ft.ListTile(
                                         leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
                                         title=ft.Text(user.name),
-                                        subtitle=ft.Text(f"id{user.id}"),
+                                        subtitle=ft.Text(f"id{user.telegram_id}"),
                                     ),
-                                    padding=ft.padding.only(left=-15),
-                                    expand=True
+                                    # padding=ft.padding.only(left=-15),
+                                    expand=True,
+                                    # bgcolor=ft.colors.RED
                                 ),
                                 ft.IconButton(
                                     icon=ft.icons.KEYBOARD_ARROW_RIGHT,
@@ -243,7 +245,7 @@ def main(page: ft.Page):
                                 ),
                             ]
                         ),
-                        padding=15
+                        padding=ft.padding.only(right=15)
                     )
                 )
             )
@@ -270,7 +272,7 @@ def main(page: ft.Page):
                                         tooltip="Назад",
                                         on_click=lambda _: open_users_list()
                                     ),
-                                    padding=ft.padding.only(left=-15)
+                                    # padding=ft.padding.only(left=-15)
                                 ),
                                 ft.Container(
                                     content=ft.ListTile(
@@ -283,7 +285,7 @@ def main(page: ft.Page):
                                 )
                             ]
                         ),
-                        padding=15
+                        padding=ft.padding.only(left=15)
                     )
                 ),
                 ft.Divider(thickness=1)
@@ -342,7 +344,7 @@ def main(page: ft.Page):
 
     # page.route = "/stats?uuid=1&tid=409801981&work=11"
     # page.route = "/stats?uuid=1&tid=409801981&work=11&detailed=1"
-    # page.route = "/stats?akey=developer"
+    page.route = "/stats?auth_key=develop&admin_id=develop"
 
     url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
@@ -374,17 +376,12 @@ def main(page: ft.Page):
         page.controls = [main_col]
         page.update()
 
-    elif 'akey' in url_params:
-        auth_key = url_params['akey']
-
-        # todo: логика создания и проверки ключа авторизации
-        if auth_key == "developer":
-            page.scroll = ft.ScrollMode.AUTO
-
-            open_users_list()
+    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']):
+        page.scroll = ft.ScrollMode.AUTO
+        open_users_list()
 
     else:
-        col = get_info_column("Некорректная ссылка, попробуй ещё раз или напиши в поддержку через команду /feedback",
+        col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
                               icon_filename='error.png')
         page.add(col)
 

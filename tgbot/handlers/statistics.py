@@ -1,4 +1,5 @@
 from datetime import datetime
+from os import getenv
 
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -41,7 +42,8 @@ async def cmd_stats(message: Message, state: FSMContext):
                 stats_el['general']['work_id'],
                 stats_el['results']['final_mark'],
                 stats_el['results']['max_mark'],
-                stats_el['general']['time']['end'] - stats_el['general']['time']['start']
+                stats_el['general']['time']['end'] - stats_el['general']['time']['start'],
+                getenv('STATS_HOST')
             )
 
         text_to_send += lexicon['statistics']['hint_to_open_stats']
