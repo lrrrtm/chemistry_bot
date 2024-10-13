@@ -344,10 +344,11 @@ def main(page: ft.Page):
 
     # page.route = "/stats?uuid=1&tid=409801981&work=11"
     # page.route = "/stats?uuid=1&tid=409801981&work=11&detailed=1"
-    # page.route = "/stats?auth_key=develop&admin_id=develop"
+    # page.route = "/stats?auth_key=1ede7cee14d32e1fb1b258ae669c17ef1c6e9aaa4b294b9746fa1aa61a36efda&admin_id=409801981"
 
     url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
+    print(get_value(url_params['admin_id']))
     if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
                                                                                           url_params['tid'],
                                                                                           url_params['work']):
@@ -375,6 +376,7 @@ def main(page: ft.Page):
 
         page.controls = [main_col]
         page.update()
+
 
     elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == url_params['auth_key']:
         page.scroll = ft.ScrollMode.AUTO

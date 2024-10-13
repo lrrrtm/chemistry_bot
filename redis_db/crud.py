@@ -17,7 +17,10 @@ def set_temporary_key(key, value, expire_time: int = 300):
 
 def get_value(key):
     with create_connection() as rd:
-        return rd.get(key)
+        value = rd.get(key)
+        if value is not None:
+            return value.decode('utf-8')
+        return None
 
 
 def delete_key(key):
