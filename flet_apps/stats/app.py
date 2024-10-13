@@ -376,7 +376,7 @@ def main(page: ft.Page):
         page.controls = [main_col]
         page.update()
 
-    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']):
+    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == url_params['auth_key']:
         page.scroll = ft.ScrollMode.AUTO
         open_users_list()
 
