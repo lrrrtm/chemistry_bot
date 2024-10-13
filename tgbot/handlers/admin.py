@@ -30,7 +30,7 @@ def get_admin_auth_key(message: types.Message) -> str:
 
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
-    if message.chat.id == int(getenv('FBACK_GROUP_ID')):
+    if message.chat.id in [int(getenv('FBACK_GROUP_ID')), int(getenv('ADMIN_ID'))]:
         await message.answer(
             text="<b>Панель управления</b>",
             reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message), message.from_user.id)
@@ -43,10 +43,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
     await callback.answer()
     volume = callback_data.volume
 
-    if volume == "create_topic_work":
-        pass
-
-    elif volume == "system_status":
+    if volume == "system_status":
         data = get_system_status()
 
         await callback.message.edit_text(

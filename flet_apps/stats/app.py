@@ -1,7 +1,10 @@
 import sys
 import os
 import time
+from itertools import chain
 from typing import List
+
+from select import select
 
 from redis_db.crud import get_value
 from utils.image_converter import image_to_base64
@@ -12,7 +15,7 @@ from os import getenv
 from urllib.parse import urlparse, parse_qs
 import flet as ft
 from utils.user_statistics import get_user_statistics
-from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_user, get_all_users
+from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_user, get_all_users, get_all_tags
 from db.models import Work, WorkQuestion, User
 from dotenv import load_dotenv
 
@@ -212,6 +215,77 @@ def main(page: ft.Page):
 
         page.update()
 
+    def change_count_of_questions(e: ft.ControlEvent):
+        data = e.control.data
+        tag = data['tag']
+
+        config = page.session.get("new_topic_work_config")
+
+        if e.control.value:
+            if str(e.control.value).isnumeric():
+                config[tag] = int(e.control.value)
+        else:
+            config.pop(tag)
+
+        page.session.set(
+            "new_topic_work_config",
+            config,
+        )
+
+    def open_new_worK_list():
+        page.controls.clear()
+        switch_loading(True)
+
+        tags_list = get_all_tags()
+
+        tags_list = [el for el in list(set(chain.from_iterable(tags_list))) if 'ege' not in el]
+        tags_list.sort(key=lambda el: el)
+
+        col = ft.Column(
+            width=600
+        )
+        for tag in tags_list:
+            col.controls.append(
+                ft.Container(
+                    ft.Row(
+                        controls=[
+                            ft.Container(
+                                content=ft.ListTile(
+                                    leading=ft.Icon(ft.icons.TOPIC),
+                                    title=ft.Text(tag),
+                                ),
+                                expand=True,
+                            ),
+                            ft.TextField(
+                                width=50,
+                                value='0',
+                                on_change=change_count_of_questions,
+                                data={
+                                    'tag': tag
+                                },
+                                text_align=ft.TextAlign.CENTER,
+                            )
+                        ]
+                    ),
+                    padding=ft.padding.only(right=15)
+                )
+            )
+            # col.controls.append(ft.Divider(thickness=1))
+
+        page.appbar = ft.AppBar(
+            title=ft.Text("Создание тренировки", size=18),
+            actions=[
+                ft.IconButton(
+                    icon=ft.icons.IOS_SHARE,
+                    on_click=lambda _: print(page.session.get('new_topic_work_config'))
+                ),
+            ],
+            bgcolor=ft.colors.SURFACE_VARIANT
+        )
+
+        page.add(col)
+        switch_loading(False)
+
     def open_users_list():
         page.controls.clear()
         switch_loading(True)
@@ -221,6 +295,7 @@ def main(page: ft.Page):
         col = ft.Column(
             width=600
         )
+        page.scroll = ft.ScrollMode.AUTO
         for user in users:
             col.controls.append(
                 ft.Card(
@@ -250,6 +325,11 @@ def main(page: ft.Page):
                 )
             )
 
+        page.appbar = ft.AppBar(
+            title=ft.Text("Статистика учеников", size=18),
+            bgcolor=ft.colors.SURFACE_VARIANT
+        )
+
         page.add(col)
         switch_loading(False)
 
@@ -261,39 +341,11 @@ def main(page: ft.Page):
         stats = get_user_statistics(user.telegram_id)
 
         col = ft.Column(
-            controls=[
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    ft.IconButton(
-                                        icon=ft.icons.KEYBOARD_ARROW_LEFT,
-                                        tooltip="Назад",
-                                        on_click=lambda _: open_users_list()
-                                    ),
-                                    # padding=ft.padding.only(left=-15)
-                                ),
-                                ft.Container(
-                                    content=ft.ListTile(
-                                        leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
-                                        title=ft.Text(user.name),
-                                        subtitle=ft.Text(f"всего тренировок: {len(stats)}"),
-                                    ),
-                                    padding=ft.padding.only(left=-15),
-                                    expand=True
-                                )
-                            ]
-                        ),
-                        padding=ft.padding.only(left=15)
-                    )
-                ),
-                ft.Divider(thickness=1)
-            ],
             width=600
         )
 
         if stats:
+            page.scroll = ft.ScrollMode.AUTO
             for el in stats:
                 col.controls.append(
                     ft.Card(
@@ -323,21 +375,23 @@ def main(page: ft.Page):
                 )
 
         else:
-            col.controls.append(
-                ft.Column(
-                    alignment="center",
-                    horizontal_alignment="center",
-                    controls=[
-                        ft.Image(
-                            src=f"/images/tubes.png",
-                            error_content=ft.Icon(ft.icons.ERROR, size=50),
-                            height=120
-                        ),
-                        ft.Text("Завершённых тренировок пока нет", size=16)
-                    ],
-                    width=600
+            page.scroll = None
+            page.horizontal_alignment = "center"
+            page.add(
+                get_info_column(
+                    caption="Завершённых тренировок пока нет",
+                    icon_filename="tubes.png"
                 )
             )
+
+        page.appbar = ft.AppBar(
+            title=ft.Text(user.name, size=18),
+            bgcolor=ft.colors.SURFACE_VARIANT,
+            leading=ft.IconButton(
+                icon=ft.icons.ARROW_BACK,
+                on_click=lambda _: open_users_list()
+            )
+        )
 
         page.add(col)
         switch_loading(False)
@@ -345,45 +399,67 @@ def main(page: ft.Page):
     # page.route = "/stats?uuid=1&tid=409801981&work=11"
     # page.route = "/stats?uuid=1&tid=409801981&work=11&detailed=1"
     # page.route = "/stats?auth_key=1ede7cee14d32e1fb1b258ae669c17ef1c6e9aaa4b294b9746fa1aa61a36efda&admin_id=409801981"
+    # page.route = "/create-topic?auth_key=develop&admin_id=develop"
 
+    path = urlparse(page.route).path
     url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
-    if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
-                                                                                          url_params['tid'],
-                                                                                          url_params['work']):
-        col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
-        page.add(col)
-        time.sleep(1)
+    if path == "/stats":
+        if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
+                                                                                              url_params['tid'],
+                                                                                              url_params['work']):
+            col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
+            page.add(col)
+            time.sleep(1)
 
-        page.scroll = ft.ScrollMode.AUTO
+            page.scroll = ft.ScrollMode.AUTO
 
-        all_stats = get_user_statistics(int(url_params['tid']))
-        work_stats = [s for s in all_stats if s['general']['work_id'] == int(url_params['work'])][-1]
-        questions_list = get_work_questions_joined_pool(int(url_params['work']))
+            all_stats = get_user_statistics(int(url_params['tid']))
+            work_stats = [s for s in all_stats if s['general']['work_id'] == int(url_params['work'])][-1]
+            questions_list = get_work_questions_joined_pool(int(url_params['work']))
 
-        detailed = False
-        if 'detailed' in url_params:
-            detailed = bool(url_params['detailed'])
+            detailed = False
+            if 'detailed' in url_params:
+                detailed = bool(url_params['detailed'])
 
-        main_col = ft.Column(
-            controls=[
-                get_general_info_card(work_stats, detailed=detailed),
-                get_questions_info_card(questions_list, detailed=detailed)
-            ],
-            width=700
-        )
+            main_col = ft.Column(
+                controls=[
+                    get_general_info_card(work_stats, detailed=detailed),
+                    get_questions_info_card(questions_list, detailed=detailed)
+                ],
+                width=700
+            )
 
-        page.controls = [main_col]
-        page.update()
+            page.controls = [main_col]
+            page.update()
 
 
-    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == url_params[
-        'auth_key']:
-        page.scroll = ft.ScrollMode.AUTO
-        open_users_list()
+        elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == \
+                url_params[
+                    'auth_key']:
+            page.scroll = ft.ScrollMode.AUTO
+            open_users_list()
 
+        else:
+            col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+                                  icon_filename='error.png')
+            page.add(col)
+
+    elif path == "/create-topic":
+        if all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == \
+                url_params[
+                    'auth_key']:
+            page.scroll = ft.ScrollMode.AUTO
+
+            page.session.set('new_topic_work_config', {})
+            open_new_worK_list()
+
+        else:
+            col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
+                                  icon_filename='error.png')
+            page.add(col)
     else:
-        col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+        col = get_info_column("Такой страницы не существует",
                               icon_filename='error.png')
         page.add(col)
 

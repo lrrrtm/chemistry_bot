@@ -4,6 +4,7 @@ from pydoc_data.topics import topics
 from typing import List
 from contextlib import contextmanager
 
+from sqlalchemy import select, func
 from sqlalchemy.orm import aliased
 
 from db.models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
@@ -105,6 +106,11 @@ def get_all_topics() -> List[Topic]:
         topics = session.query(Topic).all()
         return topics
 
+def get_all_tags() -> List[str]:
+    with get_session() as session:
+        stmt = select(Topic.tags_list)
+        tags_lists = session.execute(stmt).scalars().all()
+        return tags_lists
 
 def get_all_users() -> List[User]:
     with get_session() as session:
@@ -259,3 +265,5 @@ def get_output_mark(input_mark: int):
     with get_session() as session:
         data = session.query(Converting).filter_by(input_mark=input_mark).first()
         return data.output_mark
+
+print(get_all_tags())
