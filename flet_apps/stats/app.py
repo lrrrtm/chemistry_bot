@@ -344,7 +344,7 @@ def main(page: ft.Page):
 
     # page.route = "/stats?uuid=1&tid=409801981&work=11"
     # page.route = "/stats?uuid=1&tid=409801981&work=11&detailed=1"
-    page.route = "/stats?auth_key=develop&admin_id=develop"
+    # page.route = "/stats?auth_key=develop&admin_id=develop"
 
     url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
