@@ -348,7 +348,6 @@ def main(page: ft.Page):
 
     url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
-    print(get_value(url_params['admin_id']))
     if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
                                                                                           url_params['tid'],
                                                                                           url_params['work']):
@@ -378,7 +377,8 @@ def main(page: ft.Page):
         page.update()
 
 
-    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == url_params['auth_key']:
+    elif all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == url_params[
+        'auth_key']:
         page.scroll = ft.ScrollMode.AUTO
         open_users_list()
 
