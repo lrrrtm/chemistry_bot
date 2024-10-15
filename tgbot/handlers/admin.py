@@ -22,12 +22,12 @@ from utils.services_checker import get_system_status
 router = Router()
 
 
-def get_admin_auth_key(message: types.Message) -> str:
-    input_string = f"{datetime.utcnow()}{message.from_user.id}"
+def get_admin_auth_key(telegram_id: int) -> str:
+    input_string = f"{datetime.utcnow()}{telegram_id}"
     key = hashlib.sha256(input_string.encode()).hexdigest()
 
     set_temporary_key(
-        key=str(message.from_user.id),
+        key=str(telegram_id),
         value=key
     )
 
@@ -39,7 +39,7 @@ async def cmd_admin(message: types.Message):
     if message.chat.id in [int(getenv('FBACK_GROUP_ID')), int(getenv('ADMIN_ID'))]:
         await message.answer(
             text="<b>Панель управления</b>",
-            reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message), message.from_user.id)
+            reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message.from_user.id), message.from_user.id)
         )
 
 
@@ -64,7 +64,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
             text="<b>База данных</b>"
         )
         await callback.message.edit_reply_markup(
-            reply_markup=get_admin_db_kb(get_admin_auth_key(callback.message), callback.from_user.id)
+            reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
         )
 
     elif volume == "update_topics_list":
