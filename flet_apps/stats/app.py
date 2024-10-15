@@ -610,6 +610,14 @@ def main(page: ft.Page):
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
 
+    def error_404():
+        page.controls.clear()
+        page.scroll = None
+        page.title = "404"
+        col = get_info_column("Такой страницы не существует",
+                              icon_filename='error.png')
+        page.add(col)
+
     def navigate(e=None):
         path = urlparse(page.route).path
         url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
@@ -637,10 +645,7 @@ def main(page: ft.Page):
                     open_ege_marks_list()
 
                 else:
-                    page.title = "404"
-                    col = get_info_column("Такой страницы не существует",
-                                          icon_filename='error.png')
-                    page.add(col)
+                    error_404()
 
             else:
                 col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
@@ -679,10 +684,7 @@ def main(page: ft.Page):
                     page.update()
 
                 else:
-                    page.title = "404"
-                    col = get_info_column("Такой страницы не существует",
-                                          icon_filename='error.png')
-                    page.add(col)
+                    error_404()
 
             else:
                 col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
@@ -690,10 +692,7 @@ def main(page: ft.Page):
                 page.add(col)
 
         else:
-            page.title = "404"
-            col = get_info_column("Такой страницы не существует",
-                                  icon_filename='error.png')
-            page.add(col)
+            error_404()
 
     page.on_connect = navigate
     navigate()
