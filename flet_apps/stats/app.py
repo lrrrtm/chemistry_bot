@@ -27,6 +27,7 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
+
 # set_temporary_key(
 #     'develop',
 #     'develop',
@@ -609,7 +610,7 @@ def main(page: ft.Page):
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
 
-    def navigate(e = None):
+    def navigate(e=None):
         path = urlparse(page.route).path
         url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
@@ -635,18 +636,25 @@ def main(page: ft.Page):
 
                     open_ege_marks_list()
 
+                else:
+                    page.title = "404"
+                    col = get_info_column("Такой страницы не существует",
+                                          icon_filename='error.png')
+                    page.add(col)
+
             else:
                 col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
                                       icon_filename='error.png')
                 page.add(col)
 
         elif re.match(r"^/student/.*", path) is not None:
-            if volume == "view-stats":
-                page.title = "Результат тренировки"
-                if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
-                                                                                                      url_params['tid'],
-                                                                                                      url_params['work']):
-                    col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
+            if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
+                                                                                                  url_params['tid'],
+                                                                                                  url_params['work']):
+                if volume == "view-stats":
+                    page.title = "Результат тренировки"
+                    col = get_info_column("Загружаем информацию", progress_bar_visible=True,
+                                          icon_filename='loading.png')
                     page.add(col)
 
                     page.scroll = ft.ScrollMode.AUTO
@@ -671,9 +679,15 @@ def main(page: ft.Page):
                     page.update()
 
                 else:
-                    col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+                    page.title = "404"
+                    col = get_info_column("Такой страницы не существует",
                                           icon_filename='error.png')
                     page.add(col)
+
+            else:
+                col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+                                      icon_filename='error.png')
+                page.add(col)
 
         else:
             page.title = "404"
@@ -681,9 +695,9 @@ def main(page: ft.Page):
                                   icon_filename='error.png')
             page.add(col)
 
-
     page.on_connect = navigate
     navigate()
+
 
 if __name__ == "__main__":
     ft.app(
