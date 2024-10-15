@@ -39,14 +39,15 @@ async def cmd_stats(message: Message, state: FSMContext):
                 get_user(message.from_user.id).id,
                 message.from_user.id,
                 stats_el['general']['work_id'],
-                stats_el['general']['work_id'],
+                '',
+                # stats_el['general']['work_id'],
                 stats_el['results']['final_mark'],
                 stats_el['results']['max_mark'],
                 stats_el['general']['time']['end'] - stats_el['general']['time']['start'],
                 getenv('STATS_HOST')
             )
 
-        text_to_send += lexicon['statistics']['hint_to_open_stats']
+        # text_to_send += lexicon['statistics']['hint_to_open_stats']
         await message.answer(text_to_send)
 
     else:

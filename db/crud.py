@@ -7,8 +7,9 @@ from contextlib import contextmanager
 from sqlalchemy import select, func
 from sqlalchemy.orm import aliased
 
-from db.models import Pool, Stats, Topic, User, Work, WorkQuestion, Converting
+from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
 from db.database import Session
+from utils.tags_helper import get_random_questions
 
 
 @contextmanager
@@ -106,21 +107,31 @@ def get_all_topics() -> List[Topic]:
         topics = session.query(Topic).all()
         return topics
 
+
 def get_all_tags() -> List[str]:
     with get_session() as session:
         stmt = select(Topic.tags_list)
         tags_lists = session.execute(stmt).scalars().all()
         return tags_lists
 
+
 def get_all_users() -> List[User]:
     with get_session() as session:
         users = session.query(User).all()
         return users
 
+
+def get_all_questions() -> List[Pool]:
+    with get_session() as session:
+        data = session.query(Pool).all()
+        return data
+
+
 def get_user(telegram_id: int) -> User:
     with get_session() as session:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
         return user
+
 
 def get_work_questions(work_id: int) -> List[WorkQuestion]:
     with get_session() as session:
@@ -179,8 +190,9 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
             limit = tag_data['limit']
 
             t = tag
-            if "ege" in tag:
-                t = [tag]
+            # todo: разобраться
+            # if "ege" in tag:
+            #     t = [tag]
 
             questions = session.query(Pool).filter(Pool.tags_list.contains(t)).all()
             if tag_data['limit'] is not None:
@@ -195,12 +207,13 @@ def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
         return selected_questions
 
 
-def create_new_work(user_id: int, work_type: str, topic_id: int) -> Work:
+def create_new_work(user_id: int, work_type: str, topic_id: int, hand_work_id: str = None) -> Work:
     with get_session() as session:
         work = Work(
             user_id=user_id,
             work_type=work_type,
-            topic_id=topic_id
+            topic_id=topic_id,
+            hand_work_id=hand_work_id
         )
         session.add(work)
         session.commit()
@@ -210,8 +223,8 @@ def create_new_work(user_id: int, work_type: str, topic_id: int) -> Work:
 
 def insert_work_questions(work: Work, questions_list: List[Pool]):
     with get_session() as session:
-        for question in questions_list:
-            pos = int(question.tags_list[-1].split("_")[-1]) if question.type == "ege" else -1
+        for index, question in enumerate(questions_list):
+            pos = index + 1
 
             q = WorkQuestion(
                 work_id=work.id,
@@ -231,12 +244,13 @@ def update_question_status(q_id: int, status: str):
         session.commit()
 
 
-def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime):
+def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime, start_datetime: datetime = None):
     with get_session() as session:
         q = session.query(WorkQuestion).filter_by(id=q_id).first()
         q.status = "answered"
         q.user_answer = user_answer
         q.user_mark = user_mark
+        q.start_datetime=start_datetime
         q.end_datetime = end_datetime
 
         session.commit()
@@ -266,4 +280,43 @@ def get_output_mark(input_mark: int):
         data = session.query(Converting).filter_by(input_mark=input_mark).first()
         return data.output_mark
 
-print(get_all_tags())
+
+def insert_new_hand_work(name: str, identificator: str, questions_ids_list: list) -> HandWork:
+    with get_session() as session:
+        w = HandWork(
+            name=name,
+            identificator=identificator,
+            questions_list=questions_ids_list
+
+        )
+        session.add(w)
+        session.commit()
+        return w
+
+
+def get_hand_work(identificator: str) -> HandWork:
+    with get_session() as session:
+        data = session.query(HandWork).filter_by(identificator=identificator).first()
+        return data
+
+
+def get_questions_list_by_id(ids_list: List[int]) -> List[Pool]:
+    result = []
+    with get_session() as session:
+        for q_id in ids_list:
+            q = session.query(Pool).filter_by(id=q_id).first()
+            result.append(q)
+
+        return result
+
+def get_ege_converting() -> List[Converting]:
+    with get_session() as session:
+        data = session.query(Converting).all()
+        return data
+
+def update_ege_converting(data: dict):
+    with get_session() as session:
+        for key, value in data.items():
+            el = session.query(Converting).filter_by(id=key).first()
+            el.output_mark = value['value']
+            session.commit()

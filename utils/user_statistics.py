@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool,
-                     get_output_mark)
+                     get_output_mark, get_hand_work)
 from db.models import WorkQuestion
 from utils.mark_converter import convert_ege_mark
 
@@ -48,8 +48,10 @@ def get_user_statistics(telegram_id: int):
         if work.work_type == "topic":
             topic = get_topic_by_id(work.topic_id)
             work_stats['general']['name'] = topic.name
-        else:
+        elif work.work_type == "ege":
             work_stats['general']['name'] = "КИМ ЕГЭ"
+        elif work.work_type == "hand_work":
+            work_stats['general']['name'] = get_hand_work(work.hand_work_id).name
 
         work_questions = get_work_questions(work.id)
         work_questions = remove_none(work_questions)

@@ -21,6 +21,7 @@ class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
     work_type: str
     topic_id: int
+    hand_work_id: str
 
 
 class SelfCheckCallbackFactory(CallbackData, prefix="self_check"):
@@ -76,15 +77,15 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_start_work_kb(work_type: str, topic_id: int = -1) -> InlineKeyboardMarkup:
+def get_start_work_kb(work_type: str, topic_id: int = -1, hand_work_id: str = "") -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['start'],
-        callback_data=StartNewWorkCallbackFactory(action="start", work_type=work_type, topic_id=topic_id),
+        callback_data=StartNewWorkCallbackFactory(action="start", work_type=work_type, topic_id=topic_id, hand_work_id=hand_work_id),
     )
     builder.button(
         text=lexicon['new_work']['cancel'],
-        callback_data=StartNewWorkCallbackFactory(action="cancel", work_type=work_type, topic_id=topic_id)
+        callback_data=StartNewWorkCallbackFactory(action="cancel", work_type=work_type, topic_id=topic_id, hand_work_id=hand_work_id)
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -94,7 +95,7 @@ def get_view_result_kb(user: User, work_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['view_results'],
-        url=f"{getenv('STATS_HOST')}/stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
+        url=f"{getenv('STATS_HOST')}/student/view-stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}"
     )
 
     builder.adjust(1)

@@ -29,12 +29,15 @@ def get_admin_menu_main_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
 
     builder.button(
         text=lexicon['admin']['create_topic_work'],
-        # callback_data=AdminMenuMainCallbackFactory(volume="create_topic_work"),
-        url=f"{getenv('STATS_HOST')}/create-topic?auth_key={auth_key}&admin_id={tid}"
+        url=f"{getenv('STATS_HOST')}/admin/create-hand-work?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
         text=lexicon['admin']['students_stats'],
-        url=f"{getenv('STATS_HOST')}/stats?auth_key={auth_key}&admin_id={tid}"
+        url=f"{getenv('STATS_HOST')}/admin/students-stats?auth_key={auth_key}&admin_id={tid}"
+    )
+    builder.button(
+        text=lexicon['admin']['ege_converting'],
+        url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
         text=lexicon['admin']['system_status'],

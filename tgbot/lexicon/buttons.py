@@ -29,5 +29,6 @@ lexicon = {
         'create_topic_work': "📚 Создание тренировки",
         'students_stats': "📊 Статистика учеников",
         'system_status': "👀 Состояние системы",
+        'ege_converting': "📝 Конвертация баллов ЕГЭ"
     }
 }

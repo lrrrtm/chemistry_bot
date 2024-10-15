@@ -11,7 +11,8 @@ from aiogram.types import Message, InputFile, FSInputFile, ReplyKeyboardMarkup, 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
                      get_random_questions_by_tag_list, insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name,
-                     update_question_status, get_skipped_questions)
+                     update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
+                     get_all_questions, remove_work)
 from db.models import Pool
 from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
@@ -24,7 +25,7 @@ from tgbot.lexicon.buttons import lexicon as btns_lexicon, lexicon
 from tgbot.states.picking_topic import UserTopicChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.tags_helper import get_ege_tags_list, get_ege_self_check_tags_list
+from utils.tags_helper import get_ege_tags_list, get_ege_self_check_tags_list, get_random_questions
 
 router = Router()
 
@@ -73,7 +74,7 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
 
 @router.callback_query(SelectNewWorkTypeCallbackFactory.filter())
 async def process_user_work_type(callback: types.CallbackQuery, callback_data: SelectNewWorkTypeCallbackFactory,
-                                state: FSMContext):
+                                 state: FSMContext):
     await callback.answer()
     action = callback_data.work_type
 
@@ -132,6 +133,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
     action = callback_data.action
     work_type = callback_data.work_type
     topic_id = callback_data.topic_id
+    hand_work_id = callback_data.hand_work_id
 
     if action == "start":
         await callback.message.delete()
@@ -142,25 +144,67 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
         )
 
         user = get_user(callback.from_user.id)
-        work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id)
+        work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id, hand_work_id=hand_work_id)
 
-        tags_list = get_ege_tags_list() if work_type == "ege" else [{'tag': t, 'limit': None} for t in
-                                                                    get_topic_by_id(topic_id).tags_list]
+        pool = get_all_questions()
 
-        questions_list = get_random_questions_by_tag_list(tags_list)
+        if work_type == "ege":
+            tags_list = get_ege_tags_list(each_question_limit=1)
+
+        elif work_type == "topic":
+            tags_list = {tag: 3 for tag in get_topic_by_id(topic_id).tags_list}
+
+        elif work_type == "hand_work":
+            hand_work = get_hand_work(identificator=hand_work_id)
+
+        if work_type in ["ege", "topic"]:
+            questions_ids_list = get_random_questions(
+                pool=pool,
+                request_dict=tags_list,
+            )
+
+            if questions_ids_list['is_ok']:
+                questions_list = get_questions_list_by_id(
+                    ids_list=questions_ids_list['detail']
+                )
+
+            else:
+                remove_work(work.id)
+                await msg.delete()
+
+                await callback.message.answer(
+                    text="<b>Упс, что-то сломалось</b>"
+                         "\n\nВ нашей базе не хватило задачек для того, чтобы составить для тебя персональную тренировку. Мы уже получили информацию об этом и занялись исправлением ошибки. А пока ты можешь выбрать другую тему персональной тренировки."
+                )
+                return
+
+        elif work_type == "hand_work":
+            questions_list = get_questions_list_by_id(hand_work.questions_list)
+
         insert_work_questions(work, questions_list)
 
         await msg.delete()
 
-        await go_next_question(user.telegram_id, state)
+        await try_to_open_next_question(
+            work_id=work.id,
+            user_tid=user.telegram_id,
+            state=state,
+            message=callback.message,
+        )
 
-    elif action == "cancel":
+    if action == "cancel":
         await callback.message.edit_reply_markup(
             reply_markup=None
         )
-        await callback.message.edit_text(
-            text=msg_lexicon['new_work']['creating_work_cancelled']
-        )
+
+        if work_type in ["ege", "topic"]:
+            await callback.message.edit_text(
+                text=msg_lexicon['new_work']['creating_work_cancelled']
+            )
+        elif work_type == "hand_work":
+            await callback.message.edit_text(
+                text=msg_lexicon['new_work']['starting_hand_work_cancelled']
+            )
 
 
 async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questions: bool = False):
@@ -294,10 +338,6 @@ async def process_self_check(callback: types.CallbackQuery, callback_data: SelfC
     work_question_id = callback_data.work_question_id
     work_id = callback_data.work_id
 
-    # await callback.message.edit_text(
-    #     text=f"<b>Выставленно баллов: {mark}</b>"
-    # )
-
     close_question(
         q_id=work_question_id,
         user_answer="самостоятельная проверка",
@@ -339,7 +379,7 @@ async def try_to_open_next_question(work_id: int, message: Message, user_tid: in
 
 @router.callback_query(ReDoSkippedQuestionCallbackFactory.filter())
 async def process_skipping_question(callback: types.CallbackQuery, callback_data: ReDoSkippedQuestionCallbackFactory,
-                                state: FSMContext):
+                                    state: FSMContext):
     await callback.answer()
     action = callback_data.action
     work_id = callback_data.work_id
@@ -351,8 +391,9 @@ async def process_skipping_question(callback: types.CallbackQuery, callback_data
         for question in skipped_questions_list:
             close_question(
                 q_id=question.id,
-                user_answer="---",
+                user_answer="вопрос пропущен",
                 user_mark=0,
+                start_datetime=datetime.now(),
                 end_datetime=datetime.now()
             )
         await try_to_open_next_question(

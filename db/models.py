@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, BigInteger, String, Text, JSON, ForeignKey, DateTime, Boolean
-from sqlalchemy.dialects.mysql import TINYINT
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.mysql import TINYINT, VARCHAR
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
+
 
 # Таблица 'converting'
 class Converting(Base):
@@ -14,6 +14,7 @@ class Converting(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     input_mark = Column(Integer)
     output_mark = Column(Integer)
+
 
 # Таблица 'pool'
 class Pool(Base):
@@ -30,15 +31,17 @@ class Pool(Base):
     is_rotate = Column(Integer, nullable=False)
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
 
-# Таблица 'stats'
-class Stats(Base):
-    __tablename__ = 'stats'
 
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id записи')
-    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='id пользователя')
-    work_id = Column(BigInteger, nullable=False, default=0, comment='id задания')
-    last_attempt = Column(Integer, nullable=False, comment='Кол-во баллов за последнюю попытку')
-    max_attempt = Column(Integer, nullable=False, comment='Лучший результат')
+# # Таблица 'stats'
+# class Stats(Base):
+#     __tablename__ = 'stats'
+#
+#     id = Column(Integer, primary_key=True, autoincrement=True, comment='id записи')
+#     user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='id пользователя')
+#     work_id = Column(BigInteger, nullable=False, default=0, comment='id задания')
+#     last_attempt = Column(Integer, nullable=False, comment='Кол-во баллов за последнюю попытку')
+#     max_attempt = Column(Integer, nullable=False, comment='Лучший результат')
+
 
 # Таблица 'topics'
 class Topic(Base):
@@ -48,6 +51,7 @@ class Topic(Base):
     name = Column(Text, nullable=False, comment='Название темы')
     tags_list = Column(JSON, nullable=False, comment='Список тегов темы')
 
+
 # Таблица 'users'
 class User(Base):
     __tablename__ = 'users'
@@ -56,16 +60,21 @@ class User(Base):
     telegram_id = Column(BigInteger, nullable=False)
     name = Column(Text, nullable=False)
 
+
 # Таблица 'works'
 class Work(Base):
     __tablename__ = 'works'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='id задания')
-    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, default=0, comment='Внутренний id пользователя')
+    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, default=0,
+                     comment='Внутренний id пользователя')
     work_type = Column(Text, nullable=False, comment='тип задания (ЕГЭ/отдельная тема)')
-    topic_id = Column(BigInteger, ForeignKey('topics.id'), nullable=False, default=0, comment='id темы, если work_type = topic')
+    topic_id = Column(BigInteger, ForeignKey('topics.id'), nullable=False, default=0,
+                      comment='id темы, если work_type = topic')
+    hand_work_id = Column(VARCHAR(50), nullable=True)
     start_datetime = Column(DateTime, nullable=False, comment='Начало выполнения задания', default=datetime.now)
     end_datetime = Column(DateTime, nullable=False, comment='Окончание выполнения задания')
+
 
 # Таблица 'work_questions_list'
 class WorkQuestion(Base):
@@ -80,3 +89,13 @@ class WorkQuestion(Base):
     user_mark = Column(Integer, nullable=False)
     start_datetime = Column(DateTime, nullable=False)
     end_datetime = Column(DateTime, nullable=False)
+
+
+class HandWork(Base):
+    __tablename__ = 'hand_works'
+
+    id = Column(BigInteger, nullable=False, primary_key=True, autoincrement=True)
+    name = Column(Text, nullable=False, default="Персональная тренировка")
+    identificator = Column(VARCHAR(100), nullable=False, unique=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    questions_list = Column(JSON, nullable=False)
