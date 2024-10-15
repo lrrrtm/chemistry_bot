@@ -27,11 +27,11 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-set_temporary_key(
-    'develop',
-    'develop',
-    3600
-)
+# set_temporary_key(
+#     'develop',
+#     'develop',
+#     3600
+# )
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
