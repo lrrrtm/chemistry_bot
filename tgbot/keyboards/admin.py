@@ -36,9 +36,13 @@ def get_admin_menu_main_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
         url=f"{getenv('STATS_HOST')}/admin/students-stats?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
-        text=lexicon['admin']['ege_converting'],
-        url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
+        text=lexicon['admin']['database'],
+        callback_data=AdminMenuMainCallbackFactory(volume="database"),
     )
+    # builder.button(
+    #     text=lexicon['admin']['ege_converting'],
+    #     url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
+    # )
     builder.button(
         text=lexicon['admin']['system_status'],
         callback_data=AdminMenuMainCallbackFactory(volume="system_status"),
@@ -65,3 +69,35 @@ def get_admin_system_status_kb(data: dict) -> InlineKeyboardMarkup:
     )
     builder.adjust(2)
     return builder.as_markup()
+
+def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=lexicon['admin']['update_topics_list'],
+        callback_data=AdminMenuMainCallbackFactory(volume="update_topics_list")
+    )
+    builder.button(
+        text=lexicon['admin']['update_pool'],
+        callback_data=AdminMenuMainCallbackFactory(volume="update_pool")
+    )
+    builder.button(
+        text=lexicon['admin']['ege_converting'],
+        url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
+    )
+    builder.button(
+        text=lexicon['service']['back'],
+        callback_data=AdminMenuBackCallbackFactory(current_volume="database")
+    )
+    builder.adjust(1)
+    return builder.as_markup()
+
+def get_admin_cancel_upload_kb() -> ReplyKeyboardMarkup:
+    builder = ReplyKeyboardBuilder()
+
+    builder.button(
+        text=lexicon['admin']['cancel_uploading_table']
+    )
+
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)

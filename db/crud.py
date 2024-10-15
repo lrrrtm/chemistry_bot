@@ -9,6 +9,7 @@ from sqlalchemy.orm import aliased
 
 from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
 from db.database import Session
+from utils.excel import export_topics_list
 from utils.tags_helper import get_random_questions
 
 
@@ -320,3 +321,19 @@ def update_ege_converting(data: dict):
             el = session.query(Converting).filter_by(id=key).first()
             el.output_mark = value['value']
             session.commit()
+
+def insert_topics_data(data):
+    with get_session() as session:
+        old_data = session.query(Topic).all()
+        for entry in old_data:
+            session.delete(entry)
+        session.commit()
+        for key, value in data.items():
+            t = Topic(
+                name=key,
+                tags_list=value
+            )
+            session.add(t)
+        session.commit()
+
+# export_topics_list(get_all_topics())
