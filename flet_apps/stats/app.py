@@ -2,7 +2,6 @@ import hashlib
 import re
 import sys
 import os
-import time
 from datetime import datetime
 from itertools import chain
 from typing import List
@@ -10,7 +9,6 @@ from typing import List
 import telebot
 
 from redis_db.crud import get_value, set_temporary_key
-from test import questions
 from utils.image_converter import image_to_base64
 from utils.tags_helper import get_random_questions
 
