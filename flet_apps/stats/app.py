@@ -27,11 +27,11 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-# set_temporary_key(
-#     'develop',
-#     'develop',
-#     3600
-# )
+set_temporary_key(
+    'develop',
+    'develop',
+    3600
+)
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -609,77 +609,81 @@ def main(page: ft.Page):
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
 
-    path = urlparse(page.route).path
-    url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
+    def navigate(e = None):
+        path = urlparse(page.route).path
+        url_params = {key: (value[0]) for key, value in parse_qs(urlparse(page.route).query).items()}
 
-    volume = path.split("/")[-1]
-    if re.match(r"^/admin/.*", path) is not None:
+        volume = path.split("/")[-1]
+        if re.match(r"^/admin/.*", path) is not None:
 
-        if all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == \
-                url_params['auth_key']:
-
-            page.scroll = ft.ScrollMode.AUTO
-            if volume == "create-hand-work":
-                page.title = "Создание тренировки"
-
-                page.session.set('new_topic_work_config', {'name': "", 'questions': {}})
-                open_new_work_list()
-
-            elif volume == "students-stats":
-                page.title = "Статистика учеников"
-                open_users_list()
-
-            elif volume == "ege-converting":
-                page.title = "Конвертация баллов ЕГЭ"
-
-                open_ege_marks_list()
-
-        else:
-            col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
-                                  icon_filename='error.png')
-            page.add(col)
-
-    elif re.match(r"^/student/.*", path) is not None:
-        if volume == "view-stats":
-            page.title = "Результат тренировки"
-            if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
-                                                                                                  url_params['tid'],
-                                                                                                  url_params['work']):
-                col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
-                page.add(col)
+            if all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == \
+                    url_params['auth_key']:
 
                 page.scroll = ft.ScrollMode.AUTO
+                if volume == "create-hand-work":
+                    page.title = "Создание тренировки"
 
-                all_stats = get_user_statistics(int(url_params['tid']))
-                work_stats = [s for s in all_stats if s['general']['work_id'] == int(url_params['work'])][-1]
-                questions_list = get_work_questions_joined_pool(int(url_params['work']))
+                    page.session.set('new_topic_work_config', {'name': "", 'questions': {}})
+                    open_new_work_list()
 
-                detailed = False
-                if 'detailed' in url_params:
-                    detailed = bool(url_params['detailed'])
+                elif volume == "students-stats":
+                    page.title = "Статистика учеников"
+                    open_users_list()
 
-                main_col = ft.Column(
-                    controls=[
-                        get_general_info_card(work_stats, detailed=detailed),
-                        get_questions_info_card(questions_list, detailed=detailed)
-                    ],
-                    width=700
-                )
+                elif volume == "ege-converting":
+                    page.title = "Конвертация баллов ЕГЭ"
 
-                page.controls = [main_col]
-                page.update()
+                    open_ege_marks_list()
 
             else:
-                col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+                col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
                                       icon_filename='error.png')
                 page.add(col)
 
-    else:
-        page.title = "404"
-        col = get_info_column("Такой страницы не существует",
-                              icon_filename='error.png')
-        page.add(col)
+        elif re.match(r"^/student/.*", path) is not None:
+            if volume == "view-stats":
+                page.title = "Результат тренировки"
+                if all(key in url_params for key in ['uuid', 'tid', 'work']) and get_work_by_url_data(url_params['uuid'],
+                                                                                                      url_params['tid'],
+                                                                                                      url_params['work']):
+                    col = get_info_column("Загружаем информацию", progress_bar_visible=True, icon_filename='loading.png')
+                    page.add(col)
 
+                    page.scroll = ft.ScrollMode.AUTO
+
+                    all_stats = get_user_statistics(int(url_params['tid']))
+                    work_stats = [s for s in all_stats if s['general']['work_id'] == int(url_params['work'])][-1]
+                    questions_list = get_work_questions_joined_pool(int(url_params['work']))
+
+                    detailed = False
+                    if 'detailed' in url_params:
+                        detailed = bool(url_params['detailed'])
+
+                    main_col = ft.Column(
+                        controls=[
+                            get_general_info_card(work_stats, detailed=detailed),
+                            get_questions_info_card(questions_list, detailed=detailed)
+                        ],
+                        width=700
+                    )
+
+                    page.controls = [main_col]
+                    page.update()
+
+                else:
+                    col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
+                                          icon_filename='error.png')
+                    page.add(col)
+
+        else:
+            page.title = "404"
+            col = get_info_column("Такой страницы не существует",
+                                  icon_filename='error.png')
+            page.add(col)
+
+
+    page.on_connect = navigate
+    navigate()
 
 if __name__ == "__main__":
     ft.app(
