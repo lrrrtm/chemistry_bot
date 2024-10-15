@@ -648,6 +648,7 @@ def main(page: ft.Page):
                     error_404()
 
             else:
+                page.controls.clear()
                 col = get_info_column("Время действия ключа авторизации истекло, вызовите /admin ещё раз",
                                       icon_filename='error.png')
                 page.add(col)
@@ -687,6 +688,7 @@ def main(page: ft.Page):
                     error_404()
 
             else:
+                page.controls.clear()
                 col = get_info_column("Ничего не нашлось, попробуй ещё раз или обратись в поддержку через /feedback",
                                       icon_filename='error.png')
                 page.add(col)
