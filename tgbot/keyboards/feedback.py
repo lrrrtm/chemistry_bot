@@ -1,9 +1,8 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from tgbot.lexicon.buttons import lexicon
 
-from typing import Optional
 from aiogram.filters.callback_data import CallbackData
 
 

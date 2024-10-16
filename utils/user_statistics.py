@@ -1,10 +1,8 @@
-from datetime import datetime
 from typing import List
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool,
                      get_output_mark, get_hand_work)
 from db.models import WorkQuestion
-from utils.mark_converter import convert_ege_mark
 
 def remove_none(work_questions_list: List[WorkQuestion]):
     for q in work_questions_list:

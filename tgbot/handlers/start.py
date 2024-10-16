@@ -3,7 +3,7 @@ import re
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardRemove
 
 from db.crud import (get_user, create_user, get_hand_work)
 from tgbot.handlers.menu import cmd_menu

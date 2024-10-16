@@ -3,7 +3,7 @@ from os import getenv
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from db.models import User, Pool, WorkQuestion
+from db.models import User
 from tgbot.lexicon.buttons import lexicon
 
 from aiogram.filters.callback_data import CallbackData

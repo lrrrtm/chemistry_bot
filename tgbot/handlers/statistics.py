@@ -1,15 +1,11 @@
-from datetime import datetime
 from os import getenv
 
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from aiogram.utils.formatting import (
-    Bold, as_list, as_marked_section, as_key_value, HashTag
-)
 
-from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions)
+from db.crud import (get_user, get_user_works)
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from utils.user_statistics import get_user_statistics

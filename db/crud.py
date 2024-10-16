@@ -103,10 +103,14 @@ def get_topic_by_name(topic_name: str) -> Topic:
         return topic
 
 
-def get_all_topics() -> List[Topic]:
+def get_all_topics(active: bool) -> List[Topic]:
     with get_session() as session:
-        topics = session.query(Topic).all()
-        return topics
+        if active:
+            data = session.query(Topic).filter_by(is_active=1).all()
+        else:
+            data = session.query(Topic).all()
+
+        return data
 
 
 def get_all_tags() -> List[str]:
@@ -245,13 +249,14 @@ def update_question_status(q_id: int, status: str):
         session.commit()
 
 
-def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime, start_datetime: datetime = None):
+def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime,
+                   start_datetime: datetime = None):
     with get_session() as session:
         q = session.query(WorkQuestion).filter_by(id=q_id).first()
         q.status = "answered"
         q.user_answer = user_answer
         q.user_mark = user_mark
-        q.start_datetime=start_datetime
+        q.start_datetime = start_datetime
         q.end_datetime = end_datetime
 
         session.commit()
@@ -310,10 +315,12 @@ def get_questions_list_by_id(ids_list: List[int]) -> List[Pool]:
 
         return result
 
+
 def get_ege_converting() -> List[Converting]:
     with get_session() as session:
         data = session.query(Converting).all()
         return data
+
 
 def update_ege_converting(data: dict):
     with get_session() as session:
@@ -322,18 +329,34 @@ def update_ege_converting(data: dict):
             el.output_mark = value['value']
             session.commit()
 
+
 def insert_topics_data(data):
     with get_session() as session:
         old_data = session.query(Topic).all()
-        for entry in old_data:
-            session.delete(entry)
+        old_topic_names = []
+
+        for el in old_data:
+            old_topic_names.append(el.name.lower())
+            el.is_active = 0
         session.commit()
-        for key, value in data.items():
-            t = Topic(
-                name=key,
-                tags_list=value
-            )
-            session.add(t)
+
+        for name, tags_list in data.items():
+            print(f"Текущий тег: {name} ({tags_list})")
+            print(name.lower(), old_topic_names)
+            if name.lower() in old_topic_names:
+                print("Тег есть в базе")
+                topic = session.query(Topic).filter_by(name=name).first()
+                topic.tags_list = tags_list
+                topic.is_active = 1
+
+            else:
+                print("Тега нет в базе, создаём заново")
+                t = Topic(
+                    name=name,
+                    tags_list=tags_list,
+                    is_active=1
+                )
+                session.add(t)
         session.commit()
 
 # export_topics_list(get_all_topics())

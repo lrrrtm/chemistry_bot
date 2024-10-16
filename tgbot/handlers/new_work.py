@@ -1,20 +1,16 @@
 import os.path
 from datetime import datetime
 from os import getenv
-from typing import List
-
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InputFile, FSInputFile, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
-                     get_random_questions_by_tag_list, insert_work_questions, remove_last_user_work,
+                     insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name,
                      update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
                      get_all_questions, remove_work)
-from db.models import Pool
-from tgbot.handlers.menu import cmd_menu
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
@@ -25,7 +21,7 @@ from tgbot.lexicon.buttons import lexicon as btns_lexicon, lexicon
 from tgbot.states.picking_topic import UserTopicChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.tags_helper import get_ege_tags_list, get_ege_self_check_tags_list, get_random_questions
+from utils.tags_helper import get_ege_tags_list, get_random_questions
 
 router = Router()
 
@@ -89,7 +85,7 @@ async def process_user_work_type(callback: types.CallbackQuery, callback_data: S
     elif action == "topic":
         await callback.message.delete()
 
-        topics_list = get_all_topics()
+        topics_list = get_all_topics(active=True)
         await callback.message.answer(
             text=msg_lexicon['new_work']['topic_work_caption'],
             reply_markup=get_topics_kb(topics_list)
@@ -223,8 +219,10 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
         if q.status in questions_statuses:
             q_info = get_question_from_pool(q.question_id)
 
-            question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if any(
-                elem in q_info.tags_list for elem in get_ege_self_check_tags_list()) else f"\n\n{q_info.text}"
+            # question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if any(
+            #     elem in q_info.tags_list for elem in get_ege_self_check_tags_list()) else f"\n\n{q_info.text}"
+
+            question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if bool(q_info.is_selfcheck) else f"\n\n{q_info.text}"
 
             if bool(q_info.question_image):
                 if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
@@ -239,7 +237,8 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                             f"{question_text_block}",
                     show_caption_above_media=True,
                     reply_markup=get_skip_question_kb(
-                        self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                        # self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                        self_check_btn_visible=bool(q_info.is_selfcheck)
                     )
                 )
             else:
@@ -248,7 +247,8 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                     text=f"№{q.position} <code>(id{q_info.id})</code>"
                          f"{question_text_block}",
                     reply_markup=get_skip_question_kb(
-                        self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                        # self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
+                        self_check_btn_visible=bool(q_info.is_selfcheck)
                     )
                 )
             await state.set_state(UserAnswerToQuestion.waiting_for_answer)
@@ -306,7 +306,8 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
         return
 
     else:
-        if any(elem in data['question_data'].tags_list for elem in get_ege_self_check_tags_list()):
+        # if any(elem in data['question_data'].tags_list for elem in get_ege_self_check_tags_list()):
+        if bool(data['question_data'].is_selfcheck):
             await message.answer(
                 text=msg_lexicon['new_work']['self_check_request']
             )

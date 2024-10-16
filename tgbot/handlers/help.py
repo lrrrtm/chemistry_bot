@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import Message
 
 from tgbot.lexicon.messages import lexicon
 

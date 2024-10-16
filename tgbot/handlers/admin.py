@@ -7,9 +7,8 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
 
-from db.crud import get_all_users, get_all_topics, insert_topics_data
+from db.crud import get_all_topics, insert_topics_data
 from redis_db.crud import set_temporary_key
-from tgbot.handlers.check import cmd_check
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackFactory, get_admin_system_status_kb, \
     AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb
@@ -70,7 +69,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
     elif volume == "update_topics_list":
         await callback.message.delete()
 
-        topics_list = get_all_topics()
+        topics_list = get_all_topics(active=True)
         export_topics_list(topics_list)
 
         await callback.message.answer_document(

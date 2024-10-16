@@ -29,18 +29,8 @@ class Pool(Base):
     answer_image = Column(TINYINT, nullable=False, default=0, comment='Наличие изображения ответа')
     full_mark = Column(TINYINT, nullable=False, default=0, comment='Максимальный первичный балл')
     is_rotate = Column(Integer, nullable=False)
+    is_selfcheck = Column(Integer, nullable=False)
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
-
-
-# # Таблица 'stats'
-# class Stats(Base):
-#     __tablename__ = 'stats'
-#
-#     id = Column(Integer, primary_key=True, autoincrement=True, comment='id записи')
-#     user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment='id пользователя')
-#     work_id = Column(BigInteger, nullable=False, default=0, comment='id задания')
-#     last_attempt = Column(Integer, nullable=False, comment='Кол-во баллов за последнюю попытку')
-#     max_attempt = Column(Integer, nullable=False, comment='Лучший результат')
 
 
 # Таблица 'topics'
@@ -50,6 +40,7 @@ class Topic(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='id темы')
     name = Column(Text, nullable=False, comment='Название темы')
     tags_list = Column(JSON, nullable=False, comment='Список тегов темы')
+    is_active = Column(Integer, nullable=False)
 
 
 # Таблица 'users'

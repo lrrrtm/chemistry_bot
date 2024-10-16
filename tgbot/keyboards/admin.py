@@ -1,14 +1,10 @@
 from os import getenv
 
-from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-
-from db.models import User, Pool, WorkQuestion
 from tgbot.lexicon.buttons import lexicon
 
 from aiogram.filters.callback_data import CallbackData
-
-from utils.services_checker import services
 
 
 class AdminMenuBackCallbackFactory(CallbackData, prefix="admin_menu_back"):
@@ -70,6 +66,7 @@ def get_admin_system_status_kb(data: dict) -> InlineKeyboardMarkup:
     builder.adjust(2)
     return builder.as_markup()
 
+
 def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -91,6 +88,7 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     )
     builder.adjust(1)
     return builder.as_markup()
+
 
 def get_admin_cancel_upload_kb() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()

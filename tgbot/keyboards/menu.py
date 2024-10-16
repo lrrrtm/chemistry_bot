@@ -1,5 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 from tgbot.lexicon.buttons import lexicon
 
@@ -13,10 +13,6 @@ def get_menu_kb() -> ReplyKeyboardMarkup:
     builder.row(
         KeyboardButton(text=lexicon['main_menu']['stats'])
     )
-    # builder.row(
-    #     KeyboardButton(text=lexicon['main_menu']['stats']),
-    #     KeyboardButton(text=lexicon['main_menu']['settings'])
-    # )
 
     return builder.as_markup(resize_keyboard=True)
 

@@ -605,6 +605,14 @@ def main(page: ft.Page):
         page.add(col)
         switch_loading(False)
 
+    def open_topics_list():
+        page.controls.clear()
+        switch_loading(True)
+
+
+
+        switch_loading(False)
+
     # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
     # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
@@ -643,6 +651,11 @@ def main(page: ft.Page):
                     page.title = "Конвертация баллов ЕГЭ"
 
                     open_ege_marks_list()
+
+                elif volume == "topics-list":
+                    page.title = "Темы тренировок"
+
+                    open_topics_list()
 
                 else:
                     error_404()
