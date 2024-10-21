@@ -231,8 +231,7 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
                     else:
                         pass
 
-            errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их ID:</b> \n{" ".join(str(a) for a in import_data['errors'])}" if \
-            import_data['errors'] else ""
+            errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их ID:</b> \n{" ".join(str(a) for a in import_data['errors'])}" if import_data['errors'] else ""
             await message.answer(
                 text="<b>Добавление вопросов</b>"
                      f"\n\nУспешно импортировано вопросов: {len(import_data['data'])}" + errors_text
