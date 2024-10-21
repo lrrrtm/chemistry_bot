@@ -24,7 +24,7 @@ def import_pool(filepath: str):
     try:
         for row_num in range(2, 1002):
             if sheet.cell(row=row_num, column=1).value is not None:
-                import_id = f"{len(data) + 1}{datetime.now().strftime("%Y%m%d%H%M%S")}"
+                import_id = f"{len(data) + 1}{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 if all(
                         [
                             sheet.cell(row=row_num, column=2).value is not None,
