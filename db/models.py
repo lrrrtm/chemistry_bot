@@ -21,6 +21,7 @@ class Pool(Base):
     __tablename__ = 'pool'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='id вопроса')
+    import_id = Column(Text, nullable=True)
     type = Column(Text, nullable=False, comment='Тип вопроса (1 или 2 часть)')
     level = Column(Integer, nullable=False, comment='Сложность вопроса (от 1 до 5)')
     text = Column(Text, nullable=False, comment='Текст вопроса')
@@ -30,6 +31,7 @@ class Pool(Base):
     full_mark = Column(TINYINT, nullable=False, default=0, comment='Максимальный первичный балл')
     is_rotate = Column(Integer, nullable=False)
     is_selfcheck = Column(Integer, nullable=False)
+    is_active = Column(Integer, nullable=False, default=1)
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
 
 

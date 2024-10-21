@@ -2,6 +2,8 @@ import asyncio
 import logging
 from os import getenv
 
+from aiogram.types import ReplyKeyboardRemove
+
 from config import bot, dp
 from threading import Thread
 
@@ -12,7 +14,8 @@ logging.basicConfig(level=logging.INFO)
 async def on_startup():
     await bot.send_message(
         chat_id=getenv('FBACK_GROUP_ID'),
-        text=lexicon['service']['after_reboot']
+        text=lexicon['service']['after_reboot'],
+        reply_markup=ReplyKeyboardRemove()
     )
 
 async def main():

@@ -1,4 +1,5 @@
 import hashlib
+import os.path
 from datetime import datetime
 from os import getenv
 
@@ -7,15 +8,17 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
 
-from db.crud import get_all_topics, insert_topics_data
+from db.crud import get_all_topics, insert_topics_data, get_all_pool, insert_pool_data
 from redis_db.crud import set_temporary_key
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackFactory, get_admin_system_status_kb, \
-    AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb
+    AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb, \
+    get_admin_pool_menu_kb
 from tgbot.lexicon.buttons import lexicon
-from tgbot.states.updating_db import UpdateTopics
+from tgbot.states.updating_db import UpdateTopics, InsertPool
 from utils.clearing import clear_folder
-from utils.excel import export_topics_list, import_topics_list
+from utils.excel import export_topics_list, import_topics_list, import_pool
+from utils.move_file import move_image
 from utils.services_checker import get_system_status
 
 router = Router()
@@ -81,8 +84,37 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
 
         await state.set_state(UpdateTopics.waiting_for_msg)
 
-    elif volume == "update_poll":
-        await callback.message.delete()
+    elif volume == "pool_menu":
+        await callback.message.edit_text(
+            text="<b>База вопросов</b>"
+                 "\n\nВыберите необходимое действие"
+        )
+
+        await callback.message.edit_reply_markup(
+            reply_markup=get_admin_pool_menu_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
+        )
+
+        # pool = get_all_pool(active=True)
+        # export_pool(pool)
+
+        # await callback.message.answer_document(
+        #     document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx"),
+        #     caption=f"<b>Обновление базы вопросов</b>"
+        #             f"\n\nДля добавления новых вопросов откройте эту таблицу, внесите все данные, после чего отправьте отредактированный файл обратно.",
+        #     reply_markup=get_admin_cancel_upload_kb()
+        # )
+        #
+        # await state.set_state(UpdatePool.waiting_for_msg)
+
+    elif volume == "insert_pool":
+        await callback.message.answer_document(
+            document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx"),
+            caption=f"<b>Добавление вопросов</b>"
+                    f"\n\nДля добавления новых вопросов откройте эту таблицу, внесите все данные, после чего отправьте отредактированный файл обратно.",
+            reply_markup=get_admin_cancel_upload_kb()
+        )
+
+        await state.set_state(InsertPool.waiting_for_msg)
 
 
 @router.callback_query((AdminMenuBackCallbackFactory.filter()))
@@ -93,8 +125,17 @@ async def admin_menu_back_process(callback: types.CallbackQuery, callback_data: 
 
     await callback.message.delete()
 
-    if current_volume == "system_status" or current_volume == "database":
+    if current_volume in ["system_status", "database"]:
         await cmd_admin(callback.message)
+    elif current_volume == "pool_menu":
+        await callback.message.answer(
+            text="<b>База данных</b>",
+            reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
+        )
+    # if current_volume == "system_status" or current_volume == "database":
+    #     await cmd_admin(callback.message)
+    #
+    # elif current_volume == ""
 
 
 @router.callback_query((AdminRebootServiceCallbackFactory.filter()))
@@ -122,7 +163,7 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
             reply_markup=ReplyKeyboardRemove()
         )
         file_id = message.document.file_id
-        filepath = f"{getenv('ROOT_FOLDER')}/data/temp/recieved_topics_list.xlsx"
+        filepath = f"{getenv('ROOT_FOLDER')}/data/temp/topics_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx"
         file = await bot.get_file(file_id)
         await bot.download_file(file.file_path, filepath)
 
@@ -136,7 +177,65 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
             await message.answer_document(
                 document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/temp/{filename}"),
                 caption="<b>Обновление базы тем/тегов</b>"
-                     "\n\nДанные успешно обновлены. В файле приведена информация о результатах импорта."
+                        "\n\nДанные успешно обновлены. В файле приведена информация о результатах импорта."
+            )
+        else:
+            await message.answer(
+                text="<b>Ошибка при импорте файла</b>"
+                     f"\n\nПри обработке отправленного вами файла произошла следующая ошибка: {import_data['comment']}"
+            )
+
+    clear_folder(f"{getenv('ROOT_FOLDER')}/data/temp")
+
+
+@router.message(InsertPool.waiting_for_msg)
+async def catch_pool_list_table(message: Message, state: FSMContext):
+    if message.text == lexicon['admin']['cancel_uploading_table']:
+        await state.clear()
+        await message.answer(
+            text="<b>Добавление данных отменено</b>",
+            reply_markup=ReplyKeyboardRemove()
+        )
+    else:
+        msg = await message.answer(
+            text="Выполняется обработка файла...",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        file_id = message.document.file_id
+        filepath = f"{getenv('ROOT_FOLDER')}/data/temp/pool_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx"
+        file = await bot.get_file(file_id)
+        await bot.download_file(file.file_path, filepath)
+
+        import_data = import_pool(filepath)
+        await msg.delete()
+
+        if import_data['is_ok']:
+            pool = insert_pool_data(import_data['data'])
+
+            for el in pool:
+                if bool(el.question_image):
+                    if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png"):
+                        move_image(
+                            source_path=f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png",
+                            destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{el.id}.png"
+                        )
+                    else:
+                        pass
+
+                if bool(el.answer_image):
+                    if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png"):
+                        move_image(
+                            source_path=f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png",
+                            destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{el.id}.png"
+                        )
+                    else:
+                        pass
+
+            errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их ID:</b> \n{" ".join(str(a) for a in import_data['errors'])}" if \
+            import_data['errors'] else ""
+            await message.answer(
+                text="<b>Добавление вопросов</b>"
+                     f"\n\nУспешно импортировано вопросов: {len(import_data['data'])}" + errors_text
             )
         else:
             await message.answer(

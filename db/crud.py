@@ -1,5 +1,7 @@
+import os.path
 import random
 from datetime import datetime
+from os import getenv
 from pydoc_data.topics import topics
 from typing import List
 from contextlib import contextmanager
@@ -9,7 +11,8 @@ from sqlalchemy.orm import aliased
 
 from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
 from db.database import Session
-from utils.excel import export_topics_list
+from utils.excel import export_topics_list, export_pool
+from utils.move_file import move_image
 from utils.tags_helper import get_random_questions
 
 
@@ -102,6 +105,29 @@ def get_topic_by_name(topic_name: str) -> Topic:
         topic = session.query(Topic).filter_by(name=topic_name).first()
         return topic
 
+def get_all_pool(active: bool) -> List[Pool]:
+    with get_session() as session:
+        if active:
+            data = session.query(Pool).filter_by(is_active=1).all()
+        else:
+            data = session.query(Pool).all()
+
+        return data
+
+def get_paginated_pool(page_num, per_page = 15) -> List[Pool]:
+    offset = (page_num - 1) * per_page
+    with get_session() as session:
+        items = session.query(Pool).filter_by(is_active=1).limit(per_page).offset(offset).all()
+        return items
+
+def get_pool_by_query(query: str) -> List[Pool]:
+    with get_session() as session:
+        if query.isnumeric():
+            items = session.query(Pool).filter_by(is_active=1, id=int(query)).all()
+        else:
+            items = session.query(Pool).filter_by(is_active=1).filter(Pool.text.like(f'%{query}%')).all()
+
+        return items
 
 def get_all_topics(active: bool) -> List[Topic]:
     with get_session() as session:
@@ -329,6 +355,13 @@ def update_ege_converting(data: dict):
             el.output_mark = value['value']
             session.commit()
 
+def insert_pool_data(data: List[Pool]):
+    with get_session() as session:
+        for el in data:
+            session.add(el)
+        session.commit()
+        return data
+
 
 def insert_topics_data(data):
     with get_session() as session:
@@ -341,16 +374,12 @@ def insert_topics_data(data):
         session.commit()
 
         for name, tags_list in data.items():
-            print(f"Текущий тег: {name} ({tags_list})")
-            print(name.lower(), old_topic_names)
             if name.lower() in old_topic_names:
-                print("Тег есть в базе")
                 topic = session.query(Topic).filter_by(name=name).first()
                 topic.tags_list = tags_list
                 topic.is_active = 1
 
             else:
-                print("Тега нет в базе, создаём заново")
                 t = Topic(
                     name=name,
                     tags_list=tags_list,
@@ -360,3 +389,4 @@ def insert_topics_data(data):
         session.commit()
 
 # export_topics_list(get_all_topics())
+# export_pool(get_all_pool(active=True))

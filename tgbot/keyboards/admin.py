@@ -76,7 +76,7 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     )
     builder.button(
         text=lexicon['admin']['update_pool'],
-        callback_data=AdminMenuMainCallbackFactory(volume="update_pool")
+        callback_data=AdminMenuMainCallbackFactory(volume="pool_menu")
     )
     builder.button(
         text=lexicon['admin']['ege_converting'],
@@ -86,6 +86,27 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
         text=lexicon['service']['back'],
         callback_data=AdminMenuBackCallbackFactory(current_volume="database")
     )
+    builder.adjust(1)
+    return builder.as_markup()
+
+def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text=lexicon['admin']['insert_pool'],
+        callback_data=AdminMenuMainCallbackFactory(volume="insert_pool")
+    )
+    builder.button(
+        text=lexicon['admin']['edit_pool'],
+        callback_data=AdminMenuBackCallbackFactory(current_volume="None")
+        # todo: разблокировать
+        # url=f"{getenv('STATS_HOST')}/admin/pool?auth_key={auth_key}&admin_id={tid}"
+    )
+    builder.button(
+        text=lexicon['service']['back'],
+        callback_data=AdminMenuBackCallbackFactory(current_volume="pool_menu")
+    )
+
     builder.adjust(1)
     return builder.as_markup()
 

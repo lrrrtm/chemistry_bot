@@ -5,5 +5,5 @@ class UpdateTopics(StatesGroup):
     waiting_for_msg = State()
 
 
-class UpdatePool(StatesGroup):
+class InsertPool(StatesGroup):
     waiting_for_msg = State()
