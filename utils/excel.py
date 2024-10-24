@@ -104,14 +104,14 @@ def export_pool(data: List[Pool]):
     wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/chembot_pool_list.xlsx")
 
 
-def export_topics_list(data: List[Topic]):
+def export_topics_list(db_data: List[Topic]):
     wb = openpyxl.load_workbook(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_topics_list.xlsx")
 
     sheet_name = "MAIN"
     sheet = wb[sheet_name]
 
     data = []
-    for topic in data:
+    for topic in db_data:
         topic_name = topic.name
         for tag in topic.tags_list:
             data.append([topic_name, tag])
