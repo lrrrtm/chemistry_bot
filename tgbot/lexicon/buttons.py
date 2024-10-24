@@ -32,9 +32,9 @@ lexicon = {
         'ege_converting': "📝 Конвертация баллов ЕГЭ",
         'database': "🗃️ База данных",
         'cancel_uploading_table': "🚫 Отменить",
-        'update_topics_list': "Обновление тем/тегов",
-        'update_pool': "База вопросов",
-        'insert_pool': "Добавление вопросов",
-        'edit_pool': "Редактирование вопросов"
+        'update_topics_list': "📋 Темы и теги",
+        'update_pool': "🤔 Пул вопросов",
+        'insert_pool': "🆕 Добавить вопросы",
+        'edit_pool': "📝 Редактировать пул"
     }
 }

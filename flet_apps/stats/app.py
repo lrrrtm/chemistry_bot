@@ -7,6 +7,7 @@ from itertools import chain
 from typing import List
 
 import telebot
+from anyio.abc import value
 
 from redis_db.crud import get_value, set_temporary_key
 from utils.image_converter import image_to_base64
@@ -19,14 +20,14 @@ from urllib.parse import urlparse, parse_qs
 import flet as ft
 from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
-    get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting
+    get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
+    get_paginated_pool, get_pool_by_query
 from db.models import WorkQuestion
 from dotenv import load_dotenv
 
 load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
-
 
 # set_temporary_key(
 #     'develop',
@@ -177,7 +178,9 @@ def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool =
                                 padding=ft.padding.only(left=10, top=10)),
                             ft.Image(
                                 src_base64=image_to_base64(
-                                    question.question_id) if bool(question.question_image) else None,
+                                    image_type="question",
+                                    question_id=question.question_id
+                                ) if bool(question.question_image) else None,
                                 error_content=ft.Text("Не удалось загрузить изображение с заданием", size=14),
                                 # border_radius=10,
                                 visible=bool(question.question_image)
@@ -605,18 +608,206 @@ def main(page: ft.Page):
         page.add(col)
         switch_loading(False)
 
-    def open_topics_list():
+    def check_question_card_after_update_btn(e: ft.ControlEvent):
+        id = e.control.value
+        data = page.session.get("")
+
+    def validate_question_card(e: ft.ControlEvent):
+        data = e.control.data
+        place = data['place']
+        question = data['question']
+        field_value = e.control.value.strip()
+
+        wrong_fields = []
+
+        if place in ["question_field", "answer_field"]:
+            if len(field_value) < 5:
+                e.control.border_color = ft.colors.RED
+                
+            else:
+                e.control.border_color = ft.colors.GREEN
+
+        elif place in ["level_field", "mark_field"]:
+            if len(field_value) == 1 and field_value.isnumeric() and 0 < int(field_value) <= 5:
+                e.control.border_color = ft.colors.GREEN
+            else:
+                e.control.border_color = ft.colors.RED
+                wrong_fields.append(place)
+
+        elif place == "tags_list_field":
+            if len(field_value.split(", ")) > 0 and field_value.split(", ")[0] != "":
+                e.control.border_color = ft.colors.GREEN
+            else:
+                e.control.border_color = ft.colors.RED
+                wrong_fields.append(place)
+
+        data = page.session.get("wrong_fields")
+        data[question].id = wrong_fields
+        page.session.set("wrong_fields", data)
+
+        page.update()
+
+    def goto_query(e: ft.ControlEvent):
+        open_pool_list(
+            page_num=None,
+            query=e.control.value.strip()
+        )
+
+    def open_pool_list(page_num: int | None, query: str | None):
+        per_page = 15
         page.controls.clear()
         switch_loading(True)
 
+        data = []
 
+        if query is None:
+            pool = get_paginated_pool(
+                page_num=page_num,
+                per_page=per_page
+            )
+        else:
+            pool = get_pool_by_query(
+                query=query,
+            )
 
+        col = ft.ResponsiveRow(columns=4)
+
+        page.appbar = ft.AppBar(
+            actions=[
+                # ft.TextField(
+                #     prefix_icon=ft.icons.FIND_IN_PAGE,
+                #     width=200,
+                #     on_submit=goto_query
+                # ),
+                ft.IconButton(
+                    icon=ft.icons.ARROW_BACK,
+                    on_click=lambda _: open_pool_list(page_num=page_num - 1, query=None),
+                    disabled=page_num == 1
+                ),
+                ft.Text(f"{page_num}", size=16),
+                ft.Container(
+                    content=ft.IconButton(
+                        icon=ft.icons.ARROW_FORWARD,
+                        on_click=lambda _: open_pool_list(page_num=page_num + 1, query=None),
+                        disabled=len(pool) < per_page
+                    ),
+                    padding=ft.padding.only(right=15)
+                )
+            ]
+        )
+
+        for el in pool:
+            data.append(el)
+            col.controls.append(
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.ListTile(
+                                    leading=ft.Text(f"{el.id}", size=16),
+                                    title=ft.TextField(
+                                        value=el.text,
+                                        multiline=True,
+                                        data={'place': "question_field", "question": el},
+                                        on_change=validate_question_card
+                                    ),
+                                    subtitle=ft.Text("текст вопроса")
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.NUMBERS),
+                                    title=ft.TextField(
+                                        value=str(el.level),
+                                        multiline=True,
+                                        data={'place': "level_field", "question": el},
+                                        on_change=validate_question_card
+                                    ),
+                                    subtitle=ft.Text("уровень сложности")
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.IMAGE),
+                                    title=ft.Column([
+                                        ft.Image(
+                                            src_base64=image_to_base64("question", el.id),
+                                            error_content=ft.Text("Ошибка загрузки изображения"),
+                                        ) if el.question_image else ft.Text("Изображение отсутствует")
+                                    ]),
+                                    subtitle=ft.Text("изображение вопроса"),
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.TEXT_FIELDS),
+                                    title=ft.TextField(
+                                        value=el.answer,
+                                        multiline=True,
+                                        data={'place': "answer_field", "question": el},
+                                        on_change=validate_question_card
+                                    ),
+                                    subtitle=ft.Text("текст ответа")
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.IMAGE),
+                                    title=ft.Column([
+                                        ft.Image(
+                                            src_base64=image_to_base64("answer", el.id),
+                                            error_content=ft.Text("Ошибка загрузки изображения"),
+                                        ) if el.answer_image else ft.Text("Изображение отсутствует")
+                                    ]),
+                                    subtitle=ft.Text("изображение ответа"),
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.NUMBERS),
+                                    title=ft.TextField(
+                                        value=str(el.full_mark),
+                                        multiline=True,
+                                        data={'place': "mark_field", "question": el},
+                                        on_change=validate_question_card
+                                    ),
+                                    subtitle=ft.Text("максимальный балл")
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.NUMBERS),
+                                    title=ft.TextField(
+                                        value=", ".join(a for a in el.tags_list),
+                                        multiline=True,
+                                        data={'place': "tags_list_field", "question": el},
+                                        on_change=validate_question_card
+                                    ),
+                                    subtitle=ft.Text("список тегов"),
+                                ),
+                                ft.Row(
+                                    alignment=ft.MainAxisAlignment.END,
+                                    controls=[
+                                        ft.OutlinedButton(
+                                            icon=ft.icons.DELETE,
+                                            text="Удалить",
+                                            data={'place': "remove_question_btn", "question": el}
+                                        ),
+                                        ft.FilledButton(
+                                            icon=ft.icons.SAVE,
+                                            text="Сохранить",
+                                            data={'place': "update_question_btn", "question": el},
+                                            on_click=None
+                                        )
+                                    ]
+                                )
+                            ],
+                            scroll=ft.ScrollMode.AUTO
+                        ),
+                        padding=10
+                    ),
+                    width=600,
+                    height=750,
+                    col={"lg": 1}
+                )
+            )
+
+        page.add(col)
         switch_loading(False)
 
     # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
     # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
+    # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
 
     def error_404():
         page.controls.clear()
@@ -652,10 +843,11 @@ def main(page: ft.Page):
 
                     open_ege_marks_list()
 
-                elif volume == "topics-list":
-                    page.title = "Темы тренировок"
-
-                    open_topics_list()
+                elif volume == "pool":
+                    open_pool_list(
+                        page_num=1,
+                        query=None
+                    )
 
                 else:
                     error_404()

@@ -77,8 +77,12 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
 
         await callback.message.answer_document(
             document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/temp/chembot_topics_list.xlsx"),
-            caption=f"<b>Обновление базы тем/тегов</b>"
-                    f"\n\nДля внесения изменений откройте эту таблицу, добавьте, измените или удалите нужные строки, после чего отправьте отредактированный файл обратно.",
+            caption=f"<b>{lexicon['admin']['update_topics_list']}</b>"
+                    f"\n\n1. Откройте файл, отправленный в этом сообщении"
+                    f"\n2. Перейдите на лист MAIN"
+                    f"\n3. Удалите ненужные и/или добавьте новые строки с названиями тем и тегами"
+                    f"\n4. Сохраните файл и отправьте его обратным сообщением."
+                    f"\n\nP.S. В одной строке должен содержаться только 1 тег",
             reply_markup=get_admin_cancel_upload_kb()
         )
 
@@ -86,8 +90,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
 
     elif volume == "pool_menu":
         await callback.message.edit_text(
-            text="<b>База вопросов</b>"
-                 "\n\nВыберите необходимое действие"
+            text=f"<b>{lexicon['admin']['update_pool']}</b>"
         )
 
         await callback.message.edit_reply_markup(
@@ -176,7 +179,7 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
             insert_topics_data(import_data['data'])
             await message.answer_document(
                 document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/temp/{filename}"),
-                caption="<b>Обновление базы тем/тегов</b>"
+                caption=f"<b>{lexicon['admin']['update_topics_list']}</b>"
                         "\n\nДанные успешно обновлены. В файле приведена информация о результатах импорта."
             )
         else:
