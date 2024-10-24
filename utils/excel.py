@@ -14,7 +14,7 @@ load_dotenv()
 
 def import_pool(filepath: str):
     wb = openpyxl.load_workbook(filepath)
-    sheet_name = "Основной лист"
+    sheet_name = "MAIN"
     sheet = wb[sheet_name]
 
     image_loader = SheetImageLoader(sheet)
@@ -88,7 +88,7 @@ def import_pool(filepath: str):
 def export_pool(data: List[Pool]):
     wb = openpyxl.load_workbook(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx")
 
-    sheet_name = "Основной лист"
+    sheet_name = "MAIN"
     sheet = wb[sheet_name]
 
     for index, q in enumerate(data):
@@ -107,7 +107,7 @@ def export_pool(data: List[Pool]):
 def export_topics_list(data: List[Topic]):
     wb = openpyxl.load_workbook(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_topics_list.xlsx")
 
-    sheet_name = "Основной лист"
+    sheet_name = "MAIN"
     sheet = wb[sheet_name]
 
     data = []
@@ -125,7 +125,7 @@ def export_topics_list(data: List[Topic]):
 
 def import_topics_list(filepath: str):
     wb = openpyxl.load_workbook(filepath)
-    sheet_name = "Основной лист"
+    sheet_name = "MAIN"
 
     result = {}
     errors = []
@@ -146,13 +146,14 @@ def import_topics_list(filepath: str):
                 topic_name = str(topic_name).replace("ё", "е")
 
                 if topic_name not in result.keys():
-                    result[topic_name] = set()
+                    result[topic_name] = []
 
                 if tag is not None:
 
                     tag = str(tag).replace("ё", "е")
 
-                    result[topic_name].add(tag.lower())
+                    result[topic_name].append(tag.lower())
+
                     sheet.cell(row=row_num, column=3).value = "OK"
                 else:
                     errors.append({'type': "tag", 'comment': "отсутствие тега", 'pos': {'row': row_num, 'column': 2},
