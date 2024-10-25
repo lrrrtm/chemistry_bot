@@ -15,10 +15,10 @@ from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
     get_skip_question_kb, get_self_check_kb, SelfCheckCallbackFactory, get_redo_skipped_questions_kb, \
-    ReDoSkippedQuestionCallbackFactory
+    ReDoSkippedQuestionCallbackFactory, get_topics_volumes_kb, SelectNewWorkVolumeCallbackFactory
 from tgbot.lexicon.messages import lexicon as msg_lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon, lexicon
-from tgbot.states.picking_topic import UserTopicChoice
+from tgbot.states.picking_topic import UserTopicChoice, UserTopicVolumeChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
 from utils.tags_helper import get_ege_tags_list, get_random_questions
@@ -40,7 +40,7 @@ async def cmd_new_work(message: Message, state: FSMContext):
 
             await message.answer(
                 text=msg_lexicon['new_work']['previous_work_not_ended'],
-                reply_markup=get_user_work_way_kb()
+                reply_markup=get_user_work_way_kb(hand_work_id=None)
             )
         else:
             await message.answer(
@@ -54,15 +54,29 @@ async def process_user_work_way(callback: types.CallbackQuery, callback_data: Se
                                 state: FSMContext):
     await callback.answer()
     action = callback_data.action
+    hand_work_id = callback_data.hand_work_id
 
     if action == 'start_new_work':
         remove_last_user_work(get_user(callback.from_user.id))
-        await callback.message.edit_text(
-            text=msg_lexicon['new_work']['select_type_of_work']
-        )
-        await callback.message.edit_reply_markup(
-            reply_markup=get_new_work_types_kb()
-        )
+
+        if hand_work_id is None:
+            await callback.message.edit_text(
+                text=msg_lexicon['new_work']['select_type_of_work']
+            )
+            await callback.message.edit_reply_markup(
+                reply_markup=get_new_work_types_kb()
+            )
+
+        else:
+            hand_work = get_hand_work(identificator=hand_work_id)
+            await callback.message.edit_text(
+                text=msg_lexicon['new_work']['hand_work_caption'].format(hand_work.name),
+            )
+
+            await callback.message.edit_reply_markup(
+                reply_markup=get_start_work_kb(work_type="hand_work", hand_work_id=hand_work_id)
+            )
+
     elif action == 'continue_last_work':
         await callback.message.delete()
         await go_next_question(get_user(callback.from_user.id).telegram_id, state, add_skipped_questions=True)
@@ -83,14 +97,58 @@ async def process_user_work_type(callback: types.CallbackQuery, callback_data: S
         )
 
     elif action == "topic":
-        await callback.message.delete()
+        await callback.message.edit_text(
+            text=f"<b>{lexicon['new_work']['topic']}</b>"
+                 f"\n\nВыбери нужный тебе раздел"
+        )
+
+        await callback.message.edit_reply_markup(
+            reply_markup=get_topics_volumes_kb()
+        )
+
+
+@router.callback_query(SelectNewWorkVolumeCallbackFactory.filter())
+async def process_starting_work(callback: types.CallbackQuery, callback_data: SelectNewWorkVolumeCallbackFactory,
+                                state: FSMContext):
+    volume = callback_data.volume
+
+    if volume is None:
+        await callback.answer()
+        await callback.message.edit_text(
+            text=msg_lexicon['new_work']['select_type_of_work']
+        )
+        await callback.message.edit_reply_markup(
+            reply_markup=get_new_work_types_kb()
+        )
+
+    else:
+        volumes_dict = {
+            'main_chem': "Общая химия",
+            'organic_chem': "Органическая химия",
+            'not_organic_chem': "Неорганическая химия",
+            'oge': "ОГЭ"
+        }
 
         topics_list = get_all_topics(active=True)
-        await callback.message.answer(
-            text=msg_lexicon['new_work']['topic_work_caption'],
-            reply_markup=get_topics_kb(topics_list)
-        )
-        await state.set_state(UserTopicChoice.waiting_for_answer)
+        topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
+
+        if not topics_list:
+            await callback.answer(
+                text=f"ℹ️ В разделе «{volumes_dict[volume]}» пока нет доступных тем. Попробуй выбрать другой раздел",
+                show_alert=True
+            )
+
+        else:
+            await callback.message.delete()
+
+            await callback.message.answer(
+                text=f"<b>{lexicon['new_work']['topic']}</b>"
+                     f"\n\nВыбран раздел <b>{volumes_dict[volume]}</b>"
+                     f"\n\nТеперь выбери нужную тебе тему",
+                reply_markup=get_topics_kb(topics_list)
+            )
+
+            await state.set_state(UserTopicChoice.waiting_for_answer)
 
 
 @router.message(UserTopicChoice.waiting_for_answer)
@@ -99,20 +157,32 @@ async def process_user_topic_choice(message: Message, state: FSMContext):
 
     if message.text == btns_lexicon['service']['back']:
         await message.answer(
-            text=msg_lexicon['new_work']['picking_topic_cancelled'],
+            text=btns_lexicon['service']['back'],
             reply_markup=ReplyKeyboardRemove()
         )
-        await cmd_new_work(message, state)
+
+        await message.answer(
+            text=f"<b>{lexicon['new_work']['topic']}</b>"
+                 f"\n\nВыбери нужный тебе раздел",
+            reply_markup=get_topics_volumes_kb()
+        )
+
     else:
-        topic_name = message.text.strip()
-        topic_data = get_topic_by_name(topic_name)
+        input_topic_name = message.text.strip()
+        topic_data = get_topic_by_name(input_topic_name)
         if topic_data is not None:
-            await message.answer(
-                text=msg_lexicon['new_work']['topic_picked'].format(topic_data.name),
+            msg = await message.answer(
+                text="Загружаем данные",
                 reply_markup=ReplyKeyboardRemove()
             )
+            await msg.delete()
+
             await message.answer(
-                text=msg_lexicon['new_work']['topic_work_caption_2'],
+                text=msg_lexicon['new_work']['topic_work_caption_2'].format(
+                    btns_lexicon['new_work']['topic'],
+                    topic_data.volume,
+                    topic_data.name
+                ),
                 reply_markup=get_start_work_kb(work_type="topic", topic_id=topic_data.id)
             )
         else:
@@ -131,7 +201,12 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
     topic_id = callback_data.topic_id
     hand_work_id = callback_data.hand_work_id
 
+    works_list = get_user_works(callback.from_user.id)
+    if works_list and works_list[0].end_datetime is None:
+        return
+
     if action == "start":
+
         await callback.message.delete()
         msg = await bot.send_message(
             chat_id=callback.from_user.id,
@@ -169,7 +244,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
                 await msg.delete()
 
                 await callback.message.answer(
-                    text="<b>Упс, что-то сломалось</b>"
+                    text="<b>😬 Упс, что-то поломалось</b>"
                          "\n\nВ нашей базе не хватило задачек для того, чтобы составить для тебя персональную тренировку. Мы уже получили информацию об этом и занялись исправлением ошибки. А пока ты можешь выбрать другую тему персональной тренировки."
                 )
                 return
@@ -199,7 +274,10 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
             )
         elif work_type == "hand_work":
             await callback.message.edit_text(
-                text=msg_lexicon['new_work']['starting_hand_work_cancelled']
+                text=msg_lexicon['new_work']['starting_hand_work_cancelled'].format(
+                    getenv('BOT_NAME'),
+                    hand_work_id
+                )
             )
 
 
@@ -219,10 +297,8 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
         if q.status in questions_statuses:
             q_info = get_question_from_pool(q.question_id)
 
-            # question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if any(
-            #     elem in q_info.tags_list for elem in get_ege_self_check_tags_list()) else f"\n\n{q_info.text}"
-
-            question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if bool(q_info.is_selfcheck) else f"\n\n{q_info.text}"
+            question_text_block = f"\n\n{self_check_note}\n\n{q_info.text}" if bool(
+                q_info.is_selfcheck) else f"\n\n{q_info.text}"
 
             if bool(q_info.question_image):
                 if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
@@ -237,7 +313,6 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                             f"{question_text_block}",
                     show_caption_above_media=True,
                     reply_markup=get_skip_question_kb(
-                        # self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
                         self_check_btn_visible=bool(q_info.is_selfcheck)
                     )
                 )
@@ -247,7 +322,6 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                     text=f"№{q.position} <code>(id{q_info.id})</code>"
                          f"{question_text_block}",
                     reply_markup=get_skip_question_kb(
-                        # self_check_btn_visible=any(elem in q_info.tags_list for elem in get_ege_self_check_tags_list())
                         self_check_btn_visible=bool(q_info.is_selfcheck)
                     )
                 )
@@ -306,7 +380,6 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
         return
 
     else:
-        # if any(elem in data['question_data'].tags_list for elem in get_ege_self_check_tags_list()):
         if bool(data['question_data'].is_selfcheck):
             await message.answer(
                 text=msg_lexicon['new_work']['self_check_request']

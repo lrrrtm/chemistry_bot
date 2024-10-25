@@ -5,9 +5,9 @@ from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ReplyKeyboardRemove
 
-from db.crud import (get_user, create_user, get_hand_work)
+from db.crud import (get_user, create_user, get_hand_work, get_user_works)
 from tgbot.handlers.menu import cmd_menu
-from tgbot.keyboards.new_work import get_start_work_kb
+from tgbot.keyboards.new_work import get_start_work_kb, get_user_work_way_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.states.register_user import InputUserName
 
@@ -20,10 +20,19 @@ async def deep_linking(message: Message, command: CommandObject, state: FSMConte
     work = get_hand_work(identificator=identificator)
 
     if work:
-        await message.answer(
-            text=lexicon['new_work']['hand_work_caption'],
-            reply_markup=get_start_work_kb(work_type="hand_work", hand_work_id=identificator)
-        )
+        works_list = get_user_works(message.from_user.id)
+        if works_list and works_list[0].end_datetime is None:
+
+            await message.answer(
+                text=lexicon['new_work']['previous_work_not_ended'],
+                reply_markup=get_user_work_way_kb(hand_work_id=identificator)
+            )
+        else:
+            await message.answer(
+                text=lexicon['new_work']['hand_work_caption'].format(work.name),
+                reply_markup=get_start_work_kb(work_type="hand_work", hand_work_id=identificator)
+            )
+
     else:
         await message.answer(
             text="Персональная тренировка с таким номером не найдена. Проверь правильность ссылки или обратись к преподавателю."

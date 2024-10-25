@@ -21,6 +21,7 @@ async def cmd_stats(message: Message, state: FSMContext):
     )
 
     works_list = get_user_works(message.from_user.id)
+    works_list = [el for el in works_list if el.end_datetime is not None][:10]
 
     await msg.delete()
 

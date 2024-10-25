@@ -11,11 +11,14 @@ from aiogram.filters.callback_data import CallbackData
 
 class SelectWorkWayCallbackFactory(CallbackData, prefix="work_way"):
     action: str
+    hand_work_id: str | None
 
 
 class SelectNewWorkTypeCallbackFactory(CallbackData, prefix="new_work_type"):
     work_type: str
 
+class SelectNewWorkVolumeCallbackFactory(CallbackData, prefix="new_work_volume"):
+    volume: str | None
 
 class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
@@ -35,15 +38,15 @@ class ReDoSkippedQuestionCallbackFactory(CallbackData, prefix="redo_skipped"):
     work_id: int
 
 
-def get_user_work_way_kb() -> InlineKeyboardMarkup:
+def get_user_work_way_kb(hand_work_id: str | None) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['continue_last_work'],
-        callback_data=SelectWorkWayCallbackFactory(action="continue_last_work"),
+        callback_data=SelectWorkWayCallbackFactory(action="continue_last_work", hand_work_id=hand_work_id),
     )
     builder.button(
         text=lexicon['new_work']['start_new_work'],
-        callback_data=SelectWorkWayCallbackFactory(action="start_new_work")
+        callback_data=SelectWorkWayCallbackFactory(action="start_new_work", hand_work_id=hand_work_id)
     )
     builder.adjust(1)
     return builder.as_markup()
@@ -62,16 +65,41 @@ def get_new_work_types_kb() -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
+def get_topics_volumes_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text="Общая химия",
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume="main_chem")
+    )
+    builder.button(
+        text="Органическая химия",
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume="organic_chem")
+    )
+    builder.button(
+        text="Неорганическая химия",
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume="not_organic_chem")
+    )
+    builder.button(
+        text="ОГЭ",
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume="oge")
+    )
+    builder.button(
+        text=lexicon['service']['back'],
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume=None)
+    )
+    builder.adjust(1)
+    return builder.as_markup()
 
 def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()
-    builder.button(
-        text=lexicon['service']['back'],
-    )
     for topic in topics_list:
         builder.button(
             text=topic.name,
         )
+    builder.button(
+        text=lexicon['service']['back'],
+    )
     builder.adjust(1)
 
     return builder.as_markup(resize_keyboard=True)

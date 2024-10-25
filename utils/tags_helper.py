@@ -4,11 +4,6 @@ import random
 
 from db.models import Pool
 
-
-def get_ege_self_check_tags_list():
-    return [f"ege_{n}" for n in range(29, 35)]
-
-
 def get_ege_tags_list(each_question_limit: int):
     return {f"ege_{num}": each_question_limit for num in range(1, 35)}
 

@@ -1,5 +1,6 @@
 import hashlib
 import os.path
+import subprocess
 from datetime import datetime
 from os import getenv
 
@@ -15,6 +16,7 @@ from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackF
     AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb, \
     get_admin_pool_menu_kb
 from tgbot.lexicon.buttons import lexicon
+from tgbot.lexicon.messages import lexicon as msg_lexicon
 from tgbot.states.updating_db import UpdateTopics, InsertPool
 from utils.clearing import clear_folder
 from utils.excel import export_topics_list, import_topics_list, import_pool
@@ -40,7 +42,8 @@ def get_admin_auth_key(telegram_id: int) -> str:
 async def cmd_admin(message: types.Message):
     if message.chat.id in [int(getenv('FBACK_GROUP_ID')), int(getenv('ADMIN_ID'))]:
         await message.answer(
-            text="<b>Панель управления</b>",
+            text="<b>🎛️ Панель управления</b>"
+                 "\n\nВыберие необходимый раздел",
             reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message.from_user.id), message.from_user.id)
         )
 
@@ -55,7 +58,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
         data = get_system_status()
 
         await callback.message.edit_text(
-            text="<b>Состояние системы</b>"
+            text=f"<b>{lexicon['admin']['system_status']}</b>"
         )
         await callback.message.edit_reply_markup(
             reply_markup=get_admin_system_status_kb(data)
@@ -63,7 +66,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
 
     elif volume == "database":
         await callback.message.edit_text(
-            text="<b>База данных</b>"
+            text=f"<b>{lexicon['admin']['database']}</b>"
         )
         await callback.message.edit_reply_markup(
             reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
@@ -97,22 +100,10 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
             reply_markup=get_admin_pool_menu_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
         )
 
-        # pool = get_all_pool(active=True)
-        # export_pool(pool)
-
-        # await callback.message.answer_document(
-        #     document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx"),
-        #     caption=f"<b>Обновление базы вопросов</b>"
-        #             f"\n\nДля добавления новых вопросов откройте эту таблицу, внесите все данные, после чего отправьте отредактированный файл обратно.",
-        #     reply_markup=get_admin_cancel_upload_kb()
-        # )
-        #
-        # await state.set_state(UpdatePool.waiting_for_msg)
-
     elif volume == "insert_pool":
         await callback.message.answer_document(
             document=FSInputFile(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx"),
-            caption=f"<b>Добавление вопросов</b>"
+            caption=f"<b>{lexicon['admin']['insert_pool']}</b>"
                     f"\n\nДля добавления новых вопросов откройте эту таблицу, внесите все данные, после чего отправьте отредактированный файл обратно.",
             reply_markup=get_admin_cancel_upload_kb()
         )
@@ -130,15 +121,12 @@ async def admin_menu_back_process(callback: types.CallbackQuery, callback_data: 
 
     if current_volume in ["system_status", "database"]:
         await cmd_admin(callback.message)
+
     elif current_volume == "pool_menu":
         await callback.message.answer(
-            text="<b>База данных</b>",
+            text=f"<b>{lexicon['admin']['database']}</b>",
             reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
         )
-    # if current_volume == "system_status" or current_volume == "database":
-    #     await cmd_admin(callback.message)
-    #
-    # elif current_volume == ""
 
 
 @router.callback_query((AdminRebootServiceCallbackFactory.filter()))
@@ -147,9 +135,17 @@ async def admin_menu_reboot_process(callback: types.CallbackQuery, callback_data
     filename = callback_data.filename
 
     await callback.answer(
-        text=f"ℹ️ Запрос на перезагрузку {filename} отправлен!",
+        text=f"ℹ️ Запрос на перезапуск службы {filename} отправлен!",
         show_alert=True
     )
+
+    try:
+        subprocess.run(["sudo", "systemctl", "restart", filename], check=True)
+
+    except subprocess.CalledProcessError as e:
+        await callback.message.answer(
+            text=f"Ошибка при перезапуске службы {filename}: {e}"
+        )
 
 
 @router.message(UpdateTopics.waiting_for_msg)
@@ -157,12 +153,13 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
     if message.text == lexicon['admin']['cancel_uploading_table']:
         await state.clear()
         await message.answer(
-            text="<b>Обновление данных отменено</b>",
+            text=f"{msg_lexicon['service']['action_cancelled']}",
             reply_markup=ReplyKeyboardRemove()
         )
+
     else:
         msg = await message.answer(
-            text="Выполняется обработка файла...",
+            text=f"{msg_lexicon['service']['processing_file']}",
             reply_markup=ReplyKeyboardRemove()
         )
         file_id = message.document.file_id
@@ -170,6 +167,7 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
         file = await bot.get_file(file_id)
         await bot.download_file(file.file_path, filepath)
 
+        # todo: реализовать обратную связь по загруженным данным
         import_data = import_topics_list(filepath)
 
         await msg.delete()
@@ -184,8 +182,7 @@ async def catch_topics_list_table(message: Message, state: FSMContext):
             )
         else:
             await message.answer(
-                text="<b>Ошибка при импорте файла</b>"
-                     f"\n\nПри обработке отправленного вами файла произошла следующая ошибка: {import_data['comment']}"
+                text=msg_lexicon['service']['processing_file_error'].format(import_data['comment'])
             )
 
     clear_folder(f"{getenv('ROOT_FOLDER')}/data/temp")
@@ -196,12 +193,12 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
     if message.text == lexicon['admin']['cancel_uploading_table']:
         await state.clear()
         await message.answer(
-            text="<b>Добавление данных отменено</b>",
+            text=msg_lexicon['service']['action_cancelled'],
             reply_markup=ReplyKeyboardRemove()
         )
     else:
         msg = await message.answer(
-            text="Выполняется обработка файла...",
+            text=msg_lexicon['service']['processing_file'],
             reply_markup=ReplyKeyboardRemove()
         )
         file_id = message.document.file_id
@@ -237,18 +234,16 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
             if import_data['errors']:
                 ids = " ".join(str(a) for a in import_data['errors'])
                 errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их ID:</b> \n{ids}"
-
             else:
                 errors_text = ""
 
             await message.answer(
-                text="<b>Добавление вопросов</b>"
+                text=f"<b>{lexicon['admin']['insert_pool']}</b>"
                      f"\n\nУспешно импортировано вопросов: {len(import_data['data'])}" + errors_text
             )
         else:
             await message.answer(
-                text="<b>Ошибка при импорте файла</b>"
-                     f"\n\nПри обработке отправленного вами файла произошла следующая ошибка: {import_data['comment']}"
+                text=msg_lexicon['service']['processing_file_error'].format(import_data['comment'])
             )
 
     clear_folder(f"{getenv('ROOT_FOLDER')}/data/temp")

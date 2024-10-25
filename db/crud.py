@@ -373,20 +373,19 @@ def insert_topics_data(data):
             el.is_active = 0
         session.commit()
 
-        for name, tags_list in data.items():
+        for name, data in data.items():
             if name.lower() in old_topic_names:
                 topic = session.query(Topic).filter_by(name=name).first()
-                topic.tags_list = tags_list
+                topic.tags_list = data['tags']
+                topic.volume = data['volume']
                 topic.is_active = 1
 
             else:
                 t = Topic(
                     name=name,
-                    tags_list=tags_list,
+                    tags_list=data['tags'],
+                    volume=data['volume'],
                     is_active=1
                 )
                 session.add(t)
         session.commit()
-
-# export_topics_list(get_all_topics())
-# export_pool(get_all_pool(active=True))

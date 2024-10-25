@@ -79,7 +79,7 @@ def import_pool(filepath: str):
                     data.append(question_info)
                 else:
                     errors.append(import_id)
-
+        print(data)
         return {'is_ok': True, 'data': data, 'comment': "Импорт вопросов завершён", 'errors': errors}
     except Exception as e:
         return {'is_ok': False, 'comment': f"Ошибка при чтении данных таблицы: {str(e)}", 'errors': errors}
@@ -134,40 +134,50 @@ def import_topics_list(filepath: str):
     except KeyError:
         return {'is_ok': False, 'comment': f"В файле отсутствует лист \"{sheet_name}\""}
 
-    sheet.cell(row=1, column=3).value = "Статус"
+    sheet.cell(row=1, column=4).value = "Статус"
 
     for row_num in range(2, 102):
         topic_name = sheet.cell(row=row_num, column=1).value
         tag = sheet.cell(row=row_num, column=2).value
+        volume = sheet.cell(row=row_num, column=3).value
 
-        if not all([topic_name is None, tag is None]):
+        if not all([topic_name is None, tag is None, volume is None]):
             if topic_name is not None:
 
                 topic_name = str(topic_name).replace("ё", "е")
 
                 if topic_name not in result.keys():
-                    result[topic_name] = []
+                    result[topic_name] = {'volume': str(), 'tags': list()}
 
                 if tag is not None:
 
-                    tag = str(tag).replace("ё", "е")
+                    tag = str(tag).replace("ё", "е").lower()
 
-                    result[topic_name].append(tag.lower())
+                    if volume is not None:
+                        result[topic_name]['volume'] = volume
+                        result[topic_name]['tags'].append(tag)
+                        sheet.cell(row=row_num, column=4).value = "OK"
 
-                    sheet.cell(row=row_num, column=3).value = "OK"
+                    else:
+                        errors.append(
+                            {'type': "volume", 'comment': "отсутствие раздела", 'pos': {'row': row_num, 'column': 2},
+                             'data': topic_name})
+                        sheet.cell(row=row_num, column=4).value = "VOLUME_ERROR"
+
                 else:
                     errors.append({'type': "tag", 'comment': "отсутствие тега", 'pos': {'row': row_num, 'column': 2},
                                    'data': topic_name})
-                    sheet.cell(row=row_num, column=3).value = "TAG_ERROR"
+                    sheet.cell(row=row_num, column=4).value = "TAG_ERROR"
 
             else:
                 errors.append(
                     {'type': "name", 'comment': "отсутствие названия темы", 'pos': {'row': row_num, 'column': 1},
                      'data': tag})
-                sheet.cell(row=row_num, column=3).value = "NAME_ERROR"
+                sheet.cell(row=row_num, column=4).value = "NAME_ERROR"
 
     for key, value in result.items():
-        result[key] = list(value)
+        result[key]['tags'] = list(value['tags'])
+    print(result)
     filename = f"topics_import_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
     wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/{filename}")
     return {'is_ok': True, 'comment': "Импорт тем и тегов завершён", 'data': result, 'errors': errors,

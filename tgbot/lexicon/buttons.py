@@ -13,10 +13,11 @@ lexicon = {
         'cancel_answer': "🚫 Отменить"
     },
     'new_work': {
-        'continue_last_work': "📝 Дорешать последнюю тренировку",
-        'start_new_work': "🆕 Начать новую тренировку",
+        'continue_last_work': "📝 Дорешать текущую",
+        'start_new_work': "🆕 Начать новую",
         'ege': "📑 Тренировка в формате ЕГЭ",
         'topic': "🙇 Персональная тренировка",
+        'hand_work': "🙇 Тренировка от преподавателя",
         'start': "🏃‍➡️ Супер, давай начнём!",
         'cancel': "🥱 Не хочу решать сейчас",
         'skip_question': "⏭️ Пропустить вопрос",
@@ -34,7 +35,7 @@ lexicon = {
         'cancel_uploading_table': "🚫 Отменить",
         'update_topics_list': "📋 Темы и теги",
         'update_pool': "🤔 Пул вопросов",
-        'insert_pool': "🆕 Добавить вопросы",
-        'edit_pool': "📝 Редактировать пул"
+        'insert_pool': "🆕 Добавление вопросов",
+        'edit_pool': "📝 Открыть пул"
     }
 }
