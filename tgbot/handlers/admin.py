@@ -144,7 +144,8 @@ async def admin_menu_reboot_process(callback: types.CallbackQuery, callback_data
 
     except subprocess.CalledProcessError as e:
         await callback.message.answer(
-            text=f"Ошибка при перезапуске службы {filename}: {e}"
+            text=f"🚨 Ошибка при перезапуске службы <b>{filename}</b>"
+                 f"\n\n{e}"
         )
 
 
