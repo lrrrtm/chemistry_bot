@@ -112,13 +112,15 @@ def export_topics_list(db_data: List[Topic]):
 
     data = []
     for topic in db_data:
-        topic_name = topic.name
+        name = topic.name
+        volume = topic.volume
         for tag in topic.tags_list:
-            data.append([topic_name, tag])
+            data.append([name, tag, volume])
 
     for index, el in enumerate(data):
         sheet.cell(row=index + 2, column=1, value=el[0])
         sheet.cell(row=index + 2, column=2, value=el[1])
+        sheet.cell(row=index + 2, column=3, value=el[2])
 
     wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/chembot_topics_list.xlsx")
 
@@ -136,7 +138,7 @@ def import_topics_list(filepath: str):
 
     sheet.cell(row=1, column=4).value = "Статус"
 
-    for row_num in range(2, 102):
+    for row_num in range(2, 1002):
         topic_name = sheet.cell(row=row_num, column=1).value
         tag = sheet.cell(row=row_num, column=2).value
         volume = sheet.cell(row=row_num, column=3).value
