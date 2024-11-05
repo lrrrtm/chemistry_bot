@@ -265,6 +265,17 @@ def insert_work_questions(work: Work, questions_list: List[Pool]):
             session.add(q)
         session.commit()
 
+def switch_image_flag(value: int, img_type: str, q_id: int):
+    with get_session() as session:
+        q = session.query(Pool).filter_by(id=q_id).first()
+
+        if img_type == "question":
+            q.question_image = value
+
+        elif img_type == "answer":
+            q.answer_image = value
+
+        session.commit()
 
 def update_question_status(q_id: int, status: str):
     with get_session() as session:

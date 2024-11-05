@@ -23,7 +23,8 @@ import flet as ft
 from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
     get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
-    get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question
+    get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question, \
+    switch_image_flag
 from db.models import WorkQuestion
 from dotenv import load_dotenv
 
@@ -257,10 +258,15 @@ def main(page: ft.Page):
             ]
             file_picker.upload(upload_list)
 
+    def update_images_in_db(filepath: str):
+        upload_image_config = page.session.get('upload_image_config')
+
+        if os.path.exists(filepath):
+            switch_image_flag(1, upload_image_config['type'], upload_image_config['id'])
+
     def check(e: ft.FilePickerUploadEvent):
         if bool(int(e.progress)):
             upload_image_config = page.session.get('upload_image_config')
-
 
             if upload_image_config['type'] == "question":
                 filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/{upload_image_config['id']}.png"
@@ -273,8 +279,35 @@ def main(page: ft.Page):
                 destination_path=filepath,
             )
 
+            update_images_in_db(filepath)
+
             page.route = f"/admin/pool?update_question_id={upload_image_config['id']}"
             navigate()
+
+    def remove_image_from_question(e: ft.ControlEvent):
+        image_data = e.control.data
+
+        if image_data['type'] == "question":
+            old_filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/{image_data['id']}.png"
+            new_filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
+
+        elif image_data['type'] == "answer":
+            old_filepath = f"{getenv('ROOT_FOLDER')}/data/answers_images/{image_data['id']}.png"
+            new_filepath = f"{getenv('ROOT_FOLDER')}/data/answers_images/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
+
+        if os.path.exists(old_filepath):
+            os.rename(
+                old_filepath,
+                new_filepath
+            )
+
+            switch_image_flag(0, image_data['type'], image_data['id'])
+
+            info_dialog.title.value = "Удаление изображения"
+            info_dialog.content.value = "Изображение успешно удалено!"
+            info_dialog.open = True
+
+            page.update()
 
     file_picker = ft.FilePicker(on_result=upload_files, on_upload=check)
     page.overlay.append(file_picker)
@@ -761,7 +794,6 @@ def main(page: ft.Page):
                                         data={'place': "question_field", "question": el, 'arg': "text"},
                                         on_change=validate_question_card
                                     ),
-                                    # subtitle=ft.Text("текст вопроса"),
                                 ),
                                 ft.Container(
                                     content=ft.ListTile(
@@ -780,7 +812,18 @@ def main(page: ft.Page):
                                         subtitle=ft.Text("изображение вопроса"),
                                     ),
                                     padding=ft.padding.only(left=-10)
-                                )
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.INFO),
+                                    title=ft.OutlinedButton(
+                                        text="Удалить изображение",
+                                        icon=ft.icons.DELETE,
+                                        disabled=False if bool(el.question_image) else True,
+                                        on_long_press=remove_image_from_question,
+                                        data={'type': 'question', 'id': el.id}
+
+                                    ),
+                                ),
                             ]
                         ),
                         padding=15
@@ -818,7 +861,17 @@ def main(page: ft.Page):
                                         subtitle=ft.Text("изображение ответа"),
                                     ),
                                     padding=ft.padding.only(left=-10)
-                                )
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Icon(ft.icons.INFO),
+                                    title=ft.OutlinedButton(
+                                        text="Удалить изображение",
+                                        icon=ft.icons.DELETE,
+                                        disabled=False if bool(el.answer_image) else True,
+                                        on_long_press=remove_image_from_question,
+                                        data={'type': 'answer', 'id': el.id}
+                                    ),
+                                ),
                             ]
                         ),
                         padding=15
@@ -918,7 +971,7 @@ def main(page: ft.Page):
                     controls=[
                         ft.OutlinedButton(
                             icon=ft.icons.DELETE,
-                            text="Удалить",
+                            text="Удалить впорос",
                             data='remove_question',
                             on_long_press=process_delete_or_update_question
                         ),
