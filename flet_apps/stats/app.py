@@ -697,6 +697,8 @@ def main(page: ft.Page):
         el = get_question_from_pool(question_id=question_id)
         page.session.set("currrent_question_data", el)
 
+        page.appbar.title.value = f"Вопрос #{el.id}"
+
         col = ft.Column(
             controls=[
                 ft.ListTile(
@@ -851,6 +853,11 @@ def main(page: ft.Page):
 
     def open_find_in_pool():
         page.controls.clear()
+
+        page.appbar = ft.AppBar(
+            title=ft.Text("Пул вопросов", size=18),
+            bgcolor=ft.colors.SURFACE_VARIANT
+        )
 
         pool = get_all_pool(active=True)
         questions_ids_list = [el.id for el in pool]
