@@ -21,7 +21,7 @@ import flet as ft
 from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
     get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
-    get_paginated_pool, get_pool_by_query
+    get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question
 from db.models import WorkQuestion
 from dotenv import load_dotenv
 
@@ -29,11 +29,11 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-# set_temporary_key(
-#     'develop',
-#     'develop',
-#     3600
-# )
+set_temporary_key(
+    'develop',
+    'develop',
+    3600
+)
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -613,23 +613,25 @@ def main(page: ft.Page):
         data = page.session.get("")
 
     def validate_question_card(e: ft.ControlEvent):
+        question_data = page.session.get('currrent_question_data')
         data = e.control.data
         place = data['place']
-        question = data['question']
-        field_value = e.control.value.strip()
+        arg = data['arg']
+        field_value = str(e.control.value).strip()
 
         wrong_fields = []
 
         if place in ["question_field", "answer_field"]:
-            if len(field_value) < 5:
+            if len(field_value) < 1:
                 e.control.border_color = ft.colors.RED
-                
             else:
                 e.control.border_color = ft.colors.GREEN
+                setattr(question_data, arg, field_value)
 
         elif place in ["level_field", "mark_field"]:
             if len(field_value) == 1 and field_value.isnumeric() and 0 < int(field_value) <= 5:
                 e.control.border_color = ft.colors.GREEN
+                setattr(question_data, arg, int(field_value))
             else:
                 e.control.border_color = ft.colors.RED
                 wrong_fields.append(place)
@@ -637,14 +639,16 @@ def main(page: ft.Page):
         elif place == "tags_list_field":
             if len(field_value.split(", ")) > 0 and field_value.split(", ")[0] != "":
                 e.control.border_color = ft.colors.GREEN
+                setattr(question_data, arg, field_value.split(", "))
             else:
                 e.control.border_color = ft.colors.RED
                 wrong_fields.append(place)
 
-        data = page.session.get("wrong_fields")
-        data[question].id = wrong_fields
-        page.session.set("wrong_fields", data)
+        elif place in ['rotate', 'selfcheck']:
+            setattr(question_data, arg, int(e.control.value))
 
+        print(vars(question_data))
+        page.session.set('currrent_question_data', question_data)
         page.update()
 
     def goto_query(e: ft.ControlEvent):
@@ -652,6 +656,208 @@ def main(page: ft.Page):
             page_num=None,
             query=e.control.value.strip()
         )
+
+    info_dialog = ft.AlertDialog(
+        title=ft.Text(size=20),
+        content=ft.Text(size=16),
+        actions=[
+            ft.ElevatedButton(
+                text="Хорошо",
+                on_click=lambda _: open_find_in_pool()
+            )
+        ]
+    )
+
+    page.overlay.append(info_dialog)
+
+    def process_delete_or_update_question(e: ft.ControlEvent):
+        question_data = page.session.get('currrent_question_data')
+        action = e.control.data
+
+        if action == 'remove_question':
+            # todo: проверить наличие вопроса в hand_work перед удалением. Если удаляем вопрос, то удаляем всю hand_work
+            deactivate_question(question_data.id)
+            page.controls.clear()
+            info_dialog.title.value = "Удаление вопроса"
+            info_dialog.content.value = "Вопрос успешно удалён из базы!"
+
+        elif action == 'update_question':
+            update_question(question_data)
+            info_dialog.title.value = "Обновление вопроса"
+            info_dialog.content.value = "Содержимое вопроса успешно обновлено!"
+
+        info_dialog.open = True
+        page.update()
+
+    def open_question_card(question_id: int):
+        find_question_dialog.open = False
+        page.controls.clear()
+        switch_loading(True)
+
+        el = get_question_from_pool(question_id=question_id)
+        page.session.set("currrent_question_data", el)
+
+        col = ft.Column(
+            controls=[
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.TEXT_FIELDS),
+                    title=ft.TextField(
+                        value=el.text,
+                        multiline=True,
+                        data={'place': "question_field", "question": el, 'arg': "text"},
+                        on_change=validate_question_card
+                    ),
+                    subtitle=ft.Text("текст вопроса")
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.NUMBERS),
+                    title=ft.TextField(
+                        value=str(el.level),
+                        multiline=True,
+                        data={'place': "level_field", "question": el, 'arg': "level"},
+                        on_change=validate_question_card
+                    ),
+                    subtitle=ft.Text("уровень сложности")
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.IMAGE),
+                    title=ft.Column([
+                        ft.Image(
+                            src_base64=image_to_base64("question", el.id),
+                            error_content=ft.Text("Ошибка загрузки изображения"),
+                        ) if el.question_image else ft.Text("Изображение отсутствует")
+                    ]),
+                    subtitle=ft.Text("изображение вопроса"),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.TEXT_FIELDS),
+                    title=ft.TextField(
+                        value=el.answer,
+                        multiline=True,
+                        data={'place': "answer_field", "question": el, 'arg': "answer"},
+                        on_change=validate_question_card
+                    ),
+                    subtitle=ft.Text("текст ответа")
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.IMAGE),
+                    title=ft.Column([
+                        ft.Image(
+                            src_base64=image_to_base64("answer", el.id),
+                            error_content=ft.Text("Ошибка загрузки изображения"),
+                        ) if el.answer_image else ft.Text("Изображение отсутствует")
+                    ]),
+                    subtitle=ft.Text("изображение ответа"),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.NUMBERS),
+                    title=ft.TextField(
+                        value=str(el.full_mark),
+                        multiline=True,
+                        data={'place': "mark_field", "question": el, 'arg': "full_mark"},
+                        on_change=validate_question_card
+                    ),
+                    subtitle=ft.Text("максимальный балл")
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.icons.NUMBERS),
+                    title=ft.TextField(
+                        value=", ".join(a for a in el.tags_list),
+                        multiline=True,
+                        data={'place': "tags_list_field", "question": el, 'arg': "tags_list"},
+                        on_change=validate_question_card
+                    ),
+                    subtitle=ft.Text("список тегов"),
+                ),
+                ft.Switch(label="Вращение ответа", value=bool(el.is_rotate), on_change=validate_question_card, data={'place': "rotate", "question": el, 'arg': "is_rotate"}),
+                ft.Switch(label="Самопроверка", value=bool(el.is_selfcheck), on_change=validate_question_card, data={'place': "selfcheck", "question": el, 'arg': "is_selfcheck"}),
+                ft.Row(
+                    # alignment=ft.MainAxisAlignment.END,
+                    controls=[
+                        ft.OutlinedButton(
+                            icon=ft.icons.DELETE,
+                            text="Удалить",
+                            data='remove_question',
+                            on_click=process_delete_or_update_question
+                        ),
+                        ft.ElevatedButton(
+                            icon=ft.icons.SAVE,
+                            text="Сохранить",
+                            data='update_question',
+                            on_click=process_delete_or_update_question
+                        )
+                    ]
+                )
+            ]
+        )
+
+        page.add(col)
+        switch_loading(False)
+
+    def process_edit_find_question_dialog(e: ft.ControlEvent):
+        action = e.control.data
+
+        questions_ids_list = page.session.get('questions_ids_list')
+
+        if action == "update_value":
+            user_input = str(e.control.value)
+
+            if user_input.isnumeric() and int(user_input) in questions_ids_list:
+                page.session.set("question_id_for_find", e.control.value)
+                find_question_dialog.content.controls[1].value = ""
+                find_question_dialog.actions[0].disabled = False
+            else:
+                find_question_dialog.content.controls[1].value = "Неверный формат ID / ID не существует"
+                find_question_dialog.actions[0].disabled = True
+
+
+        elif action == "find_question":
+            find_question_dialog.content.controls[0].value = None
+            find_question_dialog.actions[0].disabled = True
+
+            question_id = int(page.session.get("question_id_for_find"))
+            open_question_card(question_id=question_id)
+
+        page.update()
+
+    find_question_dialog = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("Поиск вопроса", size=20),
+        content=ft.Column(
+            controls=[
+                ft.TextField(
+                    label="ID вопроса",
+                    on_change=process_edit_find_question_dialog,
+                    data='update_value'
+                ),
+                ft.Text(size=16)
+            ],
+            width=600,
+            height=50
+        ),
+        actions=[
+            ft.ElevatedButton(
+                text="Перейти к вопросу",
+                icon=ft.icons.FILE_OPEN,
+                on_click=process_edit_find_question_dialog,
+                data='find_question',
+                disabled=True
+            )
+        ],
+        actions_alignment=ft.MainAxisAlignment.END
+    )
+
+    page.overlay.append(find_question_dialog)
+
+    def open_find_in_pool():
+        page.controls.clear()
+
+        pool = get_all_pool(active=True)
+        questions_ids_list = [el.id for el in pool]
+        page.session.set('questions_ids_list', questions_ids_list)
+        find_question_dialog.open = True
+
+        page.update()
 
     def open_pool_list(page_num: int | None, query: str | None):
         per_page = 15
@@ -774,7 +980,7 @@ def main(page: ft.Page):
                                     subtitle=ft.Text("список тегов"),
                                 ),
                                 ft.Row(
-                                    alignment=ft.MainAxisAlignment.END,
+                                    # alignment=ft.MainAxisAlignment.END,
                                     controls=[
                                         ft.OutlinedButton(
                                             icon=ft.icons.DELETE,
@@ -807,7 +1013,7 @@ def main(page: ft.Page):
     # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
-    # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
+    page.route = "/admin/pool?auth_key=develop&admin_id=develop"
 
     def error_404():
         page.controls.clear()
@@ -844,10 +1050,11 @@ def main(page: ft.Page):
                     open_ege_marks_list()
 
                 elif volume == "pool":
-                    open_pool_list(
-                        page_num=1,
-                        query=None
-                    )
+                    open_find_in_pool()
+                    # open_pool_list(
+                    #     page_num=1,
+                    #     query=None
+                    # )
 
                 else:
                     error_404()

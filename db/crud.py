@@ -274,6 +274,26 @@ def update_question_status(q_id: int, status: str):
 
         session.commit()
 
+def deactivate_question(q_id: int):
+    with get_session() as session:
+        q = session.query(Pool).filter_by(id=q_id).first()
+        q.is_active = 0
+
+        session.commit()
+
+def update_question(question: Pool):
+    with get_session() as session:
+        q = session.query(Pool).filter_by(id=question.id).first()
+
+        q.text = question.text
+        q.answer = question.answer
+        q.full_mark = question.full_mark
+        q.tags_list = question.tags_list
+        q.is_rotate = question.is_rotate
+        q.is_selfcheck = question.is_selfcheck
+        q.level = question.level
+
+        session.commit()
 
 def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime,
                    start_datetime: datetime = None):
