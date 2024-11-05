@@ -31,8 +31,8 @@ def import_pool(filepath: str):
                             sheet.cell(row=row_num, column=3).value is not None,
                             sheet.cell(row=row_num, column=5).value is not None,
                             sheet.cell(row=row_num, column=7).value is not None,
-                            sheet.cell(row=row_num, column=8).value is not None,
-                            sheet.cell(row=row_num, column=9).value is not None,
+                            # sheet.cell(row=row_num, column=8).value is not None,
+                            # sheet.cell(row=row_num, column=9).value is not None,
                             sheet.cell(row=row_num, column=10).value is not None,
                         ]
                 ):
