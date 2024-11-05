@@ -593,6 +593,8 @@ def main(page: ft.Page):
 
             update_ege_converting(config)
 
+            # info_dialog.title.value = "Обновление данных"
+            # info_dialog.content.value = "Данные "
             page.snack_bar = ft.SnackBar(
                 content=ft.Text(
                     value=f"Данные успешно обновлены",

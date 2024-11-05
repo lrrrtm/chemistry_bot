@@ -445,7 +445,15 @@ async def try_to_open_next_question(work_id: int, message: Message, user_tid: in
                 text=msg_lexicon['new_work']['view_results'],
                 reply_markup=get_view_result_kb(get_user(user_tid), work_id)
             )
-            end_work(work_id)
+            work_data = end_work(work_id)
+            if work_data.work_type == "hand_work":
+                user = get_user(user_tid)
+                hand_work_data = get_hand_work(work_data.hand_work_id)
+                await bot.send_message(
+                    chat_id=getenv('ADMIN_ID'),
+                    text=msg_lexicon['new_work']['hand_work_ended'].format(user.name, hand_work_data.name),
+                    reply_markup=get_view_result_kb(get_user(user_tid), work_id, detailed=True)
+                )
             await state.clear()
     else:
         await go_next_question(user_tid, state)
