@@ -920,7 +920,7 @@ def main(page: ft.Page):
                             icon=ft.icons.DELETE,
                             text="Удалить",
                             data='remove_question',
-                            on_click=process_delete_or_update_question
+                            on_long_press=process_delete_or_update_question
                         ),
                         ft.ElevatedButton(
                             icon=ft.icons.SAVE,
