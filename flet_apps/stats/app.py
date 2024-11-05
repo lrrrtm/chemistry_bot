@@ -29,11 +29,11 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-set_temporary_key(
-    'develop',
-    'develop',
-    3600
-)
+# set_temporary_key(
+#     'develop',
+#     'develop',
+#     3600
+# )
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -822,7 +822,7 @@ def main(page: ft.Page):
 
     find_question_dialog = ft.AlertDialog(
         modal=True,
-        title=ft.Text("Поиск вопроса", size=20),
+        title=ft.Text("Пул вопросов", size=20),
         content=ft.Column(
             controls=[
                 ft.TextField(
@@ -1013,7 +1013,7 @@ def main(page: ft.Page):
     # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
-    page.route = "/admin/pool?auth_key=develop&admin_id=develop"
+    # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
 
     def error_404():
         page.controls.clear()
@@ -1050,6 +1050,7 @@ def main(page: ft.Page):
                     open_ege_marks_list()
 
                 elif volume == "pool":
+                    page.title = "Пул вопросов"
                     open_find_in_pool()
                     # open_pool_list(
                     #     page_num=1,
