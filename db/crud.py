@@ -1,19 +1,13 @@
-import os.path
 import random
 from datetime import datetime
-from os import getenv
-from pydoc_data.topics import topics
 from typing import List
 from contextlib import contextmanager
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import aliased
 
 from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
 from db.database import Session
-from utils.excel import export_topics_list, export_pool
-from utils.move_file import move_image
-from utils.tags_helper import get_random_questions
 
 
 @contextmanager
@@ -105,6 +99,11 @@ def get_topic_by_name(topic_name: str) -> Topic:
         topic = session.query(Topic).filter_by(name=topic_name).first()
         return topic
 
+def get_topics_table() -> List[Topic]:
+    with get_session() as session:
+        data = session.query(Topic).filter_by(is_active=1).all()
+        return data
+
 def get_all_pool(active: bool) -> List[Pool]:
     with get_session() as session:
         if active:
@@ -114,11 +113,13 @@ def get_all_pool(active: bool) -> List[Pool]:
 
         return data
 
-def get_paginated_pool(page_num, per_page = 15) -> List[Pool]:
+
+def get_paginated_pool(page_num, per_page=15) -> List[Pool]:
     offset = (page_num - 1) * per_page
     with get_session() as session:
         items = session.query(Pool).filter_by(is_active=1).limit(per_page).offset(offset).all()
         return items
+
 
 def get_pool_by_query(query: str) -> List[Pool]:
     with get_session() as session:
@@ -128,6 +129,7 @@ def get_pool_by_query(query: str) -> List[Pool]:
             items = session.query(Pool).filter_by(is_active=1).filter(Pool.text.like(f'%{query}%')).all()
 
         return items
+
 
 def get_all_topics(active: bool) -> List[Topic]:
     with get_session() as session:
@@ -265,6 +267,7 @@ def insert_work_questions(work: Work, questions_list: List[Pool]):
             session.add(q)
         session.commit()
 
+
 def switch_image_flag(value: int, img_type: str, q_id: int):
     with get_session() as session:
         q = session.query(Pool).filter_by(id=q_id).first()
@@ -277,6 +280,7 @@ def switch_image_flag(value: int, img_type: str, q_id: int):
 
         session.commit()
 
+
 def update_question_status(q_id: int, status: str):
     with get_session() as session:
         q = session.query(WorkQuestion).filter_by(id=q_id).first()
@@ -285,12 +289,14 @@ def update_question_status(q_id: int, status: str):
 
         session.commit()
 
+
 def deactivate_question(q_id: int):
     with get_session() as session:
         q = session.query(Pool).filter_by(id=q_id).first()
         q.is_active = 0
 
         session.commit()
+
 
 def update_question(question: Pool):
     with get_session() as session:
@@ -305,6 +311,7 @@ def update_question(question: Pool):
         q.level = question.level
 
         session.commit()
+
 
 def close_question(q_id: int, user_answer: str, user_mark: int, end_datetime: datetime,
                    start_datetime: datetime = None):
@@ -385,6 +392,7 @@ def update_ege_converting(data: dict):
             el = session.query(Converting).filter_by(id=key).first()
             el.output_mark = value['value']
             session.commit()
+
 
 def insert_pool_data(data: List[Pool]):
     with get_session() as session:

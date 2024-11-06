@@ -24,7 +24,7 @@ from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
     get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
     get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question, \
-    switch_image_flag
+    switch_image_flag, get_topics_table
 from db.models import WorkQuestion
 from dotenv import load_dotenv
 
@@ -32,11 +32,11 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-# set_temporary_key(
-#     'develop',
-#     'develop',
-#     3600
-# )
+set_temporary_key(
+    'develop',
+    'develop',
+    3600
+)
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -394,51 +394,128 @@ def main(page: ft.Page):
         page.controls.clear()
         switch_loading(True)
 
-        tags_list = get_all_tags()
+        parsed_topics = {}
+        data = get_topics_table()
+        for el in data:
+            if el.volume not in parsed_topics.keys():
+                parsed_topics[el.volume] = []
 
-        tags_list = [el for el in list(set(chain.from_iterable(tags_list))) if 'ege' not in el]
-        tags_list.sort(key=lambda el: el)
+            parsed_topics[el.volume].append(
+                {'topic_name': el.name, 'tags_list': [tag for tag in el.tags_list if 'ege' not in tag]})
 
-        col = ft.Column(
-            controls=[
-                ft.Container(
-                    content=ft.TextField(
-                        label="Название",
-                        hint_text="Введите название тренировки",
-                        on_change=change_new_work_name,
-                    ),
-                    padding=ft.padding.only(top=15)
+        print(parsed_topics)
+
+        # main_col = ft.Column(
+        #     controls=[
+        #         ft.Container(
+        #             content=ft.TextField(
+        #                 label="Название",
+        #                 hint_text="Введите название тренировки",
+        #                 on_change=change_new_work_name,
+        #             ),
+        #             padding=ft.padding.only(top=15)
+        #         )
+        #     ],
+        #     # width=700
+        # )
+
+        main_col = ft.ResponsiveRow(columns=4)
+
+        for volume, data in parsed_topics.items():
+
+            topic_col = ft.Column(
+                controls=[
+                    ft.Text(value=volume, size=20)
+                ]
+            )
+            for topic in data:
+                tags_col = ft.Column(
+                    controls=[
+                        ft.Text(value=topic['topic_name'], size=18),
+                    ]
                 )
-            ],
-            width=600
-        )
-        for tag in tags_list:
-            col.controls.append(
-                ft.Container(
-                    ft.Row(
-                        controls=[
-                            ft.Container(
-                                content=ft.ListTile(
-                                    leading=ft.Icon(ft.icons.TOPIC),
-                                    title=ft.Text(tag),
+
+                for tag in sorted(topic['tags_list']):
+                    tags_col.controls.append(
+                        ft.Row(
+                            controls=[
+                                ft.Container(
+                                    content=ft.ListTile(
+                                        leading=ft.Icon(ft.icons.TOPIC),
+                                        title=ft.Text(tag),
+                                    ),
+                                    expand=True,
                                 ),
-                                expand=True,
-                            ),
-                            ft.TextField(
-                                width=50,
-                                value='0',
-                                on_change=change_count_of_questions,
-                                data={
-                                    'tag': tag
-                                },
-                                text_align=ft.TextAlign.CENTER,
-                            )
-                        ]
+                                ft.TextField(
+                                    width=50,
+                                    value='0',
+                                    on_change=change_count_of_questions,
+                                    data={
+                                        'tag': tag
+                                    },
+                                    text_align=ft.TextAlign.CENTER,
+                                )
+                            ]
+                        )
+                    )
+
+                topic_col.controls.append(
+                    ft.Card(
+                        content=ft.Container(
+                            content=tags_col,
+                            padding=15
+                        ),
+                        width=700,
+                        elevation=10
+                    )
+                )
+                # print("TOPIC:", topic['topic_name'])
+                # print("TAGS:", topic['tags_list'])
+                # print()
+
+            main_col.controls.append(
+                ft.Card(
+                    content=ft.Container(
+                        content=topic_col,
+                        padding=15,
                     ),
-                    padding=ft.padding.only(right=15)
+                    width=700,
+                    col={'lg': 1}
                 )
             )
-            # col.controls.append(ft.Divider(thickness=1))
+
+        # tags_list = get_all_tags()
+
+        # tags_list = [el for el in list(set(chain.from_iterable(tags_list))) if 'ege' not in el]
+        # tags_list.sort(key=lambda el: el)
+
+        # for tag in tags_list:
+        #     col.controls.append(
+        #         ft.Container(
+        #             ft.Row(
+        #                 controls=[
+        #                     ft.Container(
+        #                         content=ft.ListTile(
+        #                             leading=ft.Icon(ft.icons.TOPIC),
+        #                             title=ft.Text(tag),
+        #                         ),
+        #                         expand=True,
+        #                     ),
+        #                     ft.TextField(
+        #                         width=50,
+        #                         value='0',
+        #                         on_change=change_count_of_questions,
+        #                         data={
+        #                             'tag': tag
+        #                         },
+        #                         text_align=ft.TextAlign.CENTER,
+        #                     )
+        #                 ]
+        #             ),
+        #             padding=ft.padding.only(right=15)
+        #         )
+        #     )
+        #     # col.controls.append(ft.Divider(thickness=1))
 
         page.appbar = ft.AppBar(
             title=ft.Text("Создание тренировки", size=18),
@@ -454,7 +531,18 @@ def main(page: ft.Page):
             bgcolor=ft.colors.SURFACE_VARIANT
         )
 
-        page.add(col)
+        page.add(
+            ft.Container(
+                content=ft.TextField(
+                    label="Название тренировки",
+                    hint_text="Введите название тренировки",
+                    on_change=change_new_work_name,
+                    width=700
+                ),
+                padding=ft.padding.only(top=15)
+            )
+        )
+        page.add(main_col)
         switch_loading(False)
 
     def open_users_list():
@@ -1214,7 +1302,8 @@ def main(page: ft.Page):
     #     switch_loading(False)
 
     # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
-    # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+    page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+
     # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
     # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
     # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
