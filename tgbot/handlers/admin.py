@@ -43,7 +43,7 @@ async def cmd_admin(message: types.Message):
     if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
         await message.answer(
             text="<b>🎛️ Панель управления</b>"
-                 "\n\nВыберие необходимый раздел",
+                 "\n\nВыберите необходимый раздел",
             reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message.from_user.id), message.from_user.id)
         )
 
