@@ -353,7 +353,7 @@ def main(page: ft.Page):
                 )
 
                 bot.send_message(
-                    chat_id=getenv('FBACK_GROUP_ID'),
+                    chat_id=getenv('ADMIN_ID'),
                     text=f"<b>ℹ️ Сервисные сообщения</b>"
                          f"\n\nВы создали новую персональную тренировку. Отправьте ссылку на неё ученику. "
                          f"\n\n<b>{work.name}</b>"
@@ -1169,7 +1169,15 @@ def main(page: ft.Page):
                         content=ft.Column(
                             controls=[
                                 ft.Text("Вопрос", size=18),
-                                ft.Divider(thickness=1)
+                                ft.TextField(
+                                    prefix_icon=ft.icons.TEXT_FIELDS,
+                                    label="Текст вопроса",
+                                    multiline=True
+                                ),
+                                ft.OutlinedButton(
+                                    text="Загрузить изображение вопроса",
+                                    icon=ft.icons.UPLOAD_FILE
+                                )
                             ]
                         ),
                         padding=15
@@ -1181,7 +1189,15 @@ def main(page: ft.Page):
                         content=ft.Column(
                             controls=[
                                 ft.Text("Ответ", size=18),
-                                ft.Divider(thickness=1)
+                                ft.TextField(
+                                    prefix_icon=ft.icons.TEXT_FIELDS,
+                                    label="Текст ответа",
+                                    multiline=True
+                                ),
+                                ft.OutlinedButton(
+                                    text="Загрузить изображение ответа",
+                                    icon=ft.icons.UPLOAD_FILE
+                                )
                             ]
                         ),
                         padding=15
@@ -1193,7 +1209,45 @@ def main(page: ft.Page):
                         content=ft.Column(
                             controls=[
                                 ft.Text("Параметры", size=18),
-                                ft.Divider(thickness=1)
+                                ft.Dropdown(
+                                    label="Тип вопроса",
+                                    options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in ['КИМ ЕГЭ', 'Тема']],
+                                ),
+                                ft.Dropdown(
+                                    prefix_icon=ft.icons.CALCULATE,
+                                    label="Уровень сложности",
+                                    options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in range(1, 6)],
+                                ),
+                                ft.Dropdown(
+                                    prefix_icon=ft.icons.BAR_CHART,
+                                    label="Максимальный балл",
+                                    options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in range(1, 6)],
+                                ),
+                                ft.Divider(thickness=1),
+                                ft.ListTile(
+                                    leading=ft.Switch(value=False),
+                                    title=ft.Text("Вращение ответа", size=16)
+                                ),
+                                ft.ListTile(
+                                    leading=ft.Switch(value=False),
+                                    title=ft.Text("Самопроверка", size=16)
+                                ),
+                                ft.Divider(thickness=1),
+                                ft.TextField(
+                                    label="Список тегов",
+                                    multiline=True
+                                ),
+                                ft.Divider(thickness=1),
+                                ft.Row([
+                                    ft.OutlinedButton(
+                                        text="Очистить поля",
+                                        icon=ft.icons.CLEAR_ALL
+                                    ),
+                                    ft.FilledButton(
+                                        text="Сохранить вопрос",
+                                        icon=ft.icons.SAVE_ALT
+                                    )
+                                ])
                             ]
                         ),
                         padding=15
