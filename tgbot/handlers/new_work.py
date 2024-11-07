@@ -21,7 +21,7 @@ from tgbot.lexicon.buttons import lexicon as btns_lexicon, lexicon
 from tgbot.states.picking_topic import UserTopicChoice, UserTopicVolumeChoice
 from tgbot.states.wait_for_answer_to_question import UserAnswerToQuestion
 from utils.answer_checker import check_answer
-from utils.tags_helper import get_ege_tags_list, get_random_questions
+from utils.tags_helper import get_ege_tags_list, get_random_questions, get_questions_list_for_topic_work
 
 router = Router()
 
@@ -222,13 +222,13 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
         if work_type == "ege":
             tags_list = get_ege_tags_list(each_question_limit=1)
 
-        elif work_type == "topic":
-            tags_list = {tag: 20 for tag in get_topic_by_id(topic_id).tags_list}
+        # elif work_type == "topic":
+        #     tags_list = {tag: 20 for tag in get_topic_by_id(topic_id).tags_list}
 
         elif work_type == "hand_work":
             hand_work = get_hand_work(identificator=hand_work_id)
 
-        if work_type in ["ege", "topic"]:
+        if work_type == "ege":
             questions_ids_list = get_random_questions(
                 pool=pool,
                 request_dict=tags_list,
@@ -245,9 +245,27 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
 
                 await callback.message.answer(
                     text="<b>😬 Упс, что-то поломалось</b>"
-                         "\n\nВ нашей базе не хватило задачек для того, чтобы составить для тебя персональную тренировку. Мы уже получили информацию об этом и занялись исправлением ошибки. А пока ты можешь выбрать другую тему персональной тренировки."
+                         "\n\nВ нашей базе не хватило задачек для того, чтобы составить для тебя тренировку. Мы уже получили информацию об этом и занялись исправлением ошибки. А пока ты можешь выбрать другую тему персональной тренировки."
                 )
+                # todo: отправить админу сообщение
                 return
+
+        elif work_type == "topic":
+            data = get_questions_list_for_topic_work(topic_id=topic_id)
+            if data['is_ok']:
+                questions_list = data['detail']
+
+            else:
+                remove_work(work.id)
+                await msg.delete()
+
+                await callback.message.answer(
+                    text="<b>😬 Упс, что-то поломалось</b>"
+                         "\n\nВ нашей базе не хватило задачек для того, чтобы составить для тебя тренировку. Мы уже получили информацию об этом и занялись исправлением ошибки. А пока ты можешь выбрать другую тему персональной тренировки."
+                )
+                # todo: отправить админу сообщение
+                return
+
 
         elif work_type == "hand_work":
             questions_list = get_questions_list_by_id(hand_work.questions_list)

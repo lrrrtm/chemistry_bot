@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 from contextlib import contextmanager
 
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import aliased
 
 from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
@@ -99,10 +99,12 @@ def get_topic_by_name(topic_name: str) -> Topic:
         topic = session.query(Topic).filter_by(name=topic_name).first()
         return topic
 
+
 def get_topics_table() -> List[Topic]:
     with get_session() as session:
         data = session.query(Topic).filter_by(is_active=1).all()
         return data
+
 
 def get_all_pool(active: bool) -> List[Pool]:
     with get_session() as session:
@@ -129,6 +131,17 @@ def get_pool_by_query(query: str) -> List[Pool]:
             items = session.query(Pool).filter_by(is_active=1).filter(Pool.text.like(f'%{query}%')).all()
 
         return items
+
+
+def get_pool_by_tags(tags: List[str]) -> List[Pool]:
+    all_pool = get_all_pool(active=True)
+    result = set()
+    with get_session() as session:
+        for cur_tag in tags:
+            for q in all_pool:
+                if cur_tag in q.tags_list and cur_tag not in result:
+                    result.add(q)
+    return list(result)
 
 
 def get_all_topics(active: bool) -> List[Topic]:
@@ -401,6 +414,11 @@ def insert_pool_data(data: List[Pool]):
         session.commit()
         return data
 
+def insert_question_into_pool(q: Pool) -> Pool:
+    with get_session() as session:
+        session.add(q)
+        session.commit()
+        return q
 
 def insert_topics_data(data):
     with get_session() as session:
@@ -428,3 +446,13 @@ def insert_topics_data(data):
                 )
                 session.add(t)
         session.commit()
+
+
+if __name__ == "__main__":
+    data = get_pool_by_tags(['соли'])
+    try:
+        print(len(data))
+        for el in data:
+            print(el.id, el.text)
+    except Exception as e:
+        print(e)
