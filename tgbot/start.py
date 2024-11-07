@@ -13,7 +13,12 @@ logging.basicConfig(level=logging.INFO)
 
 async def on_startup():
     await bot.send_message(
-        chat_id=getenv('FBACK_GROUP_ID'),
+        chat_id=getenv('ADMIN_ID'),
+        text=lexicon['service']['after_reboot'],
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await bot.send_message(
+        chat_id=getenv('DEVELOPER_ID'),
         text=lexicon['service']['after_reboot'],
         reply_markup=ReplyKeyboardRemove()
     )

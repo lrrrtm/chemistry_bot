@@ -10,7 +10,7 @@ router = Router()
 
 @router.message(Command("check"))
 async def cmd_check(message: types.Message):
-    if message.chat.id == int(getenv('FBACK_GROUP_ID')):
+    if message.chat.id == int(getenv('ADMIN_ID')):
         data = get_system_status()
         text_to_send = ""
         for el in data:

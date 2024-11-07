@@ -48,7 +48,7 @@ async def fback_process(message: Message, state: FSMContext):
         user = f"@{message.from_user.username} ({message.from_user.first_name})" or message.from_user.first_name
 
         await bot.send_message(
-            chat_id=getenv('FBACK_GROUP_ID'),
+            chat_id=getenv('ADMIN_ID'),
             text=lexicon['feedback']['new_ask'].format(user, user_text),
             reply_markup=get_answer_to_user_kb(message.from_user.id)
         )

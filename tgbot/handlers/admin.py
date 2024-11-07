@@ -40,7 +40,7 @@ def get_admin_auth_key(telegram_id: int) -> str:
 
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
-    if message.chat.id in [int(getenv('FBACK_GROUP_ID')), int(getenv('ADMIN_ID'))]:
+    if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
         await message.answer(
             text="<b>🎛️ Панель управления</b>"
                  "\n\nВыберие необходимый раздел",
