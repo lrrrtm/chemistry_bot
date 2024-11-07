@@ -223,7 +223,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
             tags_list = get_ege_tags_list(each_question_limit=1)
 
         elif work_type == "topic":
-            tags_list = {tag: 3 for tag in get_topic_by_id(topic_id).tags_list}
+            tags_list = {tag: 20 for tag in get_topic_by_id(topic_id).tags_list}
 
         elif work_type == "hand_work":
             hand_work = get_hand_work(identificator=hand_work_id)
