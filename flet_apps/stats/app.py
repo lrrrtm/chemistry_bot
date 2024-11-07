@@ -973,17 +973,6 @@ def main(page: ft.Page):
                     ft.Container(
                         ft.Column(
                             [
-                                # ft.ListTile(
-                                #     leading=ft.Icon(ft.icons.NUMBERS),
-                                #     title=ft.TextField(
-                                #         label="Уровень сложности",
-                                #         value=str(el.level),
-                                #         multiline=True,
-                                #         data={'place': "level_field", "question": el, 'arg': "level"},
-                                #         on_change=validate_question_card
-                                #     ),
-                                #     # subtitle=ft.Text("уровень сложности")
-                                # ),
                                 ft.ListTile(
                                     leading=ft.Icon(ft.icons.CALCULATE),
                                     title=ft.Dropdown(
@@ -998,7 +987,7 @@ def main(page: ft.Page):
                                     leading=ft.Icon(ft.icons.BAR_CHART),
                                     title=ft.Dropdown(
                                         label="Максимальный балл",
-                                        value=str(el.level),
+                                        value=str(el.full_mark),
                                         options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in range(1, 6)],
                                         data={'place': "mark_field", "question": el, 'arg': "full_mark"},
                                         on_change=validate_question_card

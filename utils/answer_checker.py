@@ -35,7 +35,11 @@ def check_answer(question_data: Pool, user_answer: str) -> int:
 
 
     elif question_data.type == "topic":
-        if question_data.answer == user_answer:
-            return question_data.full_mark
+        if question_data.is_rotate:
+            if question_data.answer in [user_answer, user_answer[::-1]]:
+                return question_data.full_mark
+
         else:
-            return 0
+            if question_data.answer == user_answer:
+                return question_data.full_mark
+        return 0
