@@ -1,4 +1,5 @@
 import hashlib
+import platform
 import re
 import sys
 import os
@@ -32,11 +33,12 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-set_temporary_key(
-    'develop',
-    'develop',
-    3600
-)
+if platform.system() == "Windows":
+    set_temporary_key(
+        'develop',
+        'develop',
+        3600
+    )
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -1140,7 +1142,7 @@ def main(page: ft.Page):
         page.controls.clear()
 
         page.appbar = ft.AppBar(
-            title=ft.Text("Пул вопросов", size=18),
+            title=ft.Text(page.title, size=18),
             bgcolor=ft.colors.SURFACE_VARIANT
         )
 
@@ -1150,6 +1152,58 @@ def main(page: ft.Page):
         find_question_dialog.open = True
 
         page.update()
+
+    def open_add_question():
+        page.controls.clear()
+
+        page.appbar = ft.AppBar(
+            title=ft.Text(page.title, size=18),
+            bgcolor=ft.colors.SURFACE_VARIANT
+        )
+
+        main_col = ft.ResponsiveRow(
+            columns=3,
+            controls=[
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Text("Вопрос", size=18),
+                                ft.Divider(thickness=1)
+                            ]
+                        ),
+                        padding=15
+                    ),
+                    col={'lg': 1}
+                ),
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Text("Ответ", size=18),
+                                ft.Divider(thickness=1)
+                            ]
+                        ),
+                        padding=15
+                    ),
+                    col={'lg': 1}
+                ),
+                ft.Card(
+                    content=ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Text("Параметры", size=18),
+                                ft.Divider(thickness=1)
+                            ]
+                        ),
+                        padding=15
+                    ),
+                    col={'lg': 1}
+                )
+            ]
+        )
+
+        page.add(main_col)
 
     # def open_pool_list(page_num: int | None, query: str | None):
     #     per_page = 15
@@ -1301,12 +1355,14 @@ def main(page: ft.Page):
     #     page.add(col)
     #     switch_loading(False)
 
-    # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
-    page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+    if platform.system() == "Windows":
+        # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
+        # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
 
-    # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
-    # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
-    # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
+        page.route = "/admin/add-question?auth_key=develop&admin_id=develop"
 
     def error_404():
         page.controls.clear()
@@ -1345,6 +1401,10 @@ def main(page: ft.Page):
                 elif volume == "pool":
                     page.title = "Пул вопросов"
                     open_find_in_pool()
+
+                elif volume == "add-question":
+                    page.title = "Добавление вопросов"
+                    open_add_question()
 
                 else:
                     error_404()

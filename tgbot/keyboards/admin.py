@@ -99,8 +99,12 @@ def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     builder.button(
         text=lexicon['admin']['edit_pool'],
         # callback_data=AdminMenuBackCallbackFactory(current_volume="None")
-        # todo: разблокировать
         url=f"{getenv('STATS_HOST')}/admin/pool?auth_key={auth_key}&admin_id={tid}"
+    )
+    builder.button(
+        text=lexicon['admin']['insert_pool_flet'],
+        # callback_data=AdminMenuBackCallbackFactory(current_volume="None")
+        url=f"{getenv('STATS_HOST')}/admin/add-question?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
         text=lexicon['service']['back'],
