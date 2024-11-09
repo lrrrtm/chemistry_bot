@@ -37,6 +37,7 @@ lexicon = {
         'update_pool': "🤔 Пул вопросов",
         'insert_pool': "🆕 Добавление вопросов",
         'edit_pool': "📝 Открыть пул",
-        'insert_pool_flet': "🆕 Добавление вопросов (App)"
+        'insert_pool_flet': "🆕 Добавление вопросов (App)",
+        'sender': "📝 Создать рассылку"
     }
 }

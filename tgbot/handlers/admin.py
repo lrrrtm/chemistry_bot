@@ -4,20 +4,21 @@ import subprocess
 from datetime import datetime
 from os import getenv
 
-from aiogram import Router, types
+from aiogram import Router, types, exceptions
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
 
-from db.crud import get_all_topics, insert_topics_data, get_all_pool, insert_pool_data
+from db.crud import get_all_topics, insert_topics_data, insert_pool_data, get_all_users
 from redis_db.crud import set_temporary_key
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackFactory, get_admin_system_status_kb, \
     AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb, \
-    get_admin_pool_menu_kb
+    get_admin_pool_menu_kb, get_admin_sender_kb
 from tgbot.lexicon.buttons import lexicon
 from tgbot.lexicon.messages import lexicon as msg_lexicon
 from tgbot.states.updating_db import UpdateTopics, InsertPool
+from tgbot.states.writing_sender_text import InputMessage
 from utils.clearing import clear_folder, clear_trash_by_db
 from utils.excel import export_topics_list, import_topics_list, import_pool
 from utils.move_file import move_image
@@ -51,7 +52,8 @@ async def cmd_admin(message: types.Message):
 @router.message(Command("cleardb"))
 async def cmd_admin(message: types.Message):
     if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
-        for dir in [f"{os.getenv('ROOT_FOLDER')}/data/questions_images", f"{os.getenv('ROOT_FOLDER')}/data/answers_images"]:
+        for dir in [f"{os.getenv('ROOT_FOLDER')}/data/questions_images",
+                    f"{os.getenv('ROOT_FOLDER')}/data/answers_images"]:
             count = clear_trash_by_db(dir)
             await message.answer(
                 text=f"{dir.split('/')[-1]}: {count}"
@@ -119,6 +121,96 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
         )
 
         await state.set_state(InsertPool.waiting_for_msg)
+
+    elif volume == "sender":
+        await callback.message.delete()
+
+        await callback.message.answer(
+            text=f"<b>{lexicon['admin']['sender']}</b>"
+                 f"\n\nНапишите и отправьте текст рассылки для всех пользователей",
+            reply_markup=get_admin_cancel_upload_kb()
+        )
+
+        await state.set_state(InputMessage.waiting_for_msg)
+
+    elif volume == "accept_sender":
+        await callback.message.edit_reply_markup(
+            reply_markup=None
+        )
+
+        msg = await bot.send_message(
+            chat_id=callback.from_user.id,
+            text=f"<b>{lexicon['admin']['sender']}</b>"
+                 f"\n\nИдёт рассылка пользователям: 0%"
+        )
+
+        data = await state.get_data()
+        html_text = data.get('html_text')
+
+        users_list = get_all_users()
+
+        sended_counter = 0
+
+        for user in users_list:
+            try:
+                await bot.send_message(
+                    chat_id=user.telegram_id,
+                    text=html_text,
+                )
+            except exceptions.TelegramBadRequest:
+                pass
+
+            sended_counter += 1
+            cur_percent = int(sended_counter / len(users_list) * 100)
+
+            if cur_percent % 10 == 0 and cur_percent != 100:
+                await msg.edit_text(
+                    text=f"<b>{lexicon['admin']['sender']}</b>"
+                         f"\n\nИдёт рассылка пользователям: {cur_percent}%"
+                )
+
+            elif cur_percent == 100:
+                await msg.edit_text(
+                    text=f"<b>{lexicon['admin']['sender']}</b>"
+                         f"\n\nРассылка успешно завершена!"
+                )
+
+
+    elif volume == "decline_sender":
+        await callback.message.edit_reply_markup(
+            reply_markup=None
+        )
+        await callback.message.answer(
+            text=f"{msg_lexicon['service']['action_cancelled']}",
+            reply_markup=ReplyKeyboardRemove()
+        )
+
+
+@router.message(InputMessage.waiting_for_msg)
+async def admin_menu_sender_process(message: Message, state: FSMContext):
+    await state.clear()
+
+    if message.text == lexicon['admin']['cancel_uploading_table']:
+        await message.answer(
+            text=f"{msg_lexicon['service']['action_cancelled']}",
+            reply_markup=ReplyKeyboardRemove()
+        )
+    else:
+        await state.update_data(html_text=message.html_text)
+
+        await message.answer(
+            text=f"<b>{lexicon['admin']['sender']}</b>"
+                 f"\n\nСообщение будет выглядеть так",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await message.answer(
+            text=message.html_text,
+        )
+        await message.answer(
+            text=f"<b>{lexicon['admin']['sender']}</b>"
+                 f"\n\nПодтвердите корректность текста рассылки перед отправкой",
+            reply_markup=get_admin_sender_kb()
+        )
 
 
 @router.callback_query((AdminMenuBackCallbackFactory.filter()))

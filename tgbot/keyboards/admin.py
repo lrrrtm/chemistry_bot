@@ -35,10 +35,10 @@ def get_admin_menu_main_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
         text=lexicon['admin']['database'],
         callback_data=AdminMenuMainCallbackFactory(volume="database"),
     )
-    # builder.button(
-    #     text=lexicon['admin']['ege_converting'],
-    #     url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
-    # )
+    builder.button(
+        text=lexicon['admin']['sender'],
+        callback_data=AdminMenuMainCallbackFactory(volume="sender"),
+    )
     builder.button(
         text=lexicon['admin']['system_status'],
         callback_data=AdminMenuMainCallbackFactory(volume="system_status"),
@@ -89,6 +89,7 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
+
 def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -97,14 +98,12 @@ def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
         callback_data=AdminMenuMainCallbackFactory(volume="insert_pool")
     )
     builder.button(
-        text=lexicon['admin']['edit_pool'],
-        # callback_data=AdminMenuBackCallbackFactory(current_volume="None")
-        url=f"{getenv('STATS_HOST')}/admin/pool?auth_key={auth_key}&admin_id={tid}"
+        text=lexicon['admin']['insert_pool_flet'],
+        url=f"{getenv('STATS_HOST')}/admin/add-question?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
-        text=lexicon['admin']['insert_pool_flet'],
-        # callback_data=AdminMenuBackCallbackFactory(current_volume="None")
-        url=f"{getenv('STATS_HOST')}/admin/add-question?auth_key={auth_key}&admin_id={tid}"
+        text=lexicon['admin']['edit_pool'],
+        url=f"{getenv('STATS_HOST')}/admin/pool?auth_key={auth_key}&admin_id={tid}"
     )
     builder.button(
         text=lexicon['service']['back'],
@@ -114,6 +113,20 @@ def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
+def get_admin_sender_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text="✅ Подтверждаю, отправить",
+        callback_data=AdminMenuMainCallbackFactory(volume="accept_sender")
+    )
+    builder.button(
+        text="❌ Отменить рассылку",
+        callback_data=AdminMenuMainCallbackFactory(volume="decline_sender")
+    )
+
+    builder.adjust(1)
+    return builder.as_markup()
 
 def get_admin_cancel_upload_kb() -> ReplyKeyboardMarkup:
     builder = ReplyKeyboardBuilder()

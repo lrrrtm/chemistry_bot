@@ -132,11 +132,13 @@ def get_pool_by_query(query: str) -> List[Pool]:
 
         return items
 
+
 def get_pool_by_id(id: int) -> Pool:
     with get_session() as session:
         result = session.query(Pool).filter_by(id=id).first()
 
         return result
+
 
 def get_pool_by_tags(tags: List[str]) -> List[Pool]:
     all_pool = get_all_pool(active=True)
@@ -419,11 +421,13 @@ def insert_pool_data(data: List[Pool]):
         session.commit()
         return data
 
+
 def insert_question_into_pool(q: Pool) -> Pool:
     with get_session() as session:
         session.add(q)
         session.commit()
         return q
+
 
 def insert_topics_data(data):
     with get_session() as session:
