@@ -8,10 +8,12 @@ from config import bot, dp
 from threading import Thread
 
 from tgbot.lexicon.messages import lexicon
+from utils.clearing import clear_folder
 
 logging.basicConfig(level=logging.INFO)
 
 async def on_startup():
+    clear_folder(f"{getenv('ROOT_FOLDER')}/data/temp")
     await bot.send_message(
         chat_id=getenv('ADMIN_ID'),
         text=lexicon['service']['after_reboot'],
