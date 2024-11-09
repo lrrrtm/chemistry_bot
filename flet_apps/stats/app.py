@@ -347,7 +347,7 @@ def main(page: ft.Page):
 
             if questions_ids_pool['is_ok']:
                 work = insert_new_hand_work(
-                    name=name if name else f"Тренировка {datetime.now().date()}",
+                    name=name if name else f"Тренировка {datetime.now().strftime('%Y%m%d%H%M')}",
                     identificator=hashlib.sha256(str(datetime.utcnow()).encode()).hexdigest()[:6],
                     questions_ids_list=questions_ids_pool['detail']
                 )
