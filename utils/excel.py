@@ -28,8 +28,8 @@ def import_pool(filepath: str):
                 if all(
                         [
                             sheet.cell(row=row_num, column=2).value is not None,
-                            sheet.cell(row=row_num, column=3).value is not None,
-                            sheet.cell(row=row_num, column=5).value is not None,
+                            # sheet.cell(row=row_num, column=3).value is not None,
+                            # sheet.cell(row=row_num, column=5).value is not None,
                             sheet.cell(row=row_num, column=7).value is not None,
                             # sheet.cell(row=row_num, column=8).value is not None,
                             # sheet.cell(row=row_num, column=9).value is not None,
@@ -40,14 +40,15 @@ def import_pool(filepath: str):
                         import_id=import_id,
                         type="ege" if sheet.cell(row=row_num, column=1).value == "КИМ ЕГЭ" else "topic",
                         level=sheet.cell(row=row_num, column=2).value,
-                        text=str(sheet.cell(row=row_num, column=3).value),
-                        answer=str(sheet.cell(row=row_num, column=5).value),
+                        text=str(sheet.cell(row=row_num, column=3).value) if sheet.cell(row=row_num, column=3).value else None,
+                        answer=str(sheet.cell(row=row_num, column=5).value) if sheet.cell(row=row_num, column=5).value else None,
                         full_mark=sheet.cell(row=row_num, column=7).value,
                         is_rotate=1 if sheet.cell(row=row_num, column=8).value == "Да" else 0,
                         is_selfcheck=1 if sheet.cell(row=row_num, column=9).value == "Да" else 0,
                         tags_list=[tag.lower().replace("ё", "е") for tag in
                                    sheet.cell(row=row_num, column=10).value.split(", ")]
                     )
+                    # sheet.cell(row=row_num, column=11).value = "OK"
                     # question_info = {
                     #     'import_id': import_id,
                     #     'type': "ege" if sheet.cell(row=row_num, column=1).value == "КИМ ЕГЭ" else "topic",
@@ -78,8 +79,8 @@ def import_pool(filepath: str):
 
                     data.append(question_info)
                 else:
-                    errors.append(import_id)
-        print(data)
+                    # sheet.cell(row=row_num, column=11).value = "ERROR"
+                    errors.append(row_num)
         return {'is_ok': True, 'data': data, 'comment': "Импорт вопросов завершён", 'errors': errors}
     except Exception as e:
         return {'is_ok': False, 'comment': f"Ошибка при чтении данных таблицы: {str(e)}", 'errors': errors}

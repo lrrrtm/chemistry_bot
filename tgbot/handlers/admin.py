@@ -211,37 +211,46 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
         await msg.delete()
 
         if import_data['is_ok']:
-            pool = insert_pool_data(import_data['data'])
+            if len(import_data['errors']) == 0:
+                pool = insert_pool_data(import_data['data'])
 
-            for el in pool:
-                if bool(el.question_image):
-                    if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png"):
-                        move_image(
-                            source_path=f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png",
-                            destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{el.id}.png"
-                        )
-                    else:
-                        pass
+                for el in pool:
+                    if bool(el.question_image):
+                        if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png"):
+                            move_image(
+                                source_path=f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png",
+                                destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{el.id}.png"
+                            )
+                        else:
+                            pass
 
-                if bool(el.answer_image):
-                    if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png"):
-                        move_image(
-                            source_path=f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png",
-                            destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{el.id}.png"
-                        )
-                    else:
-                        pass
+                    if bool(el.answer_image):
+                        if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png"):
+                            move_image(
+                                source_path=f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png",
+                                destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{el.id}.png"
+                            )
+                        else:
+                            pass
 
-            if import_data['errors']:
-                ids = " ".join(str(a) for a in import_data['errors'])
-                errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их ID:</b> \n{ids}"
+                # if import_data['errors']:
+                #     ids = "\n".join(str(a) for a in import_data['errors'])
+                #     errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их строки:</b> \n{ids}"
+                # else:
+                #     errors_text = ""
+
+                await message.answer(
+                    text=f"<b>{lexicon['admin']['insert_pool']}</b>"
+                         f"\n\nВопросы успешно импортированы ({len(import_data['data'])}/{len(import_data['data'])})"
+                )
             else:
-                errors_text = ""
+                ids = " ".join(str(a) for a in import_data['errors'])
+                await message.answer(
+                    text=f"<b>{lexicon['admin']['insert_pool']}</b>"
+                         f"\n\nВопросы не были добавлены из-за наличия ошибок в заполнении полей в следующих строках: \n\n{ids}"
+                         f"\n\nПосле устранение ошибок вызовите /admin заново и повторите загрузку вопросов"
+                )
 
-            await message.answer(
-                text=f"<b>{lexicon['admin']['insert_pool']}</b>"
-                     f"\n\nУспешно импортировано вопросов: {len(import_data['data'])}" + errors_text
-            )
         else:
             await message.answer(
                 text=msg_lexicon['service']['processing_file_error'].format(import_data['comment'])

@@ -10,7 +10,7 @@ from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questio
                      insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name,
                      update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
-                     get_all_questions, remove_work)
+                     get_all_questions, remove_work, get_all_pool)
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
@@ -217,7 +217,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
         user = get_user(callback.from_user.id)
         work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id, hand_work_id=hand_work_id)
 
-        pool = get_all_questions()
+        pool = get_all_pool(active=True)
 
         if work_type == "ege":
             tags_list = get_ege_tags_list(each_question_limit=1)
@@ -376,7 +376,8 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
             await message.answer_photo(
                 photo=FSInputFile(src),
                 show_caption_above_media=True,
-                caption=msg_lexicon['new_work']['answer_to_question_head'].format(data['position'], question_data.id),
+                caption=msg_lexicon['new_work']['answer_to_question_head'].format(data['position'], question_data.id) +
+                     f"\n\n{question_data.answer}",
                 reply_markup=ReplyKeyboardRemove()
             )
 
