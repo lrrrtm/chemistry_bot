@@ -25,8 +25,8 @@ from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
     get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
     get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question, \
-    switch_image_flag, get_topics_table
-from db.models import WorkQuestion
+    switch_image_flag, get_topics_table, insert_question_into_pool
+from db.models import WorkQuestion, Pool
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -234,6 +234,9 @@ def main(page: ft.Page):
     # file_picker = ft.FilePicker(on_result=upload_files)
     # page.overlay.append(file_picker)
 
+    upload_question_image_col = ft.Column()
+    upload_answer_image_col = ft.Column()
+
     def switch_loading(value: bool):
         loading_bar.visible = value
 
@@ -260,13 +263,24 @@ def main(page: ft.Page):
             ]
             file_picker.upload(upload_list)
 
+    def upload_files_2(e):
+        if new_file_picker.result != None and new_file_picker.result.files != None:
+            file = new_file_picker.result.files[-1]
+            upload_list = [
+                FilePickerUploadFile(
+                    file.name,
+                    upload_url=page.get_upload_url(file.name, 600),
+                )
+            ]
+            new_file_picker.upload(upload_list)
+
     def update_images_in_db(filepath: str):
         upload_image_config = page.session.get('upload_image_config')
 
         if os.path.exists(filepath):
             switch_image_flag(1, upload_image_config['type'], upload_image_config['id'])
 
-    def check(e: ft.FilePickerUploadEvent):
+    def process_update_image(e: ft.FilePickerUploadEvent):
         if bool(int(e.progress)):
             upload_image_config = page.session.get('upload_image_config')
 
@@ -285,6 +299,39 @@ def main(page: ft.Page):
 
             page.route = f"/admin/pool?update_question_id={upload_image_config['id']}"
             navigate()
+
+    def process_upload_image(e: ft.FilePickerUploadEvent):
+        if bool(int(e.progress)):
+            upload_image_config = page.session.get('upload_new_image_config')
+            upload_id = upload_image_config['upload_id']
+
+            gen_data = page.session.get('gen_upload_data')
+
+            filepath = f"{getenv('ROOT_FOLDER')}/data/temp/{upload_id}.png"
+            move_image(
+                source_path=f"{getenv('ROOT_FOLDER')}/data/uploads/{e.file_name}",
+                destination_path=filepath,
+            )
+
+            gen_upload_data = page.session.get('gen_upload_data')
+            if 'question_img_id' in gen_upload_data.keys() and gen_upload_data['question_img_id'] == upload_id:
+                upload_question_image_col.controls = [
+                    ft.Image(
+                        src_base64=image_to_base64('temp', upload_id)
+                    )
+                ]
+                gen_data['q_img'] = {'uploaded': True, 'id': upload_id}
+
+            elif 'answer_img_id' in gen_upload_data.keys() and gen_upload_data['answer_img_id'] == upload_id:
+                upload_answer_image_col.controls = [
+                    ft.Image(
+                        src_base64=image_to_base64('temp', upload_id)
+                    )
+                ]
+                gen_data['a_img'] = {'uploaded': True, 'id': upload_id}
+
+            page.session.set('gen_upload_data', gen_data)
+            page.update()
 
     def remove_image_from_question(e: ft.ControlEvent):
         image_data = e.control.data
@@ -311,8 +358,10 @@ def main(page: ft.Page):
 
             page.update()
 
-    file_picker = ft.FilePicker(on_result=upload_files, on_upload=check)
+    file_picker = ft.FilePicker(on_result=upload_files, on_upload=process_update_image)
+    new_file_picker = ft.FilePicker(on_result=upload_files_2, on_upload=process_upload_image)
     page.overlay.append(file_picker)
+    page.overlay.append(new_file_picker)
 
     def change_count_of_questions(e: ft.ControlEvent):
         data = e.control.data
@@ -853,10 +902,32 @@ def main(page: ft.Page):
         info_dialog.open = True
         page.update()
 
-    def goto_upload_image(e: ft.ControlEvent):
+    def goto_update_image(e: ft.ControlEvent):
         page.session.set('upload_image_config', e.control.data)
 
         file_picker.pick_files(
+            file_type=ft.FilePickerFileType.IMAGE,
+            allowed_extensions=['png']
+        )
+
+    def goto_upload_image(e: ft.ControlEvent):
+        upload_id = str(datetime.now().timestamp())
+        data = e.control.data
+        img_type = data['type']
+        data['upload_id'] = upload_id
+
+        gen_data = page.session.get('gen_upload_data')
+        if gen_data is not None:
+            gen_data[f"{img_type}_img_id"] = upload_id
+            page.session.set('gen_upload_data', gen_data)
+        else:
+            page.session.set('gen_upload_data', {f"{img_type}_img_id": upload_id})
+
+        print(page.session.get('gen_upload_data'))
+
+        page.session.set('upload_new_image_config', data)
+
+        new_file_picker.pick_files(
             file_type=ft.FilePickerFileType.IMAGE,
             allowed_extensions=['png']
         )
@@ -892,7 +963,7 @@ def main(page: ft.Page):
                                         leading=ft.IconButton(
                                             icon=ft.icons.IMAGE,
                                             tooltip="Обновить изображение вопроса",
-                                            on_click=goto_upload_image,
+                                            on_click=goto_update_image,
                                             data={'type': 'question', 'id': el.id}
                                         ),
                                         title=ft.Column([
@@ -941,7 +1012,7 @@ def main(page: ft.Page):
                                         leading=ft.IconButton(
                                             icon=ft.icons.IMAGE,
                                             tooltip="Обновить изображение ответа",
-                                            on_click=goto_upload_image,
+                                            on_click=goto_update_image,
                                             data={'type': 'answer', 'id': el.id}
                                         ),
                                         title=ft.Column([
@@ -1142,6 +1213,105 @@ def main(page: ft.Page):
 
         page.update()
 
+    def edit_new_q_config(e: ft.ControlEvent):
+        config = page.session.get('gen_upload_data')
+
+        if config is not None:
+            data = config
+        else:
+            data = {}
+
+        el = e.control.data
+
+        if el == "q_selfcheck":
+            data['is_selfcheck'] = e.control.value
+
+        elif el == "q_rotate":
+            data['is_rotate'] = e.control.value
+
+        elif el == "q_type":
+            if e.control.value == 'КИМ ЕГЭ':
+                data['type'] = 'ege'
+            elif e.control.value == 'Тема':
+                data['type'] = 'topic'
+
+        elif el == "q_full_mark":
+            data['full_mark'] = int(e.control.value)
+
+        elif el == "q_level":
+            data['level'] = int(e.control.value)
+
+        elif el == "q_question":
+            data['question'] = e.control.value
+
+        elif el == "q_answer":
+            data['answer'] = e.control.value
+
+        elif el == "q_tags_list":
+            data['tags_list'] = [el.lower().replace('ё', 'е') for el in e.control.value.split("\n") if el]
+
+        page.session.set('gen_upload_data', data)
+
+        print(page.session.get('gen_upload_data'))
+
+    def save_new_question(e: ft.ControlEvent):
+        data = page.session.get('gen_upload_data')
+
+        values_names = ['question', 'answer', 'type', 'level', 'full_mark', 'tags_list']
+        if all([el in data.keys() for el in values_names]):
+            pool = Pool(
+                text=data['question'],
+                answer=data['answer'],
+                type=data['type'],
+                level=data['level'],
+                full_mark=data['full_mark'],
+                tags_list=data['tags_list'],
+                question_image=0,
+                answer_image=0,
+                is_selfcheck=data['is_selfcheck'],
+                is_rotate=data['is_rotate'],
+            )
+
+            if data['q_img']['uploaded']:
+                pool.question_image = 1
+
+            if data['a_img']['uploaded']:
+                pool.answer_image = 1
+
+            question = insert_question_into_pool(pool)
+
+            if data['q_img']['uploaded']:
+                move_image(
+                    source_path=f"{getenv('ROOT_FOLDER')}/data/temp/{data['q_img']['id']}.png",
+                    destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{question.id}.png",
+                )
+
+            if data['a_img']['uploaded']:
+                move_image(
+                    source_path=f"{getenv('ROOT_FOLDER')}/data/temp/{data['a_img']['id']}.png",
+                    destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{question.id}.png",
+                )
+
+            page.session.remove('gen_upload_data')
+            upload_question_image_col.controls.clear()
+            upload_answer_image_col.controls.clear()
+            navigate()
+            dlg = ft.AlertDialog(
+                title=ft.Text(page.title, size=20),
+                content=ft.Text("Вопрос успешно добавлен", size=16)
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+
+        else:
+            dlg = ft.AlertDialog(
+                title=ft.Text(page.title, size=20),
+                content=ft.Text("Заполните все поля!", size=16)
+            )
+            page.overlay.append(dlg)
+            dlg.open = True
+        page.update()
+
     def open_add_question():
         page.controls.clear()
 
@@ -1161,12 +1331,17 @@ def main(page: ft.Page):
                                 ft.TextField(
                                     prefix_icon=ft.icons.TEXT_FIELDS,
                                     label="Текст вопроса",
-                                    multiline=True
+                                    multiline=True,
+                                    data="q_question",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.OutlinedButton(
                                     text="Загрузить изображение вопроса",
-                                    icon=ft.icons.UPLOAD_FILE
-                                )
+                                    icon=ft.icons.UPLOAD_FILE,
+                                    on_click=goto_upload_image,
+                                    data={'type': 'question'}
+                                ),
+                                upload_question_image_col
                             ]
                         ),
                         padding=15
@@ -1181,12 +1356,17 @@ def main(page: ft.Page):
                                 ft.TextField(
                                     prefix_icon=ft.icons.TEXT_FIELDS,
                                     label="Текст ответа",
-                                    multiline=True
+                                    multiline=True,
+                                    data="q_answer",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.OutlinedButton(
                                     text="Загрузить изображение ответа",
-                                    icon=ft.icons.UPLOAD_FILE
-                                )
+                                    icon=ft.icons.UPLOAD_FILE,
+                                    on_click=goto_upload_image,
+                                    data={'type': 'answer'}
+                                ),
+                                upload_answer_image_col
                             ]
                         ),
                         padding=15
@@ -1201,40 +1381,51 @@ def main(page: ft.Page):
                                 ft.Dropdown(
                                     label="Тип вопроса",
                                     options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in ['КИМ ЕГЭ', 'Тема']],
+                                    data="q_type",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.Dropdown(
                                     prefix_icon=ft.icons.CALCULATE,
                                     label="Уровень сложности",
                                     options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in range(1, 6)],
+                                    data="q_level",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.Dropdown(
                                     prefix_icon=ft.icons.BAR_CHART,
                                     label="Максимальный балл",
                                     options=[ft.dropdown.Option(key=str(i), text=str(i)) for i in range(1, 6)],
+                                    data="q_full_mark",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.Divider(thickness=1),
                                 ft.ListTile(
-                                    leading=ft.Switch(value=False),
+                                    leading=ft.Switch(value=False, data="q_rotate",
+                                                      on_change=edit_new_q_config),
                                     title=ft.Text("Вращение ответа", size=16)
                                 ),
                                 ft.ListTile(
-                                    leading=ft.Switch(value=False),
+                                    leading=ft.Switch(value=False, data="q_selfcheck",
+                                                      on_change=edit_new_q_config),
                                     title=ft.Text("Самопроверка", size=16)
                                 ),
                                 ft.Divider(thickness=1),
                                 ft.TextField(
                                     label="Список тегов",
-                                    multiline=True
+                                    multiline=True,
+                                    data="q_tags_list",
+                                    on_change=edit_new_q_config
                                 ),
                                 ft.Divider(thickness=1),
                                 ft.Row([
-                                    ft.OutlinedButton(
-                                        text="Очистить поля",
-                                        icon=ft.icons.CLEAR_ALL
-                                    ),
+                                    # ft.OutlinedButton(
+                                    #     text="Очистить поля",
+                                    #     icon=ft.icons.CLEAR_ALL
+                                    # ),
                                     ft.FilledButton(
                                         text="Сохранить вопрос",
-                                        icon=ft.icons.SAVE_ALT
+                                        icon=ft.icons.SAVE_ALT,
+                                        on_click=save_new_question
                                     )
                                 ])
                             ]
@@ -1247,156 +1438,6 @@ def main(page: ft.Page):
         )
 
         page.add(main_col)
-
-    # def open_pool_list(page_num: int | None, query: str | None):
-    #     per_page = 15
-    #     page.controls.clear()
-    #     switch_loading(True)
-    #
-    #     data = []
-    #
-    #     if query is None:
-    #         pool = get_paginated_pool(
-    #             page_num=page_num,
-    #             per_page=per_page
-    #         )
-    #     else:
-    #         pool = get_pool_by_query(
-    #             query=query,
-    #         )
-    #
-    #     col = ft.ResponsiveRow(columns=4)
-    #
-    #     page.appbar = ft.AppBar(
-    #         actions=[
-    #             # ft.TextField(
-    #             #     prefix_icon=ft.icons.FIND_IN_PAGE,
-    #             #     width=200,
-    #             #     on_submit=goto_query
-    #             # ),
-    #             ft.IconButton(
-    #                 icon=ft.icons.ARROW_BACK,
-    #                 on_click=lambda _: open_pool_list(page_num=page_num - 1, query=None),
-    #                 disabled=page_num == 1
-    #             ),
-    #             ft.Text(f"{page_num}", size=16),
-    #             ft.Container(
-    #                 content=ft.IconButton(
-    #                     icon=ft.icons.ARROW_FORWARD,
-    #                     on_click=lambda _: open_pool_list(page_num=page_num + 1, query=None),
-    #                     disabled=len(pool) < per_page
-    #                 ),
-    #                 padding=ft.padding.only(right=15)
-    #             )
-    #         ]
-    #     )
-    #
-    #     for el in pool:
-    #         data.append(el)
-    #         col.controls.append(
-    #             ft.Card(
-    #                 content=ft.Container(
-    #                     content=ft.Column(
-    #                         controls=[
-    #                             ft.ListTile(
-    #                                 leading=ft.Text(f"{el.id}", size=16),
-    #                                 title=ft.TextField(
-    #                                     value=el.text,
-    #                                     multiline=True,
-    #                                     data={'place': "question_field", "question": el},
-    #                                     on_change=validate_question_card
-    #                                 ),
-    #                                 subtitle=ft.Text("текст вопроса")
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.NUMBERS),
-    #                                 title=ft.TextField(
-    #                                     value=str(el.level),
-    #                                     multiline=True,
-    #                                     data={'place': "level_field", "question": el},
-    #                                     on_change=validate_question_card
-    #                                 ),
-    #                                 subtitle=ft.Text("уровень сложности")
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.IMAGE),
-    #                                 title=ft.Column([
-    #                                     ft.Image(
-    #                                         src_base64=image_to_base64("question", el.id),
-    #                                         error_content=ft.Text("Ошибка загрузки изображения"),
-    #                                     ) if el.question_image else ft.Text("Изображение отсутствует")
-    #                                 ]),
-    #                                 subtitle=ft.Text("изображение вопроса"),
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.TEXT_FIELDS),
-    #                                 title=ft.TextField(
-    #                                     value=el.answer,
-    #                                     multiline=True,
-    #                                     data={'place': "answer_field", "question": el},
-    #                                     on_change=validate_question_card
-    #                                 ),
-    #                                 subtitle=ft.Text("текст ответа")
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.IMAGE),
-    #                                 title=ft.Column([
-    #                                     ft.Image(
-    #                                         src_base64=image_to_base64("answer", el.id),
-    #                                         error_content=ft.Text("Ошибка загрузки изображения"),
-    #                                     ) if el.answer_image else ft.Text("Изображение отсутствует")
-    #                                 ]),
-    #                                 subtitle=ft.Text("изображение ответа"),
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.NUMBERS),
-    #                                 title=ft.TextField(
-    #                                     value=str(el.full_mark),
-    #                                     multiline=True,
-    #                                     data={'place': "mark_field", "question": el},
-    #                                     on_change=validate_question_card
-    #                                 ),
-    #                                 subtitle=ft.Text("максимальный балл")
-    #                             ),
-    #                             ft.ListTile(
-    #                                 leading=ft.Icon(ft.icons.NUMBERS),
-    #                                 title=ft.TextField(
-    #                                     value=", ".join(a for a in el.tags_list),
-    #                                     multiline=True,
-    #                                     data={'place': "tags_list_field", "question": el},
-    #                                     on_change=validate_question_card
-    #                                 ),
-    #                                 subtitle=ft.Text("список тегов"),
-    #                             ),
-    #                             ft.Row(
-    #                                 # alignment=ft.MainAxisAlignment.END,
-    #                                 controls=[
-    #                                     ft.OutlinedButton(
-    #                                         icon=ft.icons.DELETE,
-    #                                         text="Удалить",
-    #                                         data={'place': "remove_question_btn", "question": el}
-    #                                     ),
-    #                                     ft.FilledButton(
-    #                                         icon=ft.icons.SAVE,
-    #                                         text="Сохранить",
-    #                                         data={'place': "update_question_btn", "question": el},
-    #                                         on_click=None
-    #                                     )
-    #                                 ]
-    #                             )
-    #                         ],
-    #                         scroll=ft.ScrollMode.AUTO
-    #                     ),
-    #                     padding=10
-    #                 ),
-    #                 width=600,
-    #                 height=750,
-    #                 col={"lg": 1}
-    #             )
-    #         )
-    #
-    #     page.add(col)
-    #     switch_loading(False)
 
     if platform.system() == "Windows":
         # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
@@ -1447,6 +1488,7 @@ def main(page: ft.Page):
 
                 elif volume == "add-question":
                     page.title = "Добавление вопросов"
+                    page.session.set('gen_upload_data', {'is_rotate': False, 'is_selfcheck': False, 'a_img': {'uploaded': False, 'id': None}, 'q_img': {'uploaded': False, 'id': None}})
                     open_add_question()
 
                 else:
