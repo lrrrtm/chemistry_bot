@@ -18,7 +18,7 @@ from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackF
 from tgbot.lexicon.buttons import lexicon
 from tgbot.lexicon.messages import lexicon as msg_lexicon
 from tgbot.states.updating_db import UpdateTopics, InsertPool
-from utils.clearing import clear_folder
+from utils.clearing import clear_folder, clear_trash_by_db
 from utils.excel import export_topics_list, import_topics_list, import_pool
 from utils.move_file import move_image
 from utils.services_checker import get_system_status
@@ -46,6 +46,16 @@ async def cmd_admin(message: types.Message):
                  "\n\nВыберите необходимый раздел",
             reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message.from_user.id), message.from_user.id)
         )
+
+
+@router.message(Command("cleardb"))
+async def cmd_admin(message: types.Message):
+    if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
+        for dir in [f"{os.getenv('ROOT_FOLDER')}/data/questions_images", f"{os.getenv('ROOT_FOLDER')}/data/answers_images"]:
+            count = clear_trash_by_db(dir)
+            await message.answer(
+                text=f"{dir.split('/')[-1]}: {count}"
+            )
 
 
 @router.callback_query(AdminMenuMainCallbackFactory.filter())

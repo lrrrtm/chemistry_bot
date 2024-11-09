@@ -132,6 +132,11 @@ def get_pool_by_query(query: str) -> List[Pool]:
 
         return items
 
+def get_pool_by_id(id: int) -> Pool:
+    with get_session() as session:
+        result = session.query(Pool).filter_by(id=id).first()
+
+        return result
 
 def get_pool_by_tags(tags: List[str]) -> List[Pool]:
     all_pool = get_all_pool(active=True)
