@@ -1,3 +1,5 @@
 .idea
 .env
 data
+fastapi_apps
+.dockerfile
