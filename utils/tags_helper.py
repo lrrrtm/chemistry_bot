@@ -53,6 +53,8 @@ def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) 
     topic_data = get_topic_by_id(topic_id)
     topic_tags_list = topic_data.tags_list
     pool_by_topic_tags = get_pool_by_tags(topic_tags_list)
+    # print("LEN", len(pool_by_topic_tags))
+    # print("TOPIC TAGS", topic_tags_list)
 
     if len(pool_by_topic_tags) < questions_limit:
         return {
@@ -67,12 +69,31 @@ def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) 
         }
 
     else:
+        limiter = 100
         while len(result_questions_list) != questions_limit:
             for tag in topic_tags_list:
-                filtered_pool = [q for q in pool_by_topic_tags if tag in topic_tags_list]
-                q = random.choice(filtered_pool)
-                result_questions_list.append(q)
-                pool_by_topic_tags.remove(q)
+                # print(f"cur tag in topic_tags_list: {tag}")
+                # print(f"ostatok in pool: {len(pool_by_topic_tags)}")
+                # print(f"result pool: {len(result_questions_list)}")
+                filtered_pool = [q for q in pool_by_topic_tags if tag in q.tags_list]
+                # print(f"filtered_pool: {len(filtered_pool)}")
+                # print()
+                if filtered_pool:
+                    q = random.choice(filtered_pool)
+                    result_questions_list.append(q)
+                    pool_by_topic_tags.remove(q)
+
+                if len(result_questions_list) == questions_limit:
+                    break
+
+            # print(f"IF: {len(result_questions_list) != questions_limit}", len(result_questions_list), questions_limit)
+            limiter -= 1
+            if limiter == 0:
+                return {
+                    'is_ok': False,
+                    'detail': f"while error",
+                }
+
 
         return {
             'is_ok': True,

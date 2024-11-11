@@ -9,7 +9,7 @@ DATABASE_URL = f"mysql+mysqlconnector://{getenv('DB_USER')}:{getenv('DB_PASSWORD
 
 engine = create_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,
     pool_pre_ping=True
 )
 Session = scoped_session(sessionmaker(bind=engine))
