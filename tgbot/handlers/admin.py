@@ -50,7 +50,7 @@ async def cmd_admin(message: types.Message):
 
 
 @router.message(Command("cleardb"))
-async def cmd_admin(message: types.Message):
+async def cmd_cleardb(message: types.Message):
     if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
         for dir in [f"{os.getenv('ROOT_FOLDER')}/data/questions_images",
                     f"{os.getenv('ROOT_FOLDER')}/data/answers_images"]:
