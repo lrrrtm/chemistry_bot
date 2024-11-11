@@ -11,7 +11,9 @@ load_dotenv()
 # Initialize bot with API token
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode="html")
 
+
 def check_file_created_today(directory):
+    res = None
     today = time.localtime()
     today_date = time.strftime("%Y-%m-%d", today)
 
@@ -22,22 +24,14 @@ def check_file_created_today(directory):
         file_date = time.strftime("%Y-%m-%d", file_creation_time)
 
         if file_date == today_date:
-            return filename
+            res = filename
 
-    return None
+    return res
 
-# Get directory path from command-line arguments
-if len(sys.argv) < 2:
-    print("Usage: python3 backup_sender.py <dir>")
-    sys.exit(1)
+data = check_file_created_today('/root/backups')
 
-directory_path = sys.argv[1]
-
-# Check if the file was created today
-# data = check_file_created_today(directory_path)
-if os.path.exists(directory_path):
-    # Send the document to ADMIN and DEVELOPER
-    with open(directory_path, "rb") as document:
+if data is not None:
+    with open(os.path.join('/root/backups', data), "rb") as document:
         bot.send_document(
             chat_id=getenv('ADMIN_ID'),
             document=document,
