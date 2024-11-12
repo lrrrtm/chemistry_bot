@@ -46,7 +46,8 @@ def import_pool(filepath: str):
                         is_rotate=1 if sheet.cell(row=row_num, column=8).value == "Да" else 0,
                         is_selfcheck=1 if sheet.cell(row=row_num, column=9).value == "Да" else 0,
                         tags_list=[tag.lower().replace("ё", "е").strip(',') for tag in
-                                   sheet.cell(row=row_num, column=10).value.split(", ")]
+                                   sheet.cell(row=row_num, column=10).value.split(", ")],
+                        created_at=datetime.now()
                     )
                     # sheet.cell(row=row_num, column=11).value = "OK"
                     # question_info = {
