@@ -33,6 +33,7 @@ class Pool(Base):
     is_selfcheck = Column(Integer, nullable=False)
     is_active = Column(Integer, nullable=False, default=1)
     tags_list = Column(JSON, nullable=False, comment='Список тегов')
+    created_at = Column(DateTime, nullable=False)
 
 
 # Таблица 'topics'
