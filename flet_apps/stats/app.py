@@ -1,20 +1,18 @@
 import hashlib
+import os
 import platform
 import re
 import sys
-import os
 from datetime import datetime
-from itertools import chain
 from typing import List
 
 import telebot
-from anyio.abc import value
-from flet_core import FilePickerUploadFile, FilePickerUploadEvent
+from flet_core import FilePickerUploadFile
 
 from redis_db.crud import get_value, set_temporary_key
 from utils.image_converter import image_to_base64
 from utils.move_file import move_image
-from utils.tags_helper import get_random_questions
+from utils.tags_helper import get_random_questions, get_random_questions_for_hard_tags_filter
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -22,9 +20,9 @@ from os import getenv
 from urllib.parse import urlparse, parse_qs
 import flet as ft
 from utils.user_statistics import get_user_statistics
-from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_tags, \
-    get_all_questions, insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
-    get_paginated_pool, get_pool_by_query, get_question_from_pool, deactivate_question, update_question, \
+from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_questions, \
+    insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
+    get_question_from_pool, deactivate_question, update_question, \
     switch_image_flag, get_topics_table, insert_question_into_pool
 from db.models import WorkQuestion, Pool
 from dotenv import load_dotenv
@@ -245,15 +243,20 @@ def main(page: ft.Page):
     def change_new_work_name(e: ft.ControlEvent):
         config = page.session.get("new_topic_work_config")
 
-        config['name'] = e.control.value
+        if config is not None:
+            config['name'] = e.control.value
+        else:
+            config = {'name': e.control.value, 'questions': {}}
 
         page.session.set(
             "new_topic_work_config",
             config,
         )
 
+        print(config)
+
     def upload_files(e):
-        if file_picker.result != None and file_picker.result.files != None:
+        if file_picker.result is not None and file_picker.result.files is not None:
             file = file_picker.result.files[-1]
             upload_list = [
                 FilePickerUploadFile(
@@ -264,7 +267,7 @@ def main(page: ft.Page):
             file_picker.upload(upload_list)
 
     def upload_files_2(e):
-        if new_file_picker.result != None and new_file_picker.result.files != None:
+        if new_file_picker.result is not None and new_file_picker.result.files is not None:
             file = new_file_picker.result.files[-1]
             upload_list = [
                 FilePickerUploadFile(
@@ -376,13 +379,76 @@ def main(page: ft.Page):
             elif e.control.value == "0":
                 questions.pop(tag)
         else:
-            questions.pop(tag)
+            try:
+                questions.pop(tag)
+            except Exception:
+                pass
 
         config['questions'] = questions
         page.session.set(
             "new_topic_work_config",
             config,
         )
+
+        print(config)
+
+    def generate_new_topic_work_with_hard_tags_filter():
+        data = page.session.get("new_topic_work_config")
+        name = data['name']
+        tags_list = list(data['questions'].values())
+
+        all_questions_list = get_all_questions()
+
+        if len(tags_list) > 1:
+            questions_ids_pool = get_random_questions_for_hard_tags_filter(pool=all_questions_list, tags_list=tags_list)
+            if questions_ids_pool['is_ok']:
+                work = insert_new_hand_work(
+                    name=name if name else f"Тренировка {datetime.now().strftime('%Y%m%d%H%M')}",
+                    identificator=hashlib.sha256(str(datetime.utcnow()).encode()).hexdigest()[:6],
+                    questions_ids_list=questions_ids_pool['detail']
+                )
+
+                bot.send_message(
+                    chat_id=getenv('ADMIN_ID'),
+                    text=f"<b>ℹ️ Сервисные сообщения</b>"
+                         f"\n\nВы создали новую персональную тренировку. Отправьте ссылку на неё ученику. "
+                         f"\n\n<b>{work.name}</b>"
+                         f"\nhttps://t.me/{getenv('BOT_NAME')}?start=work_{work.identificator}"
+                )
+
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Text(
+                        value=f"Ссылка на тренировку отправлена в Telegram",
+                        size=16
+                    ),
+                    duration=1500
+                )
+                page.snack_bar.open = True
+                page.update()
+                open_new_work_list()
+
+            else:
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Text(
+                        value=f"В базе данных не хватает вопросов",
+                        size=16
+                    ),
+                    duration=1500
+                )
+                page.snack_bar.open = True
+                page.update()
+
+
+        else:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(
+                    value="Добавьте минимум 2 тега",
+                    size=16
+                ),
+                duration=1500
+            )
+            page.snack_bar.open = True
+            page.update()
 
     def generate_new_topic_work():
         data = page.session.get("new_topic_work_config")
@@ -441,6 +507,70 @@ def main(page: ft.Page):
             page.snack_bar.open = True
             page.update()
 
+    def update_hard_tags_list(e: ft.ControlEvent):
+        # data = page.session.get('hard_tags_list')
+        data = page.session.get("new_topic_work_config")
+
+        if e.control.value:
+            if data is not None:
+                data['questions'][e.control.data] = e.control.value
+
+            else:
+                data = {'name': None, 'questions': {e.control.data: e.control.value}}
+
+        else:
+            try:
+                data['questions'].pop(e.control.data)
+            except Exception as e:
+                pass
+
+        page.session.set('new_topic_work_config', data)
+
+        print(page.session.get("new_topic_work_config"))
+
+    def open_hard_tags_list_filter_work():
+        page.controls.clear()
+        page.appbar.actions.clear()
+        switch_loading(True)
+
+        page.session.remove('new_topic_work_config')
+
+        main_col = ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.TextField(
+                        label="Название тренировки",
+                        hint_text="Введите название тренировки",
+                        on_change=change_new_work_name,
+                        width=700
+                    ),
+                    padding=ft.padding.only(top=15)
+                ),
+                ft.Divider(thickness=1)
+            ],
+            width=700
+        )
+
+        for i in range(5):
+            main_col.controls.append(
+                ft.TextField(
+                    label=f"Тег №{i + 1}",
+                    hint_text=f"Введите тег №{i + 1}",
+                    data=i + 1,
+                    on_change=update_hard_tags_list
+                )
+            )
+
+        main_col.controls.append(
+            ft.ElevatedButton(
+                text="Создать тренировку",
+                on_click=lambda _: generate_new_topic_work_with_hard_tags_filter()
+            )
+        )
+
+        page.add(main_col)
+        switch_loading(False)
+
     def open_new_work_list():
         page.controls.clear()
         switch_loading(True)
@@ -453,8 +583,6 @@ def main(page: ft.Page):
 
             parsed_topics[el.volume].append(
                 {'topic_name': el.name, 'tags_list': [tag for tag in el.tags_list if 'ege' not in tag]})
-
-        print(parsed_topics)
 
         # main_col = ft.Column(
         #     controls=[
@@ -572,9 +700,17 @@ def main(page: ft.Page):
             title=ft.Text("Создание тренировки", size=18),
             actions=[
                 ft.Container(
-                    content=ft.IconButton(
-                        icon=ft.icons.SEND,
-                        on_click=lambda _: generate_new_topic_work()
+                    content=ft.Row(
+                        controls=[
+                            ft.IconButton(
+                                icon=ft.icons.FILTER_ALT,
+                                on_click=lambda _: open_hard_tags_list_filter_work()
+                            ),
+                            ft.IconButton(
+                                icon=ft.icons.SEND,
+                                on_click=lambda _: generate_new_topic_work()
+                            )
+                        ]
                     ),
                     padding=ft.padding.only(right=15)
                 )
@@ -1441,12 +1577,12 @@ def main(page: ft.Page):
 
     if platform.system() == "Windows":
         # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
-        # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+        page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
 
         # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
         # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
         # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
-        page.route = "/admin/add-question?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/add-question?auth_key=develop&admin_id=develop"
 
     def error_404():
         page.controls.clear()
@@ -1488,7 +1624,9 @@ def main(page: ft.Page):
 
                 elif volume == "add-question":
                     page.title = "Добавление вопросов"
-                    page.session.set('gen_upload_data', {'is_rotate': False, 'is_selfcheck': False, 'a_img': {'uploaded': False, 'id': None}, 'q_img': {'uploaded': False, 'id': None}})
+                    page.session.set('gen_upload_data', {'is_rotate': False, 'is_selfcheck': False,
+                                                         'a_img': {'uploaded': False, 'id': None},
+                                                         'q_img': {'uploaded': False, 'id': None}})
                     open_add_question()
 
                 else:

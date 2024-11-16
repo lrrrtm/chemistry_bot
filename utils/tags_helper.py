@@ -5,8 +5,37 @@ import random
 from db.crud import get_topic_by_id, get_pool_by_tags
 from db.models import Pool
 
+
 def get_ege_tags_list(each_question_limit: int):
     return {f"ege_{num}": each_question_limit for num in range(1, 35)}
+
+
+def get_random_questions_for_hard_tags_filter(pool: List[Pool], tags_list: List[str], questions_count: int = 20):
+    questions_with_requested_tags = []
+    result = []
+
+    for p in pool:
+        if all([tag in p.tags_list for tag in tags_list]):
+            questions_with_requested_tags.append(p)
+
+    print(len(questions_with_requested_tags))
+
+    if len(questions_with_requested_tags) >= questions_count:
+        for _ in range(questions_count):
+            q = random.choice(questions_with_requested_tags)
+            result.append(q.id)
+            questions_with_requested_tags.remove(q)
+
+        return {
+            'is_ok': True,
+            'detail': result
+        }
+
+    else:
+        return {
+            'is_ok': False,
+            'detail': 'more_than_exists'
+        }
 
 
 def get_random_questions(pool: List[Pool], request_dict: dict) -> dict:
@@ -47,6 +76,7 @@ def get_random_questions(pool: List[Pool], request_dict: dict) -> dict:
         'detail': result
     }
 
+
 def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) -> dict:
     result_questions_list = []
 
@@ -72,12 +102,7 @@ def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) 
         limiter = 100
         while len(result_questions_list) != questions_limit:
             for tag in topic_tags_list:
-                # print(f"cur tag in topic_tags_list: {tag}")
-                # print(f"ostatok in pool: {len(pool_by_topic_tags)}")
-                # print(f"result pool: {len(result_questions_list)}")
                 filtered_pool = [q for q in pool_by_topic_tags if tag in q.tags_list]
-                # print(f"filtered_pool: {len(filtered_pool)}")
-                # print()
                 if filtered_pool:
                     q = random.choice(filtered_pool)
                     result_questions_list.append(q)
@@ -86,7 +111,6 @@ def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) 
                 if len(result_questions_list) == questions_limit:
                     break
 
-            # print(f"IF: {len(result_questions_list) != questions_limit}", len(result_questions_list), questions_limit)
             limiter -= 1
             if limiter == 0:
                 return {
@@ -94,16 +118,7 @@ def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) 
                     'detail': f"while error",
                 }
 
-
         return {
             'is_ok': True,
             'detail': result_questions_list
         }
-
-
-
-
-
-
-
-

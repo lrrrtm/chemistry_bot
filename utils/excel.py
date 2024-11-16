@@ -24,7 +24,7 @@ def import_pool(filepath: str):
     try:
         for row_num in range(2, 1002):
             if sheet.cell(row=row_num, column=1).value is not None:
-                import_id = f"{len(data) + 1}{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                import_id = f"{len(data) + 1}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 if all(
                         [
                             sheet.cell(row=row_num, column=2).value is not None,
@@ -49,20 +49,6 @@ def import_pool(filepath: str):
                                    sheet.cell(row=row_num, column=10).value.split(", ")],
                         created_at=datetime.now()
                     )
-                    # sheet.cell(row=row_num, column=11).value = "OK"
-                    # question_info = {
-                    #     'import_id': import_id,
-                    #     'type': "ege" if sheet.cell(row=row_num, column=1).value == "КИМ ЕГЭ" else "topic",
-                    #     'level': sheet.cell(row=row_num, column=2).value,
-                    #     'question_text': str(sheet.cell(row=row_num, column=3).value),
-                    #     'answer_text': str(sheet.cell(row=row_num, column=5).value),
-                    #     'mark': sheet.cell(row=row_num, column=7).value,
-                    #     'is_rotate': bool(sheet.cell(row=row_num, column=8).value),
-                    #     'is_selfcheck': bool(sheet.cell(row=row_num, column=9).value),
-                    #     'tags_list': [tag.lower().replace("ё", "е") for tag in
-                    #                   sheet.cell(row=row_num, column=10).value.split(", ")]
-                    #
-                    # }
                     try:
                         q_image = image_loader.get(f"D{row_num}")
                         q_image.save(f"{getenv('ROOT_FOLDER')}/data/temp/q_{import_id}.png")
