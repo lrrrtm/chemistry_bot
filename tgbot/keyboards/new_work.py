@@ -85,6 +85,10 @@ def get_topics_volumes_kb() -> InlineKeyboardMarkup:
         callback_data=SelectNewWorkVolumeCallbackFactory(volume="oge")
     )
     builder.button(
+        text="ЕГЭ",
+        callback_data=SelectNewWorkVolumeCallbackFactory(volume="ege")
+    )
+    builder.button(
         text=lexicon['service']['back'],
         callback_data=SelectNewWorkVolumeCallbackFactory(volume=None)
     )

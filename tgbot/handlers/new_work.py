@@ -126,7 +126,8 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
             'main_chem': "Общая химия",
             'organic_chem': "Органическая химия",
             'not_organic_chem': "Неорганическая химия",
-            'oge': "ОГЭ"
+            'oge': "ОГЭ",
+            'ege': "ЕГЭ"
         }
 
         topics_list = get_all_topics(active=True)
