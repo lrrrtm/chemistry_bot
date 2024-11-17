@@ -1,7 +1,7 @@
 from typing import List
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_question_from_pool,
-                     get_output_mark, get_hand_work)
+                     get_output_mark, get_hand_work, get_all_pool)
 from db.models import WorkQuestion
 
 def remove_none(work_questions_list: List[WorkQuestion]):
@@ -16,9 +16,10 @@ def get_user_statistics(telegram_id: int):
     # todo: убрать костыль, связанный с None в user_answer
     result = []
 
+    pool = get_all_pool(active=True)
     user = get_user(telegram_id)
-    user_works = get_user_works(telegram_id)
-    user_works = [w for w in user_works if w.end_datetime is not None]
+    user_works = list(filter(lambda w: w.end_datetime is not None, get_user_works(telegram_id)))
+    # user_works = [w for w in user_works if w.end_datetime is not None]
 
     for work in user_works:
         work_stats = {
@@ -59,7 +60,8 @@ def get_user_statistics(telegram_id: int):
         work_stats['results']['final_mark'] = work_stats['results']['recieved_mark']
 
         for question in work_questions:
-            original_question = get_question_from_pool(question.question_id)
+            # original_question = get_question_from_pool(question.question_id)
+            original_question = list(filter(lambda x: x.id == question.question_id, pool))[0]
             work_stats['results']['max_mark'] += original_question.full_mark
             if question.user_mark == original_question.full_mark:
                 work_stats['questions']['fully'].append(question)

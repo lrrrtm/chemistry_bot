@@ -23,7 +23,7 @@ from utils.user_statistics import get_user_statistics
 from db.crud import get_work_by_url_data, get_work_questions_joined_pool, get_all_users, get_all_questions, \
     insert_new_hand_work, get_ege_converting, update_ege_converting, get_all_pool, \
     get_question_from_pool, deactivate_question, update_question, \
-    switch_image_flag, get_topics_table, insert_question_into_pool
+    switch_image_flag, get_topics_table, insert_question_into_pool, remove_user
 from db.models import WorkQuestion, Pool
 from dotenv import load_dotenv
 
@@ -803,6 +803,21 @@ def main(page: ft.Page):
         page.add(col)
         switch_loading(False)
 
+    def process_remove_user(e: ft.ControlEvent):
+        tid = e.control.data
+        remove_user(telegram_id=tid)
+
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text(
+                value=f"Пользователь удалён",
+                size=16
+            ),
+            duration=1500
+        )
+        page.snack_bar.open = True
+        open_users_list()
+
+
     def open_user_info(e: ft.ControlEvent):
         page.controls.clear()
         switch_loading(True)
@@ -860,7 +875,18 @@ def main(page: ft.Page):
             leading=ft.IconButton(
                 icon=ft.icons.ARROW_BACK,
                 on_click=lambda _: open_users_list()
-            )
+            ),
+            actions=[
+                ft.Container(
+                    content=ft.ElevatedButton(
+                        icon=ft.icons.NO_ACCOUNTS,
+                        text="Удалить ученика",
+                        on_long_press=process_remove_user,
+                        data=user.telegram_id
+                    ),
+                    padding=ft.padding.only(right=15)
+                )
+            ],
         )
 
         page.add(col)
@@ -1601,9 +1627,9 @@ def main(page: ft.Page):
 
     if platform.system() == "Windows":
         # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
-        page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
 
-        # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
+        page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
         # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
         # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
         # page.route = "/admin/add-question?auth_key=develop&admin_id=develop"
