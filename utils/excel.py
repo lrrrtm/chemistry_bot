@@ -40,8 +40,10 @@ def import_pool(filepath: str):
                         import_id=import_id,
                         type="ege" if sheet.cell(row=row_num, column=1).value == "КИМ ЕГЭ" else "topic",
                         level=sheet.cell(row=row_num, column=2).value,
-                        text=str(sheet.cell(row=row_num, column=3).value) if sheet.cell(row=row_num, column=3).value else None,
-                        answer=str(sheet.cell(row=row_num, column=5).value) if sheet.cell(row=row_num, column=5).value else None,
+                        text=str(sheet.cell(row=row_num, column=3).value) if sheet.cell(row=row_num,
+                                                                                        column=3).value else None,
+                        answer=str(sheet.cell(row=row_num, column=5).value) if sheet.cell(row=row_num,
+                                                                                          column=5).value else None,
                         full_mark=sheet.cell(row=row_num, column=7).value,
                         is_rotate=1 if sheet.cell(row=row_num, column=8).value == "Да" else 0,
                         is_selfcheck=1 if sheet.cell(row=row_num, column=9).value == "Да" else 0,
@@ -131,46 +133,32 @@ def import_topics_list(filepath: str):
         tag = sheet.cell(row=row_num, column=2).value
         volume = sheet.cell(row=row_num, column=3).value
 
-        if not all([topic_name is None, tag is None, volume is None]):
-            if topic_name is not None:
+        if all([topic_name, tag, volume]):
 
-                topic_name = str(topic_name).replace("ё", "е")
+            topic_name = str(topic_name).replace("ё", "е")
+            tag = str(tag).replace("ё", "е").lower()
 
-                if topic_name not in result.keys():
-                    result[topic_name] = {'volume': str(), 'tags': list()}
+            if volume not in result:
+                result[volume] = {}
 
-                if tag is not None:
+            if topic_name not in result[volume].keys():
+                result[volume][topic_name] = []
 
-                    tag = str(tag).replace("ё", "е").lower()
+            result[volume][topic_name].append(tag)
 
-                    if volume is not None:
-                        result[topic_name]['volume'] = volume
-                        result[topic_name]['tags'].append(tag)
-                        sheet.cell(row=row_num, column=4).value = "OK"
+            sheet.cell(row=row_num, column=4).value = "OK"
 
-                    else:
-                        errors.append(
-                            {'type': "volume", 'comment': "отсутствие раздела", 'pos': {'row': row_num, 'column': 2},
-                             'data': topic_name})
-                        sheet.cell(row=row_num, column=4).value = "VOLUME_ERROR"
+        else:
+            sheet.cell(row=row_num, column=4).value = "ERROR"
 
-                else:
-                    errors.append({'type': "tag", 'comment': "отсутствие тега", 'pos': {'row': row_num, 'column': 2},
-                                   'data': topic_name})
-                    sheet.cell(row=row_num, column=4).value = "TAG_ERROR"
-
-            else:
-                errors.append(
-                    {'type': "name", 'comment': "отсутствие названия темы", 'pos': {'row': row_num, 'column': 1},
-                     'data': tag})
-                sheet.cell(row=row_num, column=4).value = "NAME_ERROR"
-
-    for key, value in result.items():
-        result[key]['tags'] = list(value['tags'])
-    print(result)
     filename = f"topics_import_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
     wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/{filename}")
     return {'is_ok': True, 'comment': "Импорт тем и тегов завершён", 'data': result, 'errors': errors,
             'filename': filename}
 
 # print(import_pool(fr"D:\repos\chemistry_bot\test_pool.xlsx"))
+
+if __name__ == '__main__':
+    import_topics_list(
+        filepath=r"C:\Users\Lario\Downloads\Telegram Desktop\чистовик.xlsx"
+    )

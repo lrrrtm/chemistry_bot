@@ -94,9 +94,9 @@ def get_topic_by_id(topic_id: int):
         return topic
 
 
-def get_topic_by_name(topic_name: str) -> Topic:
+def get_topic_by_name_and_volume(topic_name: str, volume: str) -> Topic:
     with get_session() as session:
-        topic = session.query(Topic).filter_by(name=topic_name).first()
+        topic = session.query(Topic).filter_by(name=topic_name, volume=volume).first()
         return topic
 
 
@@ -439,22 +439,45 @@ def insert_topics_data(data):
             el.is_active = 0
         session.commit()
 
-        for name, data in data.items():
-            if name.lower() in old_topic_names:
-                topic = session.query(Topic).filter_by(name=name).first()
-                topic.tags_list = data['tags']
-                topic.volume = data['volume']
-                topic.is_active = 1
+        for volume, topics_data in data.items():
+            for topic_name, tags_list in topics_data.items():
+                if topic_name.lower() in old_topic_names:
+                    topic = session.query(Topic).filter_by(name=topic_name).first()
+                    topic.tags_list = tags_list
+                    topic.volume = volume
+                    topic.is_active = 1
+                else:
+                    t = Topic(
+                        name=topic_name,
+                        tags_list=tags_list,
+                        volume=volume,
+                        is_active=1
+                    )
+                    session.add(t)
 
-            else:
-                t = Topic(
-                    name=name,
-                    tags_list=data['tags'],
-                    volume=data['volume'],
-                    is_active=1
-                )
-                session.add(t)
         session.commit()
+
+        # for name, data in data.items():
+        #     if name.lower() in old_topic_names:
+        #         print("exists")
+        #         topic = session.query(Topic).filter_by(name=name).first()
+        #         topic.tags_list = data['tags']
+        #         topic.volume = data['volume']
+        #         topic.is_active = 1
+        #
+        #         print(topic.name, topic.volume, topic.tags_list)
+        #
+        #     else:
+        #         print("new")
+        #         t = Topic(
+        #             name=name,
+        #             tags_list=data['tags'],
+        #             volume=data['volume'],
+        #             is_active=1
+        #         )
+        #         print(t.name, t.volume, t.tags_list)
+        #         session.add(t)
+        # session.commit()
 
 
 if __name__ == "__main__":

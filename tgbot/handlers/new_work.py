@@ -8,7 +8,7 @@ from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 
 from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
                      insert_work_questions, remove_last_user_work,
-                     get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name,
+                     get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name_and_volume,
                      update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
                      get_all_questions, remove_work, get_all_pool)
 from tgbot.handlers.trash import bot
@@ -150,13 +150,15 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
             )
 
             await state.set_state(UserTopicChoice.waiting_for_answer)
+            await state.update_data(selected_volume=volumes_dict[volume])
 
 
 @router.message(UserTopicChoice.waiting_for_answer)
 async def process_user_topic_choice(message: Message, state: FSMContext):
-    await state.clear()
+    data = await state.get_data()
 
     if message.text == btns_lexicon['service']['back']:
+        await state.clear()
         await message.answer(
             text=btns_lexicon['service']['back'],
             reply_markup=ReplyKeyboardRemove()
@@ -170,8 +172,10 @@ async def process_user_topic_choice(message: Message, state: FSMContext):
 
     else:
         input_topic_name = message.text.strip()
-        topic_data = get_topic_by_name(input_topic_name)
+        selected_volume = data['selected_volume']
+        topic_data = get_topic_by_name_and_volume(topic_name=input_topic_name, volume=selected_volume)
         if topic_data is not None:
+            await state.clear()
             msg = await message.answer(
                 text="Загружаем данные",
                 reply_markup=ReplyKeyboardRemove()
@@ -190,7 +194,7 @@ async def process_user_topic_choice(message: Message, state: FSMContext):
             await message.answer(
                 text=msg_lexicon['new_work']['topic_is_not_exists']
             )
-            await state.set_state(UserTopicChoice.waiting_for_answer)
+            # await state.set_state(UserTopicChoice.waiting_for_answer)
 
 
 @router.callback_query(StartNewWorkCallbackFactory.filter())
@@ -378,7 +382,7 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
                 photo=FSInputFile(src),
                 show_caption_above_media=True,
                 caption=msg_lexicon['new_work']['answer_to_question_head'].format(data['position'], question_data.id) +
-                     f"\n\n{question_data.answer}",
+                        f"\n\n{question_data.answer}",
                 reply_markup=ReplyKeyboardRemove()
             )
 
