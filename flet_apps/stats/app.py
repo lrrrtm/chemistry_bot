@@ -240,6 +240,19 @@ def main(page: ft.Page):
 
         page.update()
 
+    def change_new_work_questions_count(e: ft.ControlEvent):
+        config = page.session.get("new_topic_work_config")
+
+        if config is not None and e.control.value and e.control.value.isdigit():
+            config['questions_count'] = int(e.control.value)
+        else:
+            config = {'questions_count': int(e.control.value), 'questions': {}, 'name': None}
+
+        page.session.set(
+            "new_topic_work_config",
+            config,
+        )
+
     def change_new_work_name(e: ft.ControlEvent):
         config = page.session.get("new_topic_work_config")
 
@@ -395,12 +408,14 @@ def main(page: ft.Page):
     def generate_new_topic_work_with_hard_tags_filter():
         data = page.session.get("new_topic_work_config")
         name = data['name']
+        questions_count = data['questions_count']
         tags_list = list(data['questions'].values())
 
         all_questions_list = get_all_questions()
 
         if len(tags_list) > 1:
-            questions_ids_pool = get_random_questions_for_hard_tags_filter(pool=all_questions_list, tags_list=tags_list)
+            questions_ids_pool = get_random_questions_for_hard_tags_filter(pool=all_questions_list, tags_list=tags_list,
+                                                                           questions_count=questions_count)
             if questions_ids_pool['is_ok']:
                 work = insert_new_hand_work(
                     name=name if name else f"Тренировка {datetime.now().strftime('%Y%m%d%H%M')}",
@@ -545,6 +560,13 @@ def main(page: ft.Page):
                         width=700
                     ),
                     padding=ft.padding.only(top=15)
+                ),
+                ft.TextField(
+                    label="Количество вопросов",
+                    hint_text="Введите количество вопросов",
+                    value="10",
+                    on_change=change_new_work_questions_count,
+                    width=700
                 ),
                 ft.Divider(thickness=1)
             ],
