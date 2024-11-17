@@ -526,6 +526,8 @@ def main(page: ft.Page):
         # data = page.session.get('hard_tags_list')
         data = page.session.get("new_topic_work_config")
 
+        e.control.data = e.control.data.strip()
+
         if e.control.value:
             if data is not None:
                 data['questions'][e.control.data] = e.control.value
