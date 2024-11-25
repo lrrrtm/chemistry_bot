@@ -177,7 +177,7 @@ def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool =
                     content=ft.Column(
                         controls=[
                             ft.Container(ft.Row(
-                                [ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1}", size=18)]),
+                                [ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1} ({question.question_id})", size=18)]),
                                 padding=ft.padding.only(left=10, top=10)),
                             ft.Image(
                                 src_base64=image_to_base64(
