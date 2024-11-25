@@ -42,7 +42,7 @@ def import_pool(filepath: str):
                         level=sheet.cell(row=row_num, column=2).value,
                         text=str(sheet.cell(row=row_num, column=3).value) if sheet.cell(row=row_num,
                                                                                         column=3).value else None,
-                        answer=str(sheet.cell(row=row_num, column=5).value) if sheet.cell(row=row_num,
+                        answer=str(int(sheet.cell(row=row_num, column=5).value)) if sheet.cell(row=row_num,
                                                                                           column=5).value else None,
                         full_mark=sheet.cell(row=row_num, column=7).value,
                         is_rotate=1 if sheet.cell(row=row_num, column=8).value == "Да" else 0,
