@@ -10,7 +10,7 @@ from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questio
                      insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name_and_volume,
                      update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
-                     get_all_questions, remove_work, get_all_pool)
+                     get_all_questions, remove_work, get_all_pool, get_topic_by_volume)
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
@@ -130,10 +130,11 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
             'ege': "ЕГЭ"
         }
 
-        topics_list = get_all_topics(active=True)
-        print(len(topics_list))
-        topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
-        print(topics_list)
+        # topics_list = get_all_topics(active=True)
+        topics_list = get_topic_by_volume(volume=volumes_dict[volume])
+        # print(len(topics_list))
+        # topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
+        # print(topics_list)
 
         if not topics_list:
             await callback.answer(

@@ -161,6 +161,13 @@ def get_all_topics(active: bool) -> List[Topic]:
         return data
 
 
+def get_topic_by_volume(volume: str) -> List[Topic]:
+    with get_session() as session:
+        data = session.query(Topic).filter_by(is_active=1, volume=volume)
+
+        return data
+
+
 def get_all_tags() -> List[str]:
     with get_session() as session:
         stmt = select(Topic.tags_list)
