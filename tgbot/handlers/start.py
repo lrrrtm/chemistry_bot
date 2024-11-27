@@ -59,11 +59,7 @@ async def register_user(message: Message, state: FSMContext):
     await state.clear()
 
     user_name = message.text.strip()
-    if (
-            len(user_name) <= 30 and
-            len(re.findall(r'\w+', user_name)) == 1 and
-            bool(re.match(r'^[A-Za-zА-Яа-яёЁ\s]+$', user_name))
-    ):
+    if len(user_name) < 100:
         user = create_user(user_name, message.from_user.id)
         await message.answer(
             text=lexicon['start']['reg_ok'].format(user.name)
