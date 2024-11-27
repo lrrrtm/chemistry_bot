@@ -152,6 +152,7 @@ def import_topics_list(filepath: str):
             sheet.cell(row=row_num, column=4).value = "ERROR"
 
     filename = f"topics_import_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
+    print(result)
     wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/{filename}")
     return {'is_ok': True, 'comment': "Импорт тем и тегов завершён", 'data': result, 'errors': errors,
             'filename': filename}

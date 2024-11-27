@@ -131,7 +131,9 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
         }
 
         topics_list = get_all_topics(active=True)
+        print(len(topics_list))
         topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
+        print(topics_list)
 
         if not topics_list:
             await callback.answer(
