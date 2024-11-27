@@ -765,9 +765,37 @@ def main(page: ft.Page):
         col = ft.Column(
             width=600
         )
+        col_new = ft.ResponsiveRow(columns=5)
         page.scroll = ft.ScrollMode.AUTO
-        for user in users:
-            col.controls.append(
+        for user in sorted(users, key=lambda usr: usr.name):
+            # col.controls.append(
+            #     ft.Card(
+            #         content=ft.Container(
+            #             content=ft.Row(
+            #                 controls=[
+            #                     ft.Container(
+            #                         content=ft.ListTile(
+            #                             leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+            #                             title=ft.Text(user.name),
+            #                             subtitle=ft.Text(f"id{user.telegram_id}"),
+            #                         ),
+            #                         # padding=ft.padding.only(left=-15),
+            #                         expand=True,
+            #                         # bgcolor=ft.colors.RED
+            #                     ),
+            #                     ft.IconButton(
+            #                         icon=ft.icons.KEYBOARD_ARROW_RIGHT,
+            #                         data=user,
+            #                         on_click=open_user_info,
+            #                         tooltip="Профиль пользователя"
+            #                     ),
+            #                 ]
+            #             ),
+            #             padding=ft.padding.only(right=15)
+            #         )
+            #     )
+            # )
+            col_new.controls.append(
                 ft.Card(
                     content=ft.Container(
                         content=ft.Row(
@@ -791,7 +819,8 @@ def main(page: ft.Page):
                             ]
                         ),
                         padding=ft.padding.only(right=15)
-                    )
+                    ),
+                    col={'lg': 1}
                 )
             )
 
@@ -800,7 +829,8 @@ def main(page: ft.Page):
             bgcolor=ft.colors.SURFACE_VARIANT
         )
 
-        page.add(col)
+        # page.add(col)
+        page.add(col_new)
         switch_loading(False)
 
     def process_remove_user(e: ft.ControlEvent):

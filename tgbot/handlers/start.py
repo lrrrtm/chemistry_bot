@@ -60,6 +60,7 @@ async def register_user(message: Message, state: FSMContext):
 
     user_name = message.text.strip()
     if len(user_name) < 100:
+        user_name = user_name.capitalize()
         user = create_user(user_name, message.from_user.id)
         await message.answer(
             text=lexicon['start']['reg_ok'].format(user.name)
