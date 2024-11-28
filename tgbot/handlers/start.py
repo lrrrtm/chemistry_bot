@@ -8,7 +8,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 
 from db.crud import (get_user, create_user, get_hand_work, get_user_works)
 from tgbot.handlers.menu import cmd_menu
-from tgbot.handlers.trash import bot
+from tgbot.handlers.trash import save_user_photo
 from tgbot.keyboards.new_work import get_start_work_kb, get_user_work_way_kb
 from tgbot.lexicon.messages import lexicon
 from tgbot.states.register_user import InputUserName
@@ -73,18 +73,3 @@ async def register_user(message: Message, state: FSMContext):
         await message.answer(
             text=lexicon['start']['bad_name']
         )
-
-
-async def save_user_photo(message: Message):
-    user_id = message.from_user.id
-    user_photos = await bot.get_user_profile_photos(user_id)
-
-    if user_photos.total_count > 0:
-        photo_file_id = user_photos.photos[0][-1].file_id
-
-        file_info = await bot.get_file(photo_file_id)
-
-        file_path = file_info.file_path
-        destination = f"{os.getenv('ROOT_FOLDER')}/flet_apps/assets/users_photos/{message.from_user.id}.jpg"
-
-        await bot.download_file(file_path, destination)

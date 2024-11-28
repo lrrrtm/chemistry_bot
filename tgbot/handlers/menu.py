@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from db.crud import (get_user)
-from tgbot.handlers.start import save_user_photo
+from tgbot.handlers.trash import save_user_photo
 from tgbot.keyboards.menu import get_menu_kb
 from tgbot.lexicon.messages import lexicon
 
