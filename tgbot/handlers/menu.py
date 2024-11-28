@@ -1,9 +1,12 @@
+import os.path
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from db.crud import (get_user)
+from tgbot.handlers.start import save_user_photo
 from tgbot.keyboards.menu import get_menu_kb
 from tgbot.lexicon.messages import lexicon
 
@@ -15,6 +18,10 @@ async def cmd_menu(message: Message, state: FSMContext):
     await state.clear()
 
     user = get_user(message.from_user.id)
+
+    if not os.path.exists(f"{os.getenv('ROOT_FOLDER')}/flet_apps/assets/users_photos/{message.from_user.id}.jpg"):
+        await save_user_photo(message)
+
     if user is None:
         await message.answer(
             text="Для того, чтобы использовать эту команду, необходимо зарегистрироваться. Напиши или нажми /start"

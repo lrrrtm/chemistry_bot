@@ -802,7 +802,10 @@ def main(page: ft.Page):
                             controls=[
                                 ft.Container(
                                     content=ft.ListTile(
-                                        leading=ft.Icon(ft.icons.ACCOUNT_CIRCLE),
+                                        leading=ft.CircleAvatar(
+                                            foreground_image_src=f"users_photos/{user.telegram_id}.jpg",
+                                            content=ft.Text(''.join([letter[0] for letter in user.name.split(' ')])[:2])
+                                        ),
                                         title=ft.Text(user.name),
                                         subtitle=ft.Text(f"id{user.telegram_id}"),
                                     ),
