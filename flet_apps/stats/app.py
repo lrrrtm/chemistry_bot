@@ -657,7 +657,7 @@ def main(page: ft.Page):
                 parsed_topics[el.volume] = []
 
             parsed_topics[el.volume].append(
-                {'topic_name': el.name, 'tags_list': [tag for tag in el.tags_list if 'ege' not in tag]})
+                {'topic_name': el.name, 'tags_list': [tag for tag in el.tags_list]})
 
         # main_col = ft.Column(
         #     controls=[
@@ -673,8 +673,8 @@ def main(page: ft.Page):
         #     # width=700
         # )
 
-        main_col = ft.ResponsiveRow(columns=4)
-
+        main_col = ft.ResponsiveRow(columns=5)
+        # print(parsed_topics.items())
         for volume, data in parsed_topics.items():
 
             topic_col = ft.Column(
