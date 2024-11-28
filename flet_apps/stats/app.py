@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List
 
 import telebot
+from anyio.abc import value
 from flet_core import FilePickerUploadFile
 
 from redis_db.crud import get_value, set_temporary_key
@@ -177,7 +178,8 @@ def get_questions_info_card(questions_list: List[WorkQuestion], detailed: bool =
                     content=ft.Column(
                         controls=[
                             ft.Container(ft.Row(
-                                [ft.Icon(ft.icons.CIRCLE, color=card_color), ft.Text(f"№ {index + 1} (id{question.question_id})", size=18)]),
+                                [ft.Icon(ft.icons.CIRCLE, color=card_color),
+                                 ft.Text(f"№ {index + 1} (id{question.question_id})", size=18)]),
                                 padding=ft.padding.only(left=10, top=10)),
                             ft.Image(
                                 src_base64=image_to_base64(
@@ -406,14 +408,49 @@ def main(page: ft.Page):
         print(config)
 
     def generate_new_topic_work_with_hard_tags_filter():
-        data = page.session.get("new_topic_work_config")
+        data = page.session.get("topic_work_with_filters")
         name = data['name']
         questions_count = data['questions_count']
-        tags_list = list(data['questions'].values())
+        tags_list = data['tags'].values()
 
-        all_questions_list = get_all_questions()
+        if not name:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(
+                    value=f"Введите название тренировки",
+                    size=16
+                ),
+                duration=1500
+            )
+            page.snack_bar.open = True
+            page.update()
+            return
+
+        if not questions_count:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(
+                    value=f"Введите количество вопросов",
+                    size=16
+                ),
+                duration=1500
+            )
+            page.snack_bar.open = True
+            page.update()
+            return
+
+        if len(tags_list) < 2:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(
+                    value=f"Введите минимум 2 тега",
+                    size=16
+                ),
+                duration=1500
+            )
+            page.snack_bar.open = True
+            page.update()
+            return
 
         if len(tags_list) > 1:
+            all_questions_list = get_all_questions()
             questions_ids_pool = get_random_questions_for_hard_tags_filter(pool=all_questions_list, tags_list=tags_list,
                                                                            questions_count=questions_count)
             if questions_ids_pool['is_ok']:
@@ -523,34 +560,45 @@ def main(page: ft.Page):
             page.update()
 
     def update_hard_tags_list(e: ft.ControlEvent):
-        # data = page.session.get('hard_tags_list')
-        data = page.session.get("new_topic_work_config")
-
-        e.control.data = e.control.data.strip()
+        work_data = page.session.get("topic_work_with_filters")
 
         if e.control.value:
-            if data is not None:
-                data['questions'][e.control.data] = e.control.value
-
-            else:
-                data = {'name': None, 'questions': {e.control.data: e.control.value}}
-
+            work_data['tags'][e.control.data] = e.control.value
         else:
             try:
-                data['questions'].pop(e.control.data)
-            except Exception as e:
+                work_data['tags'].pop(e.control.data)
+            except KeyError:
                 pass
 
-        page.session.set('new_topic_work_config', data)
+        page.session.set('topic_work_with_filters', work_data)
 
-        print(page.session.get("new_topic_work_config"))
+        print(page.session.get("topic_work_with_filters"))
+
+    def new_change_work_with_filters(e: ft.ControlEvent):
+        data = page.session.get("topic_work_with_filters")
+
+        if e.control.value:
+            value = int(e.control.value) if e.control.data == 'questions_count' else e.control.value
+            data[e.control.data] = value
+
+        else:
+            data[e.control.data] = None
+
+        page.session.set('topic_work_with_filters', data)
+        print(page.session.get("topic_work_with_filters"))
 
     def open_hard_tags_list_filter_work():
         page.controls.clear()
         page.appbar.actions.clear()
         switch_loading(True)
 
-        page.session.remove('new_topic_work_config')
+        work_name = f"Тренировка {datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+        # page.session.remove('new_topic_work_config')
+        page.session.set(
+            "topic_work_with_filters",
+            {'name': work_name, 'questions_count': 10, 'tags': {}}
+        )
 
         main_col = ft.Column(
             controls=[
@@ -558,7 +606,9 @@ def main(page: ft.Page):
                     content=ft.TextField(
                         label="Название тренировки",
                         hint_text="Введите название тренировки",
-                        on_change=change_new_work_name,
+                        value=work_name,
+                        data='name',
+                        on_change=new_change_work_with_filters,
                         width=700
                     ),
                     padding=ft.padding.only(top=15)
@@ -567,7 +617,8 @@ def main(page: ft.Page):
                     label="Количество вопросов",
                     hint_text="Введите количество вопросов",
                     value="10",
-                    on_change=change_new_work_questions_count,
+                    data='questions_count',
+                    on_change=new_change_work_with_filters,
                     width=700
                 ),
                 ft.Divider(thickness=1)
@@ -849,7 +900,6 @@ def main(page: ft.Page):
         )
         page.snack_bar.open = True
         open_users_list()
-
 
     def open_user_info(e: ft.ControlEvent):
         page.controls.clear()
@@ -1660,9 +1710,9 @@ def main(page: ft.Page):
 
     if platform.system() == "Windows":
         # page.route = "/student/view-stats?uuid=1&tid=409801981&work=40&detailed=1"
-        # page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
+        page.route = "/admin/create-hand-work?auth_key=develop&admin_id=develop"
 
-        page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
+        # page.route = "/admin/students-stats?auth_key=develop&admin_id=develop"
         # page.route = "/admin/ege-converting?auth_key=develop&admin_id=develop"
         # page.route = "/admin/pool?auth_key=develop&admin_id=develop"
         # page.route = "/admin/add-question?auth_key=develop&admin_id=develop"
