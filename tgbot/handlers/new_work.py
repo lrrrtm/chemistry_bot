@@ -133,7 +133,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
         # topics_list = get_all_topics(active=True)
         topics_list = get_topic_by_volume(volume=volumes_dict[volume])
         if volume in ['oge', 'ege']:
-            topics_list = sorted(topics_list, key=lambda x: int(x.topic_name.split(" ")[0]))
+            topics_list = sorted(topics_list, key=lambda x: int(x.name.split(" ")[0]))
         # print(len(topics_list))
         # topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
         # print(topics_list)
