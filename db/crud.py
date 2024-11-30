@@ -442,13 +442,14 @@ def insert_topics_data(data):
         old_topic_names = []
 
         for el in old_data:
-            old_topic_names.append(el.name.lower())
+            old_topic_names.append({'volume': el.volume, 'topic_name': el.name.lower()})
             el.is_active = 0
         session.commit()
 
         for volume, topics_data in data.items():
             for topic_name, tags_list in topics_data.items():
-                if topic_name.lower() in old_topic_names:
+                if len(list(filter(lambda item: item['volume'] == volume and item['topic_name'].lower() == topic_name.lower(), old_topic_names))) == 1:
+                # if topic_name.lower() in old_topic_names:
                     topic = session.query(Topic).filter_by(name=topic_name).first()
                     topic.tags_list = tags_list
                     topic.volume = volume
