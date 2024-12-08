@@ -646,11 +646,24 @@ def main(page: ft.Page):
         page.add(main_col)
         switch_loading(False)
 
+    def get_questions_count_by_tag():
+        counter = {}
+        pool = get_all_pool(active=True)
+        for q in pool:
+            for tag in q.tags_list:
+                if tag not in counter.keys():
+                    counter[tag] = 1
+                else:
+                    counter[tag] += 1
+
+        return counter
+
     def open_new_work_list():
         page.controls.clear()
         switch_loading(True)
 
         parsed_topics = {}
+        counter = get_questions_count_by_tag()
         data = get_topics_table()
         for el in data:
             if el.volume not in parsed_topics.keys():
@@ -659,22 +672,7 @@ def main(page: ft.Page):
             parsed_topics[el.volume].append(
                 {'topic_name': el.name, 'tags_list': [tag for tag in el.tags_list]})
 
-        # main_col = ft.Column(
-        #     controls=[
-        #         ft.Container(
-        #             content=ft.TextField(
-        #                 label="Название",
-        #                 hint_text="Введите название тренировки",
-        #                 on_change=change_new_work_name,
-        #             ),
-        #             padding=ft.padding.only(top=15)
-        #         )
-        #     ],
-        #     # width=700
-        # )
-
         main_col = ft.ResponsiveRow(columns=5)
-        # print(parsed_topics.items())
         for volume, data in parsed_topics.items():
 
             topic_col = ft.Column(
@@ -693,13 +691,14 @@ def main(page: ft.Page):
                     tags_col.controls.append(
                         ft.Row(
                             controls=[
-                                ft.Container(
-                                    content=ft.ListTile(
-                                        leading=ft.Icon(ft.icons.TOPIC),
-                                        title=ft.Text(tag),
-                                    ),
-                                    expand=True,
-                                ),
+                                # ft.Container(
+                                #     content=ft.ListTile(
+                                #         leading=ft.Icon(ft.icons.TOPIC),
+                                #         title=ft.Text(tag),
+                                #     ),
+                                #     expand=True,
+                                # ),
+                                ft.Container(ft.Text(tag, size=16), width=320),
                                 ft.TextField(
                                     width=50,
                                     value='0',
@@ -708,7 +707,8 @@ def main(page: ft.Page):
                                         'tag': tag
                                     },
                                     text_align=ft.TextAlign.CENTER,
-                                )
+                                ),
+                                ft.Text(str(counter[tag]) if tag in counter.keys() else '0', size=16)
                             ]
                         )
                     )
@@ -723,9 +723,6 @@ def main(page: ft.Page):
                         elevation=10
                     )
                 )
-                # print("TOPIC:", topic['topic_name'])
-                # print("TAGS:", topic['tags_list'])
-                # print()
 
             main_col.controls.append(
                 ft.Card(
@@ -737,39 +734,6 @@ def main(page: ft.Page):
                     col={'lg': 1}
                 )
             )
-
-        # tags_list = get_all_tags()
-
-        # tags_list = [el for el in list(set(chain.from_iterable(tags_list))) if 'ege' not in el]
-        # tags_list.sort(key=lambda el: el)
-
-        # for tag in tags_list:
-        #     col.controls.append(
-        #         ft.Container(
-        #             ft.Row(
-        #                 controls=[
-        #                     ft.Container(
-        #                         content=ft.ListTile(
-        #                             leading=ft.Icon(ft.icons.TOPIC),
-        #                             title=ft.Text(tag),
-        #                         ),
-        #                         expand=True,
-        #                     ),
-        #                     ft.TextField(
-        #                         width=50,
-        #                         value='0',
-        #                         on_change=change_count_of_questions,
-        #                         data={
-        #                             'tag': tag
-        #                         },
-        #                         text_align=ft.TextAlign.CENTER,
-        #                     )
-        #                 ]
-        #             ),
-        #             padding=ft.padding.only(right=15)
-        #         )
-        #     )
-        #     # col.controls.append(ft.Divider(thickness=1))
 
         page.appbar = ft.AppBar(
             title=ft.Text("Создание тренировки", size=18),
@@ -793,7 +757,7 @@ def main(page: ft.Page):
             bgcolor=ft.colors.SURFACE_VARIANT
         )
 
-        page.add(
+        page.controls = [
             ft.Container(
                 content=ft.TextField(
                     label="Название тренировки",
@@ -802,9 +766,9 @@ def main(page: ft.Page):
                     width=700
                 ),
                 padding=ft.padding.only(top=15)
-            )
-        )
-        page.add(main_col)
+            ),
+            main_col
+        ]
         switch_loading(False)
 
     def open_users_list():
@@ -1061,7 +1025,6 @@ def main(page: ft.Page):
                                 value=str(el.output_mark),
                                 text_align=ft.TextAlign.CENTER,
                                 expand=True,
-                                # border=ft.InputBorder.UNDERLINE,
                                 data=el.input_mark,
                                 on_change=change_ege_mark
                             )
