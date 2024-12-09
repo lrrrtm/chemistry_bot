@@ -691,14 +691,14 @@ def main(page: ft.Page):
                     tags_col.controls.append(
                         ft.Row(
                             controls=[
-                                # ft.Container(
-                                #     content=ft.ListTile(
-                                #         leading=ft.Icon(ft.icons.TOPIC),
-                                #         title=ft.Text(tag),
-                                #     ),
-                                #     expand=True,
-                                # ),
-                                ft.Container(ft.Text(tag, size=16), width=320),
+                                ft.Container(
+                                    content=ft.ListTile(
+                                        leading=ft.Icon(ft.icons.TOPIC),
+                                        title=ft.Text(tag),
+                                    ),
+                                    expand=True,
+                                ),
+                                # ft.Container(ft.Text(tag, size=16), width=320),
                                 ft.TextField(
                                     width=50,
                                     value='0',
