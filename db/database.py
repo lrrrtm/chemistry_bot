@@ -1,3 +1,5 @@
+import time
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from db.models import Base
@@ -14,4 +16,12 @@ engine = create_engine(
 )
 Session = scoped_session(sessionmaker(bind=engine))
 
-Base.metadata.create_all(engine)
+for _attempt in range(10):
+    try:
+        Base.metadata.create_all(engine)
+        break
+    except Exception as _e:
+        logging.warning("DB not ready (attempt %d/10): %s", _attempt + 1, _e)
+        if _attempt == 9:
+            raise
+        time.sleep(3 * (_attempt + 1))
