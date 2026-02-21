@@ -41,7 +41,7 @@ class Topic(Base):
     __tablename__ = 'topics'
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='id темы')
-    volume = Column(String, nullable=False)
+    volume = Column(String(255), nullable=False)
     name = Column(Text, nullable=False, comment='Название темы')
     tags_list = Column(JSON, nullable=False, comment='Список тегов темы')
     is_active = Column(Integer, nullable=False)
