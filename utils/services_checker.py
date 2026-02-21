@@ -1,73 +1,73 @@
 import subprocess
-from flet import icons
+import os
 
 services = [
     {
         'name': "База данных",
-        'filename': "mysql.service",
-        'flet_icon': icons.DATASET
+        'container': "chemistry_db",
+        'icon': "🗄️"
     },
     {
         'name': "Сервер Nginx",
-        'filename': "nginx.service",
-        'flet_icon': icons.COMPUTER
+        'container': "chemistry_nginx",
+        'icon': "🌐"
     },
     {
         'name': "Telegram-бот",
-        'filename': "chemistry_bot.service",
-        'flet_icon': icons.TELEGRAM
+        'container': "chemistry_bot",
+        'icon': "🤖"
     },
     {
-        'name': "Статистика",
-        'filename': "chemistry_stats.service",
-        'flet_icon': icons.QUERY_STATS
+        'name': "API / Фронтенд",
+        'container': "chemistry_api",
+        'icon': "⚙️"
     },
-    # {
-    #     'name': "Панель управления",
-    #     'filename': "chemistry_control.service",
-    #     'flet_icon': icons.CONTROL_CAMERA
-    # }
 ]
 
 service_status_translation = {
-    "active": "🟢",
-    "inactive": "⛔",
-    "failed": "⛔",
-    "activating": "🟡",
-    "deactivating": "🔴",
-    "reloading": "🔄",
+    "running": "🟢",
+    "exited": "⛔",
+    "stopped": "⛔",
+    "restarting": "🔄",
+    "paused": "🟡",
+    "dead": "⛔",
+    "created": "🟡",
     "unknown": "⛔"
 }
+
+
+def _get_container_status(container_name: str) -> str:
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{.State.Status}}", container_name],
+            capture_output=True, text=True, timeout=5
+        )
+        status = result.stdout.strip()
+        return status if status else "unknown"
+    except Exception:
+        return "unknown"
 
 
 def get_system_status():
     result = []
     for service in services:
-        try:
-            status = subprocess.run(['systemctl', 'is-active', service['filename']], capture_output=True, text=True)
-            service_status = status.stdout.strip()
-            result.append(
-                {
-                    'flet_icon': service['flet_icon'],
-                    'filename': service['filename'],
-                    'name': service['name'],
-                    'status': service_status_translation[service_status]
-                }
-            )
-        except Exception as e:
-            result.append(
-                {
-                    'flet_icon': service['flet_icon'],
-                    'filename': service['filename'],
-                    'name': service['name'],
-                    'status': service_status_translation['unknown']
-                }
-            )
+        status = _get_container_status(service['container'])
+        emoji = service_status_translation.get(status, service_status_translation['unknown'])
+        result.append({
+            'icon': service['icon'],
+            'filename': service['container'],  # container name used for restart
+            'name': service['name'],
+            'status': emoji,
+            'status_text': status,
+        })
     return result
 
 
-def restart_service(filename: str):
+def restart_service(container_name: str):
     try:
-        subprocess.run(['sudo', 'systemctl', 'restart', filename], capture_output=True, text=True)
+        subprocess.run(
+            ["docker", "restart", container_name],
+            capture_output=True, text=True, timeout=30
+        )
     except Exception as e:
         print(e)

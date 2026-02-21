@@ -3,3 +3,10 @@
 data
 fastapi_apps
 .dockerfile
+# Frontend build artifacts and dependencies
+frontend/node_modules
+frontend/.vite
+# Keep dist for deployment
+# frontend/dist
+# Docker backups volume (host-side)
+backups/

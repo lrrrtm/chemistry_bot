@@ -1,0 +1,180 @@
+services:
+
+  # ── MySQL ────────────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: chemistry_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${DB_NAME}
+      MYSQL_USER:          ${DB_USER}
+      MYSQL_PASSWORD:      ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1",
+             "-u", "${DB_USER}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout:  5s
+      retries:  10
+      start_period: 30s
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: chemistry_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --save 60 1
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Telegram Bot ─────────────────────────────────────────────────────────
+  bot:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    image: chemistry_app:latest
+    container_name: chemistry_bot
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      ROOT_FOLDER: /app
+      DB_HOST:     db
+      DB_PORT:     "3306"
+      REDIS_HOST:  redis
+      REDIS_PORT:  "6379"
+    volumes:
+      - app_data:/app/data
+      # Mount Docker socket so the bot can restart other containers
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - internal
+    command: python tgbot/start.py
+
+  # ── FastAPI Backend ───────────────────────────────────────────────────────
+  api:
+    image: chemistry_app:latest
+    container_name: chemistry_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bot:
+        condition: service_started
+    env_file: .env
+    environment:
+      ROOT_FOLDER: /app
+      DB_HOST:     db
+      DB_PORT:     "3306"
+      REDIS_HOST:  redis
+      REDIS_PORT:  "6379"
+    volumes:
+      - app_data:/app/data
+    networks:
+      - internal
+      - web
+    command: >
+      uvicorn api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 2
+
+  # ── Nginx + React Frontend ────────────────────────────────────────────────
+  nginx:
+    build:
+      context:    .
+      dockerfile: Dockerfile.nginx
+    container_name: chemistry_nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - web
+
+  # ── Certbot (Let's Encrypt auto-renewal) ──────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: chemistry_certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew every 12 h; certbot skips if cert is still fresh (< 30 days to expiry)
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+
+  # ── Database Backup (run manually or on schedule) ─────────────────────────
+  # Usage: docker compose run --rm backup
+  backup:
+    image: chemistry_app:latest
+    container_name: chemistry_backup
+    profiles: ["backup"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      ROOT_FOLDER: /app
+      DB_HOST:     db
+      DB_PORT:     "3306"
+      REDIS_HOST:  redis
+      REDIS_PORT:  "6379"
+    volumes:
+      - app_data:/app/data
+      - backups:/backups
+    networks:
+      - internal
+    entrypoint: []
+    command: >
+      sh -c "
+        set -e &&
+        FILE=/backups/chemistry_bot_$$(date +%Y%m%d_%H%M%S).sql.gz &&
+        mysqldump -h db -u $$DB_USER -p$$DB_PASSWORD $$DB_NAME | gzip > $$FILE &&
+        echo Backup saved: $$FILE &&
+        find /backups -name '*.sql.gz' -mtime +7 -delete &&
+        python utils/backup_sender.py
+      "
+
+volumes:
+  db_data:
+  redis_data:
+  app_data:
+  backups:
+  certbot_certs:
+  certbot_www:
+
+networks:
+  internal:
+    driver: bridge
+  web:
+    driver: bridge

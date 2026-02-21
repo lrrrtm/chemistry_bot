@@ -242,7 +242,7 @@ async def admin_menu_reboot_process(callback: types.CallbackQuery, callback_data
     )
 
     try:
-        subprocess.run(["sudo", "systemctl", "restart", filename], check=True)
+        subprocess.run(["docker", "restart", filename], check=True)
 
     except subprocess.CalledProcessError as e:
         await callback.message.answer(

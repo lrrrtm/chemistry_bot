@@ -28,10 +28,12 @@ def check_file_created_today(directory):
 
     return res
 
-data = check_file_created_today('/root/backups')
+BACKUP_DIR = getenv('BACKUP_DIR', '/backups')
+
+data = check_file_created_today(BACKUP_DIR)
 
 if data is not None:
-    with open(os.path.join('/root/backups', data), "rb") as document:
+    with open(os.path.join(BACKUP_DIR, data), "rb") as document:
         bot.send_document(
             chat_id=getenv('ADMIN_ID'),
             document=document,
