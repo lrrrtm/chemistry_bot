@@ -1,0 +1,229 @@
+const BASE = "/api";
+
+function getToken(): string | null {
+  return localStorage.getItem("admin_token");
+}
+
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+      ...(options.headers ?? {}),
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let detail = text;
+    try {
+      const json = JSON.parse(text);
+      detail = json.detail ?? text;
+    } catch {}
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export const api = {
+  // Auth
+  login: (password: string) =>
+    request<{ token: string }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+
+  verify: () => request<{ ok: boolean }>("/auth/verify"),
+
+  // Users
+  getUsers: () =>
+    request<Array<{ id: number; telegram_id: number; name: string }>>(
+      "/admin/users"
+    ),
+
+  deleteUser: (telegram_id: number) =>
+    request<{ ok: boolean }>(`/admin/users/${telegram_id}`, {
+      method: "DELETE",
+    }),
+
+  getUserStats: (telegram_id: number) =>
+    request<
+      Array<{
+        work_id: number;
+        name: string;
+        type: string;
+        start: string | null;
+        end: string | null;
+        final_mark: number;
+        max_mark: number;
+        fully: number;
+        semi: number;
+        zero: number;
+        questions_amount: number;
+      }>
+    >(`/admin/users/${telegram_id}/stats`),
+
+  // Topics
+  getTopics: () =>
+    request<
+      Record<
+        string,
+        Array<{
+          id: number;
+          name: string;
+          tags: Array<{ tag: string; count: number }>;
+        }>
+      >
+    >("/admin/topics"),
+
+  // Hand works
+  createHandWork: (payload: {
+    name: string;
+    questions: Record<string, number>;
+    mode: string;
+    hard_tags?: string[];
+    questions_count?: number;
+  }) =>
+    request<{
+      id: number;
+      name: string;
+      identificator: string;
+      link: string | null;
+    }>("/admin/hand-works", { method: "POST", body: JSON.stringify(payload) }),
+
+  // Pool
+  getPool: () =>
+    request<Array<{ id: number; text: string; tags_list: string[] }>>(
+      "/admin/pool"
+    ),
+
+  getQuestion: (id: number) =>
+    request<{
+      id: number;
+      text: string;
+      answer: string;
+      level: number;
+      full_mark: number;
+      tags_list: string[];
+      is_rotate: number;
+      is_selfcheck: number;
+      question_image: boolean;
+      answer_image: boolean;
+      type: string;
+    }>(`/admin/pool/${id}`),
+
+  updateQuestion: (
+    id: number,
+    data: {
+      text: string;
+      answer: string;
+      level: number;
+      full_mark: number;
+      tags_list: string[];
+      is_rotate: number;
+      is_selfcheck: number;
+    }
+  ) =>
+    request<{ ok: boolean }>(`/admin/pool/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteQuestion: (id: number) =>
+    request<{ ok: boolean }>(`/admin/pool/${id}`, { method: "DELETE" }),
+
+  addQuestion: (data: {
+    text: string;
+    answer: string;
+    type: string;
+    level: number;
+    full_mark: number;
+    tags_list: string[];
+    is_rotate: boolean;
+    is_selfcheck: boolean;
+  }) => request<{ id: number; ok: boolean }>("/admin/pool", { method: "POST", body: JSON.stringify(data) }),
+
+  uploadQuestionImage: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/pool/${id}/question-image`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then((r) => r.json());
+  },
+
+  deleteQuestionImage: (id: number) =>
+    request<{ ok: boolean }>(`/admin/pool/${id}/question-image`, {
+      method: "DELETE",
+    }),
+
+  uploadAnswerImage: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/pool/${id}/answer-image`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then((r) => r.json());
+  },
+
+  deleteAnswerImage: (id: number) =>
+    request<{ ok: boolean }>(`/admin/pool/${id}/answer-image`, {
+      method: "DELETE",
+    }),
+
+  // EGE converting
+  getEgeConverting: () =>
+    request<Array<{ id: number; input_mark: number; output_mark: number }>>(
+      "/admin/ege-converting"
+    ),
+
+  updateEgeConverting: (data: Record<string, number>) =>
+    request<{ ok: boolean }>("/admin/ege-converting", {
+      method: "PUT",
+      body: JSON.stringify({ data }),
+    }),
+
+  // Student (public)
+  getStudentWorkStats: (uuid: string, tid: string, work: string, detailed = 0) =>
+    request<{
+      general: {
+        user_name: string | null;
+        name: string;
+        start: string | null;
+        end: string | null;
+        final_mark: number;
+        max_mark: number;
+        fully: number;
+        semi: number;
+        zero: number;
+      };
+      questions: Array<{
+        index: number;
+        question_id: number;
+        text: string;
+        answer: string;
+        user_answer: string;
+        user_mark: number;
+        full_mark: number;
+        question_image: boolean;
+        answer_image: boolean;
+      }>;
+      detailed: boolean;
+    }>(`/student/work-stats?uuid=${uuid}&tid=${tid}&work=${work}&detailed=${detailed}`),
+
+  imageUrl: {
+    question: (id: number) => `${BASE}/images/question/${id}`,
+    answer: (id: number) => `${BASE}/images/answer/${id}`,
+    user: (telegram_id: number) => `${BASE}/images/user/${telegram_id}`,
+  },
+};

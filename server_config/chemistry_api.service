@@ -1,0 +1,15 @@
+[Unit]
+Description=Chemistry Bot FastAPI Backend (New React Frontend)
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+User=lartem
+WorkingDirectory=/home/lartem/repos/chemistry_bot
+Environment="PYTHONPATH=/home/lartem/repos/chemistry_bot"
+ExecStart=/home/lartem/repos/chemistry_bot/venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
