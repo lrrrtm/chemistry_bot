@@ -374,6 +374,8 @@ def get_skipped_questions(work_id: int) -> List[WorkQuestion]:
 def get_output_mark(input_mark: int):
     with get_session() as session:
         data = session.query(Converting).filter_by(input_mark=input_mark).first()
+        if data is None:
+            return 0
         return data.output_mark
 
 
