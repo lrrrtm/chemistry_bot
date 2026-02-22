@@ -163,8 +163,7 @@ def get_all_topics(active: bool) -> List[Topic]:
 
 def get_topic_by_volume(volume: str) -> List[Topic]:
     with get_session() as session:
-        data = session.query(Topic).filter_by(is_active=1, volume=volume)
-
+        data = session.query(Topic).filter_by(is_active=1, volume=volume).all()
         return data
 
 
@@ -434,6 +433,31 @@ def insert_question_into_pool(q: Pool) -> Pool:
         session.add(q)
         session.commit()
         return q
+
+
+def create_topic(name: str, volume: str) -> Topic:
+    with get_session() as session:
+        t = Topic(name=name, volume=volume, tags_list=[], is_active=1)
+        session.add(t)
+        session.commit()
+        return t
+
+
+def deactivate_topic(topic_id: int):
+    with get_session() as session:
+        t = session.query(Topic).filter_by(id=topic_id).first()
+        if t:
+            t.is_active = 0
+            session.commit()
+
+
+def update_topic(topic_id: int, tags_list: list):
+    with get_session() as session:
+        t = session.query(Topic).filter_by(id=topic_id).first()
+        if t:
+            t.tags_list = tags_list
+            session.commit()
+            return t
 
 
 def insert_topics_data(data):

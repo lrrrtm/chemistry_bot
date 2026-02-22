@@ -202,6 +202,21 @@ export const api = {
     });
   },
 
+  createTopic: (name: string, volume: string) =>
+    request<{ id: number; name: string; volume: string; tags: [] }>("/admin/topics", {
+      method: "POST",
+      body: JSON.stringify({ name, volume }),
+    }),
+
+  deleteTopic: (topicId: number) =>
+    request<{ ok: boolean }>(`/admin/topics/${topicId}`, { method: "DELETE" }),
+
+  updateTopicTags: (topicId: number, tags_list: string[]) =>
+    request<{ ok: boolean }>(`/admin/topics/${topicId}`, {
+      method: "PUT",
+      body: JSON.stringify({ tags_list }),
+    }),
+
   // Pool Excel import
   getPoolTemplate: () =>
     fetch(`${BASE}/admin/pool/template`, { headers: authHeaders() }).then((r) => {

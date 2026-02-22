@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, Database, Save, Trash2, Upload, X, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Database, Save, Trash2, Upload, X, Download, FileSpreadsheet, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -42,13 +42,18 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export function PoolPage() {
+  const location = useLocation();
+  const autoOpenId = (location.state as { openQuestionId?: number } | null)?.openQuestionId;
   const [pool, setPool] = useState<PoolItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selected, setSelected] = useState<QuestionFull | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState<Partial<QuestionFull>>({});
+  const [newTagInput, setNewTagInput] = useState("");
+  const newTagRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
@@ -62,6 +67,16 @@ export function PoolPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Auto-open question when navigated from another page with openQuestionId state
+  useEffect(() => {
+    if (!loading && autoOpenId) {
+      setSearch(String(autoOpenId));
+      openQuestion(autoOpenId);
+      window.history.replaceState({}, "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
   const filtered = pool.filter((q) => {
     const s = search.toLowerCase();
     return (
@@ -72,13 +87,20 @@ export function PoolPage() {
   });
 
   const openQuestion = async (id: number) => {
+    if (id === selectedId) return;
+    setSelectedId(id);
+    setSelected(null);
+    setLoadingQuestion(true);
+    setNewTagInput("");
     try {
       const q = await api.getQuestion(id);
       setSelected(q);
       setEdited({ ...q });
-      setDialogOpen(true);
     } catch {
       toast.error("Ошибка загрузки вопроса");
+      setSelectedId(null);
+    } finally {
+      setLoadingQuestion(false);
     }
   };
 
@@ -96,7 +118,12 @@ export function PoolPage() {
         is_selfcheck: edited.is_selfcheck ?? selected.is_selfcheck,
       });
       toast.success("Вопрос обновлён");
-      setDialogOpen(false);
+      // Sync updated text/tags back to the list
+      const newTags = edited.tags_list ?? selected.tags_list;
+      const newText = edited.text ?? selected.text;
+      setPool((p) =>
+        p.map((q) => q.id === selected.id ? { ...q, text: newText, tags_list: newTags } : q)
+      );
     } catch {
       toast.error("Ошибка сохранения");
     } finally {
@@ -110,7 +137,8 @@ export function PoolPage() {
       await api.deleteQuestion(selected.id);
       toast.success("Вопрос удалён");
       setPool((p) => p.filter((q) => q.id !== selected.id));
-      setDialogOpen(false);
+      setSelected(null);
+      setSelectedId(null);
     } catch {
       toast.error("Ошибка удаления");
     }
@@ -183,34 +211,38 @@ export function PoolPage() {
   if (loading) return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Пул вопросов</h1>
-        <p className="text-[var(--color-muted-foreground)] text-sm mt-1">
-          {pool.length} активных вопросов
-        </p>
-      </div>
+    <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
+      {/* Left panel — question list */}
+      <div className="lg:w-80 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+        {/* Header */}
+        <div className="px-4 pt-4 pb-2 border-b shrink-0 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-sm">Пул вопросов</h2>
+              <p className="text-xs text-[var(--color-muted-foreground)]">{pool.length} активных</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => setImportOpen(!importOpen)}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Excel
+              {importOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
+          </div>
 
-      {/* Excel import section */}
-      <Card>
-        <CardHeader
-          className="pb-3 cursor-pointer select-none"
-          onClick={() => setImportOpen(!importOpen)}
-        >
-          <CardTitle className="text-sm flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            Импорт из Excel
-            {importOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-          </CardTitle>
-        </CardHeader>
-        {importOpen && (
-          <CardContent className="space-y-4">
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Скачайте шаблон, заполните его вопросами и загрузите обратно.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+          {/* Collapsible import section */}
+          {importOpen && (
+            <div className="space-y-2 pb-1">
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                Скачайте шаблон, заполните его и загрузите обратно.
+              </p>
               <Button
                 variant="outline"
+                size="sm"
+                className="w-full text-xs h-7"
                 disabled={downloadingTemplate}
                 onClick={async () => {
                   setDownloadingTemplate(true);
@@ -224,198 +256,122 @@ export function PoolPage() {
                   }
                 }}
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-3 w-3 mr-1.5" />
                 {downloadingTemplate ? "Скачивание..." : "Скачать шаблон"}
               </Button>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pool-import-file">Файл с вопросами (.xlsx)</Label>
               <Input
-                id="pool-import-file"
                 ref={importFileRef}
                 type="file"
                 accept=".xlsx"
+                className="text-xs h-7"
                 onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
               />
+              <Button
+                size="sm"
+                className="w-full text-xs h-7"
+                disabled={importing || !importFile}
+                onClick={async () => {
+                  if (!importFile) return;
+                  setImporting(true);
+                  try {
+                    const result = await api.importPoolExcel(importFile);
+                    toast.success(result.message);
+                    setImportFile(null);
+                    if (importFileRef.current) importFileRef.current.value = "";
+                    const updatedPool = await api.getPool();
+                    setPool(updatedPool);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Ошибка импорта");
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+              >
+                <Upload className="h-3 w-3 mr-1.5" />
+                {importing ? "Импорт..." : "Импортировать"}
+              </Button>
             </div>
-            <Button
-              disabled={importing || !importFile}
-              onClick={async () => {
-                if (!importFile) return;
-                setImporting(true);
-                try {
-                  const result = await api.importPoolExcel(importFile);
-                  toast.success(result.message);
-                  setImportFile(null);
-                  if (importFileRef.current) importFileRef.current.value = "";
-                  const updatedPool = await api.getPool();
-                  setPool(updatedPool);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Ошибка импорта");
-                } finally {
-                  setImporting(false);
-                }
-              }}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {importing ? "Импорт..." : "Импортировать"}
-            </Button>
-          </CardContent>
-        )}
-      </Card>
+          )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted-foreground)]" />
-        <Input
-          placeholder="Поиск по ID, тексту или тегу..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 text-[var(--color-muted-foreground)]">
-          <Database className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p>Вопросы не найдены</p>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+            <Input
+              placeholder="ID, текст или тег..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.slice(0, 100).map((q) => (
-            <Card
-              key={q.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => openQuestion(q.id)}
-            >
-              <CardContent className="py-3 px-4">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="shrink-0 mt-0.5">
-                    id{q.id}
+
+        {/* Question list */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-[var(--color-muted-foreground)]">
+              <Database className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Вопросы не найдены</p>
+            </div>
+          ) : (
+            <>
+              {filtered.slice(0, 100).map((q) => (
+                <button
+                  key={q.id}
+                  className={`w-full text-left flex items-start gap-2 px-3 py-2.5 cursor-pointer hover:bg-[var(--color-accent)] transition-colors border-b last:border-b-0 ${
+                    selectedId === q.id ? "bg-[var(--color-accent)]" : ""
+                  }`}
+                  onClick={() => openQuestion(q.id)}
+                >
+                  <Badge variant="outline" className="shrink-0 mt-0.5 text-xs">
+                    {q.id}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm line-clamp-2">{q.text}</p>
+                    <p className="text-sm line-clamp-2">{q.text || <span className="text-[var(--color-muted-foreground)] italic">Вопрос на картинке</span>}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {q.tags_list.slice(0, 4).map((t) => (
-                        <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                      {q.tags_list.slice(0, 3).map((t) => (
+                        <Badge key={t} variant="secondary" className="text-xs px-1.5 py-0">{t}</Badge>
                       ))}
-                      {q.tags_list.length > 4 && (
-                        <Badge variant="secondary" className="text-xs">+{q.tags_list.length - 4}</Badge>
+                      {q.tags_list.length > 3 && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0">+{q.tags_list.length - 3}</Badge>
                       )}
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filtered.length > 100 && (
-            <p className="text-center text-sm text-[var(--color-muted-foreground)]">
-              Показаны первые 100 из {filtered.length}. Уточните поиск.
-            </p>
+                </button>
+              ))}
+              {filtered.length > 100 && (
+                <p className="text-center text-xs text-[var(--color-muted-foreground)] py-3 px-3">
+                  Первые 100 из {filtered.length}. Уточните поиск.
+                </p>
+              )}
+            </>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Question edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Вопрос id{selected?.id}</DialogTitle>
-          </DialogHeader>
-
-          {selected && (
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-              {/* Question text */}
-              <div className="space-y-2">
-                <Label>Текст вопроса</Label>
-                <Textarea
-                  value={edited.text ?? selected.text}
-                  onChange={(e) => setEdited((p) => ({ ...p, text: e.target.value }))}
-                  rows={3}
-                />
+      {/* Right panel — question editor */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {loadingQuestion ? (
+          <div className="flex-1 flex items-center justify-center text-[var(--color-muted-foreground)]">
+            <p className="text-sm">Загрузка вопроса...</p>
+          </div>
+        ) : !selected ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-muted-foreground)] gap-2">
+            <Database className="h-12 w-12 opacity-20" />
+            <p className="text-sm">Выберите вопрос из списка</p>
+          </div>
+        ) : (
+          <>
+            {/* Editor header */}
+            <div className="px-5 py-3 border-b shrink-0 flex items-center justify-between">
+              <div>
+                <span className="font-semibold text-sm">Вопрос id{selected.id}</span>
+                <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">{selected.type}</span>
               </div>
-
-              <ImageSection type="question" hasImage={selected.question_image} />
-
-              {/* Answer text */}
-              <div className="space-y-2">
-                <Label>Текст ответа</Label>
-                <Textarea
-                  value={edited.answer ?? selected.answer}
-                  onChange={(e) => setEdited((p) => ({ ...p, answer: e.target.value }))}
-                  rows={2}
-                />
-              </div>
-
-              <ImageSection type="answer" hasImage={selected.answer_image} />
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Сложность (1–5)</Label>
-                  <Select
-                    value={String(edited.level ?? selected.level)}
-                    onValueChange={(v) => setEdited((p) => ({ ...p, level: Number(v) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Максимальный балл</Label>
-                  <Select
-                    value={String(edited.full_mark ?? selected.full_mark)}
-                    onValueChange={(v) => setEdited((p) => ({ ...p, full_mark: Number(v) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Теги (по одному на строку)</Label>
-                <Textarea
-                  value={(edited.tags_list ?? selected.tags_list).join("\n")}
-                  onChange={(e) => setEdited((p) => ({ ...p, tags_list: e.target.value.split("\n").filter(Boolean) }))}
-                  rows={4}
-                  className="font-mono text-xs"
-                />
-              </div>
-
-              <div className="flex gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={Boolean(edited.is_rotate ?? selected.is_rotate)}
-                    onCheckedChange={(v) => setEdited((p) => ({ ...p, is_rotate: Number(v) }))}
-                  />
-                  <Label>Вращение ответа</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={Boolean(edited.is_selfcheck ?? selected.is_selfcheck)}
-                    onCheckedChange={(v) => setEdited((p) => ({ ...p, is_selfcheck: Number(v) }))}
-                  />
-                  <Label>Самопроверка</Label>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4 mr-1" />
+                    <Button variant="destructive" size="sm" className="h-7 text-xs">
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
                       Удалить
                     </Button>
                   </AlertDialogTrigger>
@@ -434,16 +390,170 @@ export function PoolPage() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-
-                <Button className="flex-1" onClick={handleSave} disabled={saving}>
-                  <Save className="h-4 w-4 mr-1" />
+                <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving}>
+                  <Save className="h-3.5 w-3.5 mr-1" />
                   {saving ? "Сохранение..." : "Сохранить"}
                 </Button>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {/* Editor form */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <CardContent className="py-4 space-y-4">
+                {/* Question text */}
+                <div className="space-y-2">
+                  <Label>Текст вопроса</Label>
+                  <Textarea
+                    value={edited.text ?? selected.text}
+                    onChange={(e) => setEdited((p) => ({ ...p, text: e.target.value }))}
+                    rows={20}
+                  />
+                </div>
+
+                <ImageSection type="question" hasImage={selected.question_image} />
+
+                {/* Answer text */}
+                <div className="space-y-2">
+                  <Label>Текст ответа</Label>
+                  <Textarea
+                    value={edited.answer ?? selected.answer}
+                    onChange={(e) => setEdited((p) => ({ ...p, answer: e.target.value }))}
+                    rows={20}
+                  />
+                </div>
+
+                <ImageSection type="answer" hasImage={selected.answer_image} />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Сложность (1–5)</Label>
+                    <Select
+                      value={String(edited.level ?? selected.level)}
+                      onValueChange={(v) => setEdited((p) => ({ ...p, level: Number(v) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Максимальный балл</Label>
+                    <Select
+                      value={String(edited.full_mark ?? selected.full_mark)}
+                      onValueChange={(v) => setEdited((p) => ({ ...p, full_mark: Number(v) }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Теги</Label>
+                  {/* Add tag input */}
+                  <div className="flex gap-2">
+                    <Input
+                      ref={newTagRef}
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      placeholder="Новый тег..."
+                      className="h-8 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        const tag = newTagInput.trim();
+                        if (!tag) return;
+                        const current = edited.tags_list ?? selected.tags_list;
+                        if (current.includes(tag)) {
+                          toast.warning("Такой тег уже есть");
+                          return;
+                        }
+                        setEdited((p) => ({ ...p, tags_list: [...current, tag] }));
+                        setNewTagInput("");
+                        newTagRef.current?.focus();
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 shrink-0"
+                      disabled={!newTagInput.trim()}
+                      onClick={() => {
+                        const tag = newTagInput.trim();
+                        if (!tag) return;
+                        const current = edited.tags_list ?? selected.tags_list;
+                        if (current.includes(tag)) {
+                          toast.warning("Такой тег уже есть");
+                          return;
+                        }
+                        setEdited((p) => ({ ...p, tags_list: [...current, tag] }));
+                        setNewTagInput("");
+                        newTagRef.current?.focus();
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Добавить
+                    </Button>
+                  </div>
+                  {/* Tag chips */}
+                  {(edited.tags_list ?? selected.tags_list).length === 0 ? (
+                    <p className="text-sm text-[var(--color-muted-foreground)]">Нет тегов</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {(edited.tags_list ?? selected.tags_list).map((tag) => (
+                        <div
+                          key={tag}
+                          className="flex items-center gap-1.5 bg-[var(--color-accent)] rounded-full px-3 py-1 text-sm"
+                        >
+                          <span>{tag}</span>
+                          <button
+                            className="ml-0.5 hover:text-[var(--color-destructive)] transition-colors"
+                            onClick={() =>
+                              setEdited((p) => ({
+                                ...p,
+                                tags_list: (p.tags_list ?? selected!.tags_list).filter((t) => t !== tag),
+                              }))
+                            }
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={Boolean(edited.is_rotate ?? selected.is_rotate)}
+                      onCheckedChange={(v) => setEdited((p) => ({ ...p, is_rotate: Number(v) }))}
+                    />
+                    <Label>Вращение ответа</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={Boolean(edited.is_selfcheck ?? selected.is_selfcheck)}
+                      onCheckedChange={(v) => setEdited((p) => ({ ...p, is_selfcheck: Number(v) }))}
+                    />
+                    <Label>Самопроверка</Label>
+                  </div>
+                </div>
+              </CardContent>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

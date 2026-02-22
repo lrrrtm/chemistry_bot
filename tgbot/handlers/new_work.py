@@ -97,13 +97,15 @@ async def process_user_work_type(callback: types.CallbackQuery, callback_data: S
         )
 
     elif action == "topic":
+        topics_all = get_all_topics(active=True)
+        volumes = list(dict.fromkeys(t.volume for t in topics_all))
         await callback.message.edit_text(
             text=f"<b>{lexicon['new_work']['topic']}</b>"
                  f"\n\nВыбери нужный тебе раздел"
         )
 
         await callback.message.edit_reply_markup(
-            reply_markup=get_topics_volumes_kb()
+            reply_markup=get_topics_volumes_kb(volumes)
         )
 
 
@@ -122,25 +124,16 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
         )
 
     else:
-        volumes_dict = {
-            'main_chem': "Общая химия",
-            'organic_chem': "Органическая химия",
-            'not_organic_chem': "Неорганическая химия",
-            'oge': "ОГЭ",
-            'ege': "ЕГЭ"
-        }
-
         # topics_list = get_all_topics(active=True)
-        topics_list = get_topic_by_volume(volume=volumes_dict[volume])
-        if volume in ['oge', 'ege']:
+        topics_list = get_topic_by_volume(volume=volume)
+        try:
             topics_list = sorted(topics_list, key=lambda x: int(x.name.split(" ")[0]))
-        # print(len(topics_list))
-        # topics_list = [topic for topic in topics_list if topic.volume == volumes_dict[volume]]
-        # print(topics_list)
+        except (ValueError, IndexError):
+            pass
 
         if not topics_list:
             await callback.answer(
-                text=f"ℹ️ В разделе «{volumes_dict[volume]}» пока нет доступных тем. Попробуй выбрать другой раздел",
+                text=f"ℹ️ В разделе «{volume}» пока нет доступных тем. Попробуй выбрать другой раздел",
                 show_alert=True
             )
 
@@ -149,13 +142,13 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: Se
 
             await callback.message.answer(
                 text=f"<b>{lexicon['new_work']['topic']}</b>"
-                     f"\n\nВыбран раздел <b>{volumes_dict[volume]}</b>"
+                     f"\n\nВыбран раздел <b>{volume}</b>"
                      f"\n\nТеперь выбери нужную тебе тему",
                 reply_markup=get_topics_kb(topics_list)
             )
 
             await state.set_state(UserTopicChoice.waiting_for_answer)
-            await state.update_data(selected_volume=volumes_dict[volume])
+            await state.update_data(selected_volume=volume)
 
 
 @router.message(UserTopicChoice.waiting_for_answer)
@@ -169,10 +162,12 @@ async def process_user_topic_choice(message: Message, state: FSMContext):
             reply_markup=ReplyKeyboardRemove()
         )
 
+        topics_all = get_all_topics(active=True)
+        volumes = list(dict.fromkeys(t.volume for t in topics_all))
         await message.answer(
             text=f"<b>{lexicon['new_work']['topic']}</b>"
                  f"\n\nВыбери нужный тебе раздел",
-            reply_markup=get_topics_volumes_kb()
+            reply_markup=get_topics_volumes_kb(volumes)
         )
 
     else:
@@ -332,7 +327,7 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                 if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
                     src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")
                 else:
-                    src = os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png"))
+                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png")
 
                 await bot.send_photo(
                     chat_id=user.telegram_id,
@@ -381,7 +376,7 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
             if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")):
                 src = os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")
             else:
-                src = os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png"))
+                src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png")
 
             await message.answer_photo(
                 photo=FSInputFile(src),

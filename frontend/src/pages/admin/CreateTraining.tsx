@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Send, Filter, ChevronDown, ChevronRight, Plus, Minus } from "lucide-react";
+import { Send, Filter, ChevronDown, ChevronRight, Plus, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,9 @@ export function CreateTraining() {
 
   // Hard filter mode state
   const [hardName, setHardName] = useState(() => `Тренировка ${new Date().toLocaleDateString("ru-RU")} (фильтр)`);
-  const [hardTags, setHardTags] = useState<string[]>(["", "", "", "", ""]);
+  const [hardTags, setHardTags] = useState<string[]>(["", ""]);
   const [hardCount, setHardCount] = useState(10);
+  const [activeTagField, setActiveTagField] = useState<number | null>(null);
 
   useEffect(() => {
     api.getTopics()
@@ -40,6 +41,26 @@ export function CreateTraining() {
       .catch(() => toast.error("Ошибка загрузки тем"))
       .finally(() => setLoading(false));
   }, []);
+
+  // All unique tags from all topics (for autocomplete)
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(topics).forEach((topicList) =>
+      topicList.forEach((topic) =>
+        topic.tags.forEach(({ tag }) => set.add(tag))
+      )
+    );
+    return Array.from(set).sort();
+  }, [topics]);
+
+  const getSuggestions = (value: string, index: number) => {
+    if (!value.trim()) return [];
+    const lower = value.toLowerCase();
+    const used = new Set(hardTags.filter((t, i) => i !== index && t));
+    return allTags
+      .filter((t) => t.toLowerCase().includes(lower) && !used.has(t))
+      .slice(0, 8);
+  };
 
   const updateCount = (tag: string, value: number) => {
     setQuestionCounts((prev) => {
@@ -180,21 +201,16 @@ export function CreateTraining() {
                               ({count} шт)
                             </span>
                             <div className="flex items-center gap-1">
-                              <button
-                                className="h-6 w-6 rounded-full flex items-center justify-center border hover:bg-[var(--color-muted)] transition-colors"
-                                onClick={() => updateCount(tag, (questionCounts[tag] ?? 0) - 1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </button>
-                              <span className="w-7 text-center text-sm font-medium">
-                                {questionCounts[tag] ?? 0}
-                              </span>
-                              <button
-                                className="h-6 w-6 rounded-full flex items-center justify-center border hover:bg-[var(--color-muted)] transition-colors"
-                                onClick={() => updateCount(tag, (questionCounts[tag] ?? 0) + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </button>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={count}
+                                value={questionCounts[tag] ?? 0}
+                                onChange={(e) =>
+                                  updateCount(tag, Math.min(Math.max(0, Number(e.target.value)), count))
+                                }
+                                className="w-16 h-7 text-center text-sm px-1"
+                              />
                             </div>
                           </div>
                         ))}
@@ -250,18 +266,63 @@ export function CreateTraining() {
 
               <div className="space-y-2">
                 <Label>Теги (минимум 2) — вопрос должен содержать ВСЕ указанные теги</Label>
-                {hardTags.map((tag, i) => (
-                  <Input
-                    key={i}
-                    value={tag}
-                    placeholder={`Тег №${i + 1}`}
-                    onChange={(e) => {
-                      const next = [...hardTags];
-                      next[i] = e.target.value;
-                      setHardTags(next);
-                    }}
-                  />
-                ))}
+                {hardTags.map((tag, i) => {
+                  const suggestions = activeTagField === i ? getSuggestions(tag, i) : [];
+                  return (
+                    <div key={i} className="relative flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          value={tag}
+                          placeholder={`Тег №${i + 1}`}
+                          onFocus={() => setActiveTagField(i)}
+                          onBlur={() => setActiveTagField(null)}
+                          onChange={(e) => {
+                            const next = [...hardTags];
+                            next[i] = e.target.value;
+                            setHardTags(next);
+                          }}
+                        />
+                        {suggestions.length > 0 && (
+                          <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-[var(--color-card)] border rounded-md shadow-md max-h-48 overflow-y-auto">
+                            {suggestions.map((s) => (
+                              <li
+                                key={s}
+                                className="px-3 py-1.5 text-sm cursor-pointer hover:bg-[var(--color-accent)] select-none"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  const next = [...hardTags];
+                                  next[i] = s;
+                                  setHardTags(next);
+                                  setActiveTagField(null);
+                                }}
+                              >
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        disabled={hardTags.length <= 2}
+                        onClick={() => setHardTags(hardTags.filter((_, j) => j !== i))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-1"
+                  onClick={() => setHardTags([...hardTags, ""])}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Добавить тег
+                </Button>
               </div>
 
               <Button className="w-full" onClick={handleCreateHardFilter} disabled={submitting}>

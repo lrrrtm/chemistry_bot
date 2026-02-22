@@ -65,29 +65,14 @@ def get_new_work_types_kb() -> InlineKeyboardMarkup:
     builder.adjust(1)
     return builder.as_markup()
 
-def get_topics_volumes_kb() -> InlineKeyboardMarkup:
+def get_topics_volumes_kb(volumes: list) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    builder.button(
-        text="Общая химия",
-        callback_data=SelectNewWorkVolumeCallbackFactory(volume="main_chem")
-    )
-    builder.button(
-        text="Органическая химия",
-        callback_data=SelectNewWorkVolumeCallbackFactory(volume="organic_chem")
-    )
-    builder.button(
-        text="Неорганическая химия",
-        callback_data=SelectNewWorkVolumeCallbackFactory(volume="not_organic_chem")
-    )
-    builder.button(
-        text="ОГЭ",
-        callback_data=SelectNewWorkVolumeCallbackFactory(volume="oge")
-    )
-    builder.button(
-        text="ЕГЭ",
-        callback_data=SelectNewWorkVolumeCallbackFactory(volume="ege")
-    )
+    for volume in volumes:
+        builder.button(
+            text=volume,
+            callback_data=SelectNewWorkVolumeCallbackFactory(volume=volume)
+        )
     builder.button(
         text=lexicon['service']['back'],
         callback_data=SelectNewWorkVolumeCallbackFactory(volume=None)

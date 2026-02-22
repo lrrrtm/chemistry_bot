@@ -24,7 +24,8 @@ from db.crud import (
     deactivate_question, update_question, switch_image_flag, insert_question_into_pool,
     get_ege_converting, update_ege_converting, get_work_questions_joined_pool,
     get_work_by_url_data, get_user, get_hand_work, get_topic_by_id, get_work_questions,
-    get_output_mark, get_all_topics, insert_topics_data, insert_pool_data
+    get_output_mark, get_all_topics, insert_topics_data, insert_pool_data,
+    create_topic, deactivate_topic, update_topic,
 )
 from db.models import Pool
 from utils.clearing import clear_folder
@@ -120,6 +121,15 @@ class HandWorkCreate(BaseModel):
 
 class EgeConvertingUpdate(BaseModel):
     data: dict  # input_mark -> output_mark
+
+
+class TopicCreate(BaseModel):
+    name: str
+    volume: str
+
+
+class TopicTagsUpdate(BaseModel):
+    tags_list: List[str]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -301,6 +311,24 @@ def list_topics(_=Depends(require_auth)):
         })
 
     return result
+
+
+@app.post("/api/admin/topics")
+def create_topic_endpoint(req: TopicCreate, _=Depends(require_auth)):
+    t = create_topic(req.name, req.volume)
+    return {"id": t.id, "name": t.name, "volume": t.volume, "tags": []}
+
+
+@app.delete("/api/admin/topics/{topic_id}")
+def delete_topic_endpoint(topic_id: int, _=Depends(require_auth)):
+    deactivate_topic(topic_id)
+    return {"ok": True}
+
+
+@app.put("/api/admin/topics/{topic_id}")
+def update_topic_endpoint(topic_id: int, req: TopicTagsUpdate, _=Depends(require_auth)):
+    update_topic(topic_id, req.tags_list)
+    return {"ok": True}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
