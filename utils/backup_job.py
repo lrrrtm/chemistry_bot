@@ -92,8 +92,8 @@ def run_backup() -> dict:
                 document=f,
                 visible_file_name=f"chembot_backup_{timestamp}.zip",
                 caption=(
-                    f"🔹 Резервная копия ХимБот\n"
-                    f"{datetime.now().strftime('%d.%m.%Y %H:%M')}"
+                    f"Резервная копия системы от "
+                    f"{datetime.now().strftime('%d.%m.%Y %H:%M')} UTC"
                 ),
             )
         return {"ok": True}
