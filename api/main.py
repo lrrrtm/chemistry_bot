@@ -655,7 +655,8 @@ def restore_backup(file: UploadFile = File(...), _=Depends(require_auth)):
 
         with open(sql_files[0], "rb") as sql_f:
             result = subprocess.run(
-                ["mysql", f"-h{db_host}", f"-u{db_user}", f"-p{db_password}", db_name],
+                ["mysql", f"-h{db_host}", f"-u{db_user}", f"-p{db_password}",
+                 "--ssl-mode=DISABLED", db_name],
                 stdin=sql_f,
                 capture_output=True,
                 timeout=300,
