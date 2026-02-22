@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, Filter, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search, Clock, ExternalLink, Trash2 } from "lucide-react";
+import { Send, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search, Clock, ExternalLink, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -309,16 +309,10 @@ export function CreateTraining() {
           </div>
         </TabsContent>
 
-        {/* HARD FILTER */}
+        {/* BY HARD TAGS */}
         <TabsContent value="hard" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Жёсткий фильтр по тегам
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-6">
               <div className="space-y-2">
                 <Label htmlFor="hard-name">Название тренировки</Label>
                 <Input
@@ -328,7 +322,11 @@ export function CreateTraining() {
                   placeholder="Введите название"
                 />
               </div>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="hard-count">Количество вопросов</Label>
                 <Input
@@ -400,13 +398,18 @@ export function CreateTraining() {
                   Добавить тег
                 </Button>
               </div>
-
-              <Button className="w-full" onClick={handleCreateHardFilter} disabled={submitting}>
-                <Send className="h-4 w-4 mr-2" />
-                {submitting ? "Создание..." : "Создать тренировку"}
-              </Button>
             </CardContent>
           </Card>
+
+          <div className="sticky bottom-4 flex items-center justify-between bg-[var(--color-card)] border rounded-lg px-4 py-3 shadow-lg">
+            <span className="text-sm">
+              Тегов: <strong>{hardTags.filter(Boolean).length}</strong>
+            </span>
+            <Button onClick={handleCreateHardFilter} disabled={submitting || hardTags.filter(Boolean).length < 2}>
+              <Send className="h-4 w-4 mr-2" />
+              {submitting ? "Создание..." : "Создать"}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
 
