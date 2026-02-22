@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
-  FlaskConical, Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags,
+  FlaskConical, Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ const navItems = [
   { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
   { to: "/admin/add-question", icon: BookPlus, label: "Добавить вопрос" },
   { to: "/admin/topics", icon: Tags, label: "Темы и теги" },
+  { to: "/admin/restore", icon: RotateCcw, label: "Восстановление" },
 ];
 
 export function AdminLayout() {

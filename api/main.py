@@ -1,6 +1,10 @@
 import hashlib
+import glob as glob_module
 import os
+import shutil
+import subprocess
 import sys
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -619,6 +623,70 @@ def update_ege(req: EgeConvertingUpdate, _=Depends(require_auth)):
     config = {int(k): {"value": int(v), "is_ok": True} for k, v in req.data.items()}
     update_ege_converting(config)
     return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Backup restore
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/admin/restore")
+def restore_backup(file: UploadFile = File(...), _=Depends(require_auth)):
+    temp_dir = os.path.join(ROOT_FOLDER, "data", "temp",
+                            f"restore_{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    os.makedirs(temp_dir, exist_ok=True)
+
+    try:
+        zip_path = os.path.join(temp_dir, "backup.zip")
+        with open(zip_path, "wb") as f:
+            f.write(file.file.read())
+
+        with zipfile.ZipFile(zip_path) as zf:
+            zf.extractall(temp_dir)
+
+        # Restore database
+        sql_files = glob_module.glob(os.path.join(temp_dir, "**", "*.sql"), recursive=True)
+        if not sql_files:
+            raise HTTPException(status_code=400, detail="SQL файл не найден в архиве")
+
+        db_host = os.getenv("DB_HOST", "db")
+        db_user = os.getenv("DB_USER", "chemistry")
+        db_password = os.getenv("DB_PASSWORD", "")
+        db_name = os.getenv("DB_NAME", "chemistry_bot")
+
+        with open(sql_files[0], "rb") as sql_f:
+            result = subprocess.run(
+                ["mysql", f"-h{db_host}", f"-u{db_user}", f"-p{db_password}", db_name],
+                stdin=sql_f,
+                capture_output=True,
+                timeout=300,
+            )
+        if result.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка восстановления БД: {result.stderr.decode(errors='replace')}",
+            )
+
+        # Restore images
+        image_mapping = {
+            "answers":   os.path.join(ROOT_FOLDER, "data", "answers_images"),
+            "questions": os.path.join(ROOT_FOLDER, "data", "questions_images"),
+            "users":     os.path.join(ROOT_FOLDER, "data", "users_photos"),
+        }
+        for folder_name, dest_dir in image_mapping.items():
+            os.makedirs(dest_dir, exist_ok=True)
+            for root, dirs, _ in os.walk(temp_dir):
+                for d in dirs:
+                    if d == folder_name:
+                        src_dir = os.path.join(root, d)
+                        for fname in os.listdir(src_dir):
+                            src = os.path.join(src_dir, fname)
+                            if os.path.isfile(src):
+                                shutil.copy2(src, os.path.join(dest_dir, fname))
+
+        return {"ok": True, "message": "Резервная копия успешно восстановлена"}
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

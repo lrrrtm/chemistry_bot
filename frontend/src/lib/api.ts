@@ -238,6 +238,21 @@ export const api = {
     });
   },
 
+  // Backup restore
+  restoreBackup: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/restore`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then(async (r) => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Restore failed");
+      return data as { ok: boolean; message: string };
+    });
+  },
+
   // EGE converting
   getEgeConverting: () =>
     request<Array<{ id: number; input_mark: number; output_mark: number }>>(

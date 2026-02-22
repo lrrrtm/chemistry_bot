@@ -17,6 +17,7 @@ WORKDIR /app
 # System deps: curl for healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
+        default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Python dependencies
