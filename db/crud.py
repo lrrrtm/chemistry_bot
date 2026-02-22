@@ -398,6 +398,21 @@ def get_hand_work(identificator: str) -> HandWork:
         return data
 
 
+def get_all_hand_works() -> List[HandWork]:
+    with get_session() as session:
+        return session.query(HandWork).order_by(HandWork.created_at.desc()).all()
+
+
+def delete_hand_work(hand_work_id: int) -> bool:
+    with get_session() as session:
+        hw = session.query(HandWork).filter_by(id=hand_work_id).first()
+        if not hw:
+            return False
+        session.delete(hw)
+        session.commit()
+        return True
+
+
 def get_questions_list_by_id(ids_list: List[int]) -> List[Pool]:
     result = []
     with get_session() as session:

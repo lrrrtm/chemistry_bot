@@ -31,6 +31,7 @@ from db.crud import (
     get_work_by_url_data, get_user, get_hand_work, get_topic_by_id, get_work_questions,
     get_output_mark, get_all_topics, insert_topics_data, insert_pool_data,
     create_topic, deactivate_topic, update_topic,
+    get_all_hand_works, delete_hand_work,
 )
 from db.models import Pool
 from utils.clearing import clear_folder
@@ -379,6 +380,31 @@ def update_topic_endpoint(topic_id: int, req: TopicTagsUpdate, _=Depends(require
 # Hand works (create training)
 # ──────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/admin/hand-works")
+def list_hand_works(_=Depends(require_auth)):
+    bot_name = os.getenv("BOT_NAME")
+    works = get_all_hand_works()
+    return [
+        {
+            "id": w.id,
+            "name": w.name,
+            "identificator": w.identificator,
+            "created_at": w.created_at.isoformat() if w.created_at else None,
+            "questions_count": len(w.questions_list) if w.questions_list else 0,
+            "link": f"https://t.me/{bot_name}?start=work_{w.identificator}" if bot_name else None,
+        }
+        for w in works
+    ]
+
+
+@app.delete("/api/admin/hand-works/{work_id}")
+def remove_hand_work(work_id: int, _=Depends(require_auth)):
+    ok = delete_hand_work(work_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Тренировка не найдена")
+    return {"ok": True}
+
+
 @app.post("/api/admin/hand-works")
 def create_hand_work(req: HandWorkCreate, _=Depends(require_auth)):
     all_questions = get_all_questions()
@@ -447,7 +473,7 @@ def send_training_to_user(req: SendTrainingRequest, _=Depends(require_auth)):
             text=(
                 f"📝 <b>Новая тренировка</b>\n\n"
                 f"<b>{req.name}</b>\n\n"
-                f"Нажмите на ссылку, чтобы начать:\n"
+                f"Преподаватель отправил тебе тренировку. Нажми на ссылку, чтобы начать:\n"
                 f"{req.link}"
             ),
         )

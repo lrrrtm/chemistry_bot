@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, Filter, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search } from "lucide-react";
+import { Send, Filter, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search, Clock, ExternalLink, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type User = { id: number; telegram_id: number; name: string };
+type HandWork = { id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null };
 
 type TopicTag = { tag: string; count: number };
 type TopicItem = { id: number; name: string; tags: TopicTag[] };
@@ -37,6 +43,10 @@ export function CreateTraining() {
   const [hardCount, setHardCount] = useState(10);
   const [activeTagField, setActiveTagField] = useState<number | null>(null);
 
+  // Trainings list
+  const [trainings, setTrainings] = useState<HandWork[]>([]);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   // Success dialog state
   const [successDialog, setSuccessDialog] = useState<{ name: string; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -44,6 +54,10 @@ export function CreateTraining() {
   const [userSearch, setUserSearch] = useState("");
   const [sending, setSending] = useState<number | null>(null);
   const userSearchRef = useRef<HTMLInputElement>(null);
+
+  const loadTrainings = () => {
+    api.getHandWorks().then(setTrainings).catch(() => {});
+  };
 
   useEffect(() => {
     api.getTopics()
@@ -53,6 +67,7 @@ export function CreateTraining() {
       .catch(() => toast.error("Ошибка загрузки тем"))
       .finally(() => setLoading(false));
     api.getUsers().then(setUsers).catch(() => {});
+    loadTrainings();
   }, []);
 
   // All unique tags from all topics (for autocomplete)
@@ -99,6 +114,7 @@ export function CreateTraining() {
         mode: "tags",
       });
       setQuestionCounts({});
+      loadTrainings();
       if (result.link) {
         setSuccessDialog({ name: result.name, link: result.link });
       } else {
@@ -126,6 +142,7 @@ export function CreateTraining() {
         hard_tags: tags,
         questions_count: hardCount,
       });
+      loadTrainings();
       if (result.link) {
         setSuccessDialog({ name: result.name, link: result.link });
       } else {
@@ -135,6 +152,19 @@ export function CreateTraining() {
       toast.error(err instanceof Error ? err.message : "Ошибка создания тренировки");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteTraining = async (id: number) => {
+    setDeletingId(id);
+    try {
+      await api.deleteHandWork(id);
+      setTrainings((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Тренировка удалена");
+    } catch {
+      toast.error("Ошибка удаления тренировки");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -438,16 +468,21 @@ export function CreateTraining() {
                   filteredUsers.map((user) => (
                     <div
                       key={user.telegram_id}
-                      className="flex items-center justify-between px-3 py-2 hover:bg-[var(--color-accent)] transition-colors"
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--color-accent)] transition-colors"
                     >
-                      <div className="min-w-0">
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} />
+                        <AvatarFallback className="text-[10px] font-semibold">
+                          {user.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm truncate">{user.name}</p>
                         <p className="text-[10px] text-[var(--color-muted-foreground)]">id{user.telegram_id}</p>
                       </div>
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="shrink-0 h-7 px-2"
+                        className="shrink-0 h-7 px-2.5"
                         disabled={sending === user.telegram_id}
                         onClick={() => handleSendToUser(user)}
                       >
@@ -462,6 +497,76 @@ export function CreateTraining() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Created trainings */}
+      {trainings.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Созданные тренировки
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="divide-y divide-[var(--color-border)]">
+              {trainings.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{t.name}</p>
+                    <p className="text-[10px] text-[var(--color-muted-foreground)]">
+                      {new Date(t.created_at).toLocaleString("ru-RU")} &middot; {t.questions_count} вопр.
+                    </p>
+                  </div>
+                  {t.link && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(t.link!);
+                          toast.success("Ссылка скопирована");
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <a href={t.link} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </a>
+                    </>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-7 w-7 shrink-0 text-red-500 hover:text-red-600">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Удалить тренировку?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          &laquo;{t.name}&raquo; будет удалена без возможности восстановления.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteTraining(t.id)}
+                          disabled={deletingId === t.id}
+                        >
+                          {deletingId === t.id ? "Удаление..." : "Удалить"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

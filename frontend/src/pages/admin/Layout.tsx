@@ -77,10 +77,10 @@ export function AdminLayout() {
         </NavLink>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-foreground)]"
+          className="w-full justify-start gap-3 px-3 py-2.5 h-auto text-sm font-medium text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-foreground)]"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4 shrink-0" />
           Выйти
         </Button>
       </div>

@@ -99,6 +99,14 @@ export const api = {
       link: string | null;
     }>("/admin/hand-works", { method: "POST", body: JSON.stringify(payload) }),
 
+  getHandWorks: () =>
+    request<Array<{ id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null }>>(
+      "/admin/hand-works"
+    ),
+
+  deleteHandWork: (id: number) =>
+    request<{ ok: boolean }>(`/admin/hand-works/${id}`, { method: "DELETE" }),
+
   sendTrainingToUser: (data: { telegram_id: number; link: string; name: string }) =>
     request<{ ok: boolean }>("/admin/send-training", {
       method: "POST",
