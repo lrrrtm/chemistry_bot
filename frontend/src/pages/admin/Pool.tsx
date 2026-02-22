@@ -175,36 +175,43 @@ export function PoolPage() {
   const ImageSection = ({ type, hasImage }: { type: "question" | "answer"; hasImage: boolean }) => (
     <div className="space-y-2">
       <Label>{type === "question" ? "Изображение вопроса" : "Изображение ответа"}</Label>
-      {hasImage && (
-        <div className="relative">
+      {hasImage ? (
+        <div className="relative rounded-lg overflow-hidden border">
           <img
             src={type === "question" ? api.imageUrl.question(selected!.id) : api.imageUrl.answer(selected!.id)}
             alt={type}
-            className="w-full max-h-48 object-contain rounded-lg border"
+            className="w-full max-h-48 object-contain"
           />
+          <button
+            className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
+            onClick={() => removeImage(type)}
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-      )}
-      <div className="flex gap-2">
-        <label className="flex-1">
-          <input
-            type="file"
-            accept="image/png"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && uploadImage(type, e.target.files[0])}
-          />
-          <Button variant="outline" size="sm" className="w-full" asChild>
-            <span>
-              <Upload className="h-3 w-3 mr-1.5" />
-              {hasImage ? "Заменить" : "Загрузить"}
-            </span>
-          </Button>
-        </label>
-        {hasImage && (
-          <Button variant="outline" size="sm" onClick={() => removeImage(type)}>
-            <X className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
+      ) : null}
+      <label>
+        <input
+          type="file"
+          accept="image/png"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && uploadImage(type, e.target.files[0])}
+        />
+        <div
+          className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-[var(--color-primary)] transition-colors"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files[0];
+            if (f && f.type === "image/png") uploadImage(type, f);
+          }}
+        >
+          <Upload className="h-6 w-6 mx-auto text-[var(--color-muted-foreground)] mb-1" />
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {hasImage ? "Перетащите PNG или нажмите для замены" : "Перетащите PNG или нажмите для загрузки"}
+          </p>
+        </div>
+      </label>
     </div>
   );
 

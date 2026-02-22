@@ -122,12 +122,20 @@ export function AddQuestion() {
           className="hidden"
           onChange={(e) => e.target.files?.[0] && handleImageSelect(type, e.target.files[0])}
         />
-        <Button variant="outline" size="sm" className="w-full" asChild>
-          <span>
-            <Upload className="h-3.5 w-3.5 mr-2" />
-            {file ? "Заменить PNG" : "Загрузить PNG"}
-          </span>
-        </Button>
+        <div
+          className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-[var(--color-primary)] transition-colors"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files[0];
+            if (f && f.type === "image/png") handleImageSelect(type, f);
+          }}
+        >
+          <Upload className="h-6 w-6 mx-auto text-[var(--color-muted-foreground)] mb-1" />
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {file ? "Перетащите PNG или нажмите для замены" : "Перетащите PNG или нажмите для загрузки"}
+          </p>
+        </div>
       </label>
     </div>
   );
