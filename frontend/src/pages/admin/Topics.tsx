@@ -418,7 +418,7 @@ export function Topics() {
 
       {/* ── Column 3: Tags ───────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <div className="px-4 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[44px]">
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             {selectedTopic ? selectedTopic.name : "Теги"}
           </span>

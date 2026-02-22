@@ -406,7 +406,7 @@ export function Students() {
 
       {/* ── Column 2: Works list ───────────────────────────────────────────── */}
       <div className="lg:w-72 shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px]">
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
             {selectedUser ? selectedUser.name : "Работы"}
           </span>

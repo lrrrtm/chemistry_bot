@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { FlaskConical, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
-            <div className="h-12 w-12 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
-              <FlaskConical className="h-6 w-6 text-[var(--color-primary-foreground)]" />
-            </div>
+            <img src={logoImg} alt="ХимБот" className="h-12 w-12" />
           </div>
           <CardTitle className="text-2xl">ХимБот</CardTitle>
           <CardDescription>Панель администратора</CardDescription>

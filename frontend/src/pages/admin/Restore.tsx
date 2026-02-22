@@ -16,6 +16,21 @@ const PHASE_LABELS: Record<Phase, string> = {
   error:      "Ошибка",
 };
 
+// MSK = UTC+3
+function utcToMsk(utc: string): string {
+  if (!utc || !utc.includes(":")) return utc;
+  const [h, m] = utc.split(":").map(Number);
+  const msk = (h + 3) % 24;
+  return `${String(msk).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function mskToUtc(msk: string): string {
+  if (!msk || !msk.includes(":")) return msk;
+  const [h, m] = msk.split(":").map(Number);
+  const utc = (h - 3 + 24) % 24;
+  return `${String(utc).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 export function RestorePage() {
   // ── Restore state ──────────────────────────────────────────────────────────
   const [file, setFile]           = useState<File | null>(null);
@@ -33,14 +48,14 @@ export function RestorePage() {
 
   useEffect(() => {
     api.getBackupSettings()
-      .then((s) => { setBackupTime(s.time); setBackupChatId(s.chat_id); })
+      .then((s) => { setBackupTime(utcToMsk(s.time)); setBackupChatId(s.chat_id); })
       .catch(() => {});
   }, []);
 
   const handleSaveSettings = async () => {
     setSettingsSaving(true);
     try {
-      await api.saveBackupSettings({ time: backupTime, chat_id: backupChatId });
+      await api.saveBackupSettings({ time: mskToUtc(backupTime), chat_id: backupChatId });
       toast.success("Настройки сохранены");
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -279,7 +294,7 @@ export function RestorePage() {
           <div className="space-y-1.5">
             <Label htmlFor="backup-time" className="flex items-center gap-1.5 text-sm">
               <Clock className="h-3.5 w-3.5" />
-              Время (UTC)
+              Время (МСК)
             </Label>
             <Input
               id="backup-time"

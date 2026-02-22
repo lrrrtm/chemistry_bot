@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
-  FlaskConical, Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw,
+  Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw,
 } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,7 +16,6 @@ const navItems = [
   { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
   { to: "/admin/add-question", icon: BookPlus, label: "Добавить вопрос" },
   { to: "/admin/topics", icon: Tags, label: "Темы и теги" },
-  { to: "/admin/restore", icon: RotateCcw, label: "Восстановление" },
 ];
 
 export function AdminLayout() {
@@ -31,9 +31,7 @@ export function AdminLayout() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--color-sidebar-muted)]">
-        <div className="h-8 w-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center shrink-0">
-          <FlaskConical className="h-5 w-5 text-white" />
-        </div>
+        <img src={logoImg} alt="ХимБот" className="h-8 w-8 shrink-0" />
         <div>
           <p className="font-semibold text-[var(--color-sidebar-foreground)] text-sm">ХимБот</p>
           <p className="text-xs text-[var(--color-sidebar-foreground)] opacity-60">Администратор</p>
@@ -61,7 +59,22 @@ export function AdminLayout() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-[var(--color-sidebar-muted)]">
+      <div className="p-3 border-t border-[var(--color-sidebar-muted)] space-y-1">
+        <NavLink
+          to="/admin/restore"
+          onClick={() => setSidebarOpen(false)}
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              isActive
+                ? "bg-[var(--color-primary)] text-white"
+                : "text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-muted)]"
+            )
+          }
+        >
+          <RotateCcw className="h-4 w-4 shrink-0" />
+          Восстановление
+        </NavLink>
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-muted)] hover:text-[var(--color-sidebar-foreground)]"
@@ -102,7 +115,7 @@ export function AdminLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center justify-between px-4 py-3 border-b bg-[var(--color-card)] shrink-0">
+        <header className="flex items-center justify-between px-4 py-5 border-b bg-[var(--color-card)] shrink-0">
           <Button
             variant="ghost"
             size="icon"

@@ -22,12 +22,12 @@ export function CreateTraining() {
   const [submitting, setSubmitting] = useState(false);
 
   // Tags mode state
-  const [workName, setWorkName] = useState(() => `Тренировка ${new Date().toLocaleDateString("ru-RU")}`);
+  const [workName, setWorkName] = useState(() => `Тренировка по темам (${new Date().toLocaleString("ru-RU")})`);
   const [questionCounts, setQuestionCounts] = useState<QuestionCounts>({});
   const [expandedVolumes, setExpandedVolumes] = useState<Set<string>>(new Set());
 
   // Hard filter mode state
-  const [hardName, setHardName] = useState(() => `Тренировка ${new Date().toLocaleDateString("ru-RU")} (фильтр)`);
+  const [hardName, setHardName] = useState(() => `Тренировка по тегам (${new Date().toLocaleString("ru-RU")})`);
   const [hardTags, setHardTags] = useState<string[]>(["", ""]);
   const [hardCount, setHardCount] = useState(10);
   const [activeTagField, setActiveTagField] = useState<number | null>(null);
@@ -36,7 +36,6 @@ export function CreateTraining() {
     api.getTopics()
       .then((data) => {
         setTopics(data);
-        setExpandedVolumes(new Set(Object.keys(data)));
       })
       .catch(() => toast.error("Ошибка загрузки тем"))
       .finally(() => setLoading(false));
@@ -81,7 +80,7 @@ export function CreateTraining() {
     setSubmitting(true);
     try {
       const result = await api.createHandWork({
-        name: workName || `Тренировка ${new Date().toLocaleDateString("ru-RU")}`,
+        name: workName || `Тренировка по темам (${new Date().toLocaleString("ru-RU")})`,
         questions: questionCounts,
         mode: "tags",
       });
@@ -148,7 +147,7 @@ export function CreateTraining() {
       <Tabs defaultValue="tags">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="tags" className="flex-1 sm:flex-none">По темам</TabsTrigger>
-          <TabsTrigger value="hard" className="flex-1 sm:flex-none">Жёсткий фильтр</TabsTrigger>
+          <TabsTrigger value="hard" className="flex-1 sm:flex-none">По тегам</TabsTrigger>
         </TabsList>
 
         {/* BY TAGS */}
@@ -173,7 +172,7 @@ export function CreateTraining() {
                 className="w-full text-left"
                 onClick={() => toggleVolume(volume)}
               >
-                <CardHeader className="pb-3">
+                <CardHeader className={expandedVolumes.has(volume) ? "pb-3" : ""}>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{volume}</CardTitle>
                     {expandedVolumes.has(volume) ? (
