@@ -209,12 +209,15 @@ def verify(token=Depends(require_auth)):
 # Image serving (public)
 # ──────────────────────────────────────────────────────────────────────────────
 
+_IMAGE_CACHE_HEADERS = {"Cache-Control": "public, max-age=86400"}
+
+
 @app.get("/api/images/question/{question_id}")
 def get_question_image(question_id: int):
     path = os.path.join(ROOT_FOLDER, "data", "questions_images", f"{question_id}.png")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(path, media_type="image/png")
+    return FileResponse(path, media_type="image/png", headers=_IMAGE_CACHE_HEADERS)
 
 
 @app.get("/api/images/answer/{question_id}")
@@ -222,7 +225,7 @@ def get_answer_image(question_id: int):
     path = os.path.join(ROOT_FOLDER, "data", "answers_images", f"{question_id}.png")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(path, media_type="image/png")
+    return FileResponse(path, media_type="image/png", headers=_IMAGE_CACHE_HEADERS)
 
 
 @app.get("/api/images/user/{telegram_id}")
@@ -230,7 +233,7 @@ def get_user_photo(telegram_id: int):
     path = os.path.join(ROOT_FOLDER, "data", "users_photos", f"{telegram_id}.jpg")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Photo not found")
-    return FileResponse(path, media_type="image/jpeg")
+    return FileResponse(path, media_type="image/jpeg", headers=_IMAGE_CACHE_HEADERS)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -23,14 +23,11 @@ def get_admin_menu_main_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     domain = getenv('DOMAIN', '')
 
-    builder.button(
-        text=lexicon['admin']['create_topic_work'],
-        url=f"https://{domain}/admin/create-training"
-    )
-    builder.button(
-        text=lexicon['admin']['students_stats'],
-        url=f"https://{domain}/admin/students"
-    )
+    if domain:
+        builder.button(
+            text="🌐 Открыть панель управления",
+            url=f"https://{domain}/admin"
+        )
     builder.button(
         text=lexicon['admin']['database'],
         callback_data=AdminMenuMainCallbackFactory(volume="database"),

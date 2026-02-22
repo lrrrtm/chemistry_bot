@@ -15,6 +15,9 @@ import {
 
 type User = { id: number; telegram_id: number; name: string };
 
+// Module-level cache — survives component unmount/remount within the same session
+let _usersCache: User[] | null = null;
+
 type WorkStat = {
   work_id: number;
   name: string;
@@ -275,8 +278,13 @@ export function Students() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
+    if (_usersCache) {
+      setUsers(_usersCache);
+      setLoading(false);
+      return;
+    }
     api.getUsers()
-      .then(setUsers)
+      .then((data) => { _usersCache = data; setUsers(data); })
       .catch(() => toast.error("Ошибка загрузки учеников"))
       .finally(() => setLoading(false));
   }, []);
@@ -315,7 +323,9 @@ export function Students() {
     setDeleting(true);
     try {
       await api.deleteUser(selectedUser.telegram_id);
-      setUsers((prev) => prev.filter((u) => u.telegram_id !== selectedUser.telegram_id));
+      const updated = users.filter((u) => u.telegram_id !== selectedUser.telegram_id);
+      _usersCache = updated;
+      setUsers(updated);
       setSelectedUser(null);
       setWorks([]);
       setSelectedWorkId(null);
