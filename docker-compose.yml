@@ -22,26 +22,6 @@ services:
       retries:  10
       start_period: 30s
 
-  # ── Redis ────────────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: chemistry_redis
-    restart: unless-stopped
-    command: >
-      redis-server
-      --requirepass ${REDIS_PASSWORD}
-      --save 60 1
-      --loglevel warning
-    volumes:
-      - redis_data:/data
-    networks:
-      - internal
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout:  5s
-      retries:  5
-
   # ── Telegram Bot ─────────────────────────────────────────────────────────
   bot:
     build:
@@ -53,16 +33,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     env_file: .env
     environment:
       PYTHONPATH: /app
       ROOT_FOLDER: /app
       DB_HOST:     db
       DB_PORT:     "3306"
-      REDIS_HOST:  redis
-      REDIS_PORT:  "6379"
     volumes:
       - app_data:/app/data
       # Mount Docker socket so the bot can restart other containers
@@ -79,8 +55,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
       bot:
         condition: service_started
     env_file: .env
@@ -89,8 +63,6 @@ services:
       ROOT_FOLDER: /app
       DB_HOST:     db
       DB_PORT:     "3306"
-      REDIS_HOST:  redis
-      REDIS_PORT:  "6379"
     volumes:
       - app_data:/app/data
     networks:
@@ -149,8 +121,6 @@ services:
       ROOT_FOLDER: /app
       DB_HOST:     db
       DB_PORT:     "3306"
-      REDIS_HOST:  redis
-      REDIS_PORT:  "6379"
     volumes:
       - app_data:/app/data
       - backups:/backups
@@ -169,7 +139,6 @@ services:
 
 volumes:
   db_data:
-  redis_data:
   app_data:
   backups:
   certbot_certs:

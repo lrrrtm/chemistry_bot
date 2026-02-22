@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, Database, Save, Trash2, Upload, X } from "lucide-react";
+import { Search, Database, Save, Trash2, Upload, X, Download, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +32,15 @@ type QuestionFull = {
 
 type PoolItem = { id: number; text: string; tags_list: string[] };
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function PoolPage() {
   const [pool, setPool] = useState<PoolItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +49,11 @@ export function PoolPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState<Partial<QuestionFull>>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.getPool()
@@ -176,6 +190,79 @@ export function PoolPage() {
           {pool.length} активных вопросов
         </p>
       </div>
+
+      {/* Excel import section */}
+      <Card>
+        <CardHeader
+          className="pb-3 cursor-pointer select-none"
+          onClick={() => setImportOpen(!importOpen)}
+        >
+          <CardTitle className="text-sm flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Импорт из Excel
+            {importOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+          </CardTitle>
+        </CardHeader>
+        {importOpen && (
+          <CardContent className="space-y-4">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Скачайте шаблон, заполните его вопросами и загрузите обратно.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                disabled={downloadingTemplate}
+                onClick={async () => {
+                  setDownloadingTemplate(true);
+                  try {
+                    const blob = await api.getPoolTemplate();
+                    downloadBlob(blob, "chembot_pool_list.xlsx");
+                  } catch {
+                    toast.error("Ошибка скачивания шаблона");
+                  } finally {
+                    setDownloadingTemplate(false);
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {downloadingTemplate ? "Скачивание..." : "Скачать шаблон"}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pool-import-file">Файл с вопросами (.xlsx)</Label>
+              <Input
+                id="pool-import-file"
+                ref={importFileRef}
+                type="file"
+                accept=".xlsx"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+            <Button
+              disabled={importing || !importFile}
+              onClick={async () => {
+                if (!importFile) return;
+                setImporting(true);
+                try {
+                  const result = await api.importPoolExcel(importFile);
+                  toast.success(result.message);
+                  setImportFile(null);
+                  if (importFileRef.current) importFileRef.current.value = "";
+                  const updatedPool = await api.getPool();
+                  setPool(updatedPool);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Ошибка импорта");
+                } finally {
+                  setImporting(false);
+                }
+              }}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {importing ? "Импорт..." : "Импортировать"}
+            </Button>
+          </CardContent>
+        )}
+      </Card>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-muted-foreground)]" />

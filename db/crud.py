@@ -272,7 +272,7 @@ def create_new_work(user_id: int, work_type: str, topic_id: int, hand_work_id: s
         work = Work(
             user_id=user_id,
             work_type=work_type,
-            topic_id=topic_id,
+            topic_id=topic_id if topic_id and topic_id > 0 else None,
             hand_work_id=hand_work_id
         )
         session.add(work)

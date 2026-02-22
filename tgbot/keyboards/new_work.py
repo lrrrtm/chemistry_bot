@@ -128,7 +128,7 @@ def get_view_result_kb(user: User, work_id: int, detailed: bool = False) -> Inli
 
     builder.button(
         text=lexicon['new_work']['view_results'],
-        url=f"{getenv('STATS_HOST')}/student/view-stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}&detailed={int(detailed)}"
+        url=f"https://{getenv('DOMAIN')}/student/view-stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}&detailed={int(detailed)}"
     )
 
     builder.adjust(1)

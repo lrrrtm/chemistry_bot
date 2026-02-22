@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(curl:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker network rm:*)",
+      "Bash(docker compose exec:*)"
+    ]
+  }
+}

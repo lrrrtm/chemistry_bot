@@ -9,6 +9,7 @@ import { StudentDetail } from "@/pages/admin/StudentDetail";
 import { EgeConverting } from "@/pages/admin/EgeConverting";
 import { PoolPage } from "@/pages/admin/Pool";
 import { AddQuestion } from "@/pages/admin/AddQuestion";
+import { Topics } from "@/pages/admin/Topics";
 import { StudentViewStats } from "@/pages/student/ViewStats";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="ege-converting" element={<EgeConverting />} />
           <Route path="pool" element={<PoolPage />} />
           <Route path="add-question" element={<AddQuestion />} />
+          <Route path="topics" element={<Topics />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

@@ -21,7 +21,8 @@ RUN mkdir -p \
     data/users_photos \
     data/temp \
     data/uploads \
-    data/excel_templates
+    data/excel_templates \
+    flet_apps/assets/users_photos
 
 # Default command: Telegram bot
 # Override in docker-compose for API service

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
-  FlaskConical, Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut,
+  FlaskConical, Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ const navItems = [
   { to: "/admin/ege-converting", icon: Calculator, label: "Баллы ЕГЭ" },
   { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
   { to: "/admin/add-question", icon: BookPlus, label: "Добавить вопрос" },
+  { to: "/admin/topics", icon: Tags, label: "Темы и теги" },
 ];
 
 export function AdminLayout() {

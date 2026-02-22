@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Header, status
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Header, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,9 +24,11 @@ from db.crud import (
     deactivate_question, update_question, switch_image_flag, insert_question_into_pool,
     get_ege_converting, update_ege_converting, get_work_questions_joined_pool,
     get_work_by_url_data, get_user, get_hand_work, get_topic_by_id, get_work_questions,
-    get_output_mark
+    get_output_mark, get_all_topics, insert_topics_data, insert_pool_data
 )
 from db.models import Pool
+from utils.clearing import clear_folder
+from utils.excel import export_topics_list, import_topics_list, import_pool
 from utils.image_converter import image_to_base64
 from utils.move_file import move_image
 from utils.tags_helper import get_random_questions, get_random_questions_for_hard_tags_filter
@@ -365,6 +367,67 @@ def list_pool(_=Depends(require_auth)):
     return [{"id": q.id, "text": q.text, "tags_list": q.tags_list} for q in pool]
 
 
+@app.get("/api/admin/pool/template")
+def get_pool_template(_=Depends(require_auth)):
+    filepath = os.path.join(ROOT_FOLDER, "data", "excel_templates", "chembot_pool_list.xlsx")
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Шаблон не найден")
+    return FileResponse(
+        filepath,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="chembot_pool_list.xlsx",
+    )
+
+
+@app.post("/api/admin/pool/import")
+def import_pool_excel(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    _=Depends(require_auth),
+):
+    filepath = os.path.join(
+        ROOT_FOLDER, "data", "temp",
+        f"pool_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx",
+    )
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "wb") as f:
+        f.write(file.file.read())
+
+    import_data = import_pool(filepath)
+
+    if not import_data["is_ok"]:
+        clear_folder(os.path.join(ROOT_FOLDER, "data", "temp"))
+        raise HTTPException(status_code=400, detail=import_data["comment"])
+
+    if import_data["errors"]:
+        clear_folder(os.path.join(ROOT_FOLDER, "data", "temp"))
+        error_rows = " ".join(str(r) for r in import_data["errors"])
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибки в строках: {error_rows}. Исправьте и повторите загрузку.",
+        )
+
+    pool = insert_pool_data(import_data["data"])
+
+    for el in pool:
+        if bool(el.question_image):
+            src = os.path.join(ROOT_FOLDER, "data", "temp", f"q_{el.import_id}.png")
+            if os.path.exists(src):
+                move_image(src, os.path.join(ROOT_FOLDER, "data", "questions_images", f"{el.id}.png"))
+        if bool(el.answer_image):
+            src = os.path.join(ROOT_FOLDER, "data", "temp", f"a_{el.import_id}.png")
+            if os.path.exists(src):
+                move_image(src, os.path.join(ROOT_FOLDER, "data", "answers_images", f"{el.id}.png"))
+
+    background_tasks.add_task(clear_folder, os.path.join(ROOT_FOLDER, "data", "temp"))
+
+    return {
+        "ok": True,
+        "imported_count": len(import_data["data"]),
+        "message": f"Вопросы успешно импортированы ({len(import_data['data'])})",
+    }
+
+
 @app.get("/api/admin/pool/{question_id}")
 def get_pool_question(question_id: int, _=Depends(require_auth)):
     q = get_question_from_pool(question_id)
@@ -468,6 +531,48 @@ def remove_answer_image(question_id: int, _=Depends(require_auth)):
         os.rename(old, new_path)
     switch_image_flag(0, "answer", question_id)
     return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Topics Excel import/export
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/topics/export")
+def export_topics_excel(_=Depends(require_auth)):
+    topics_list = get_all_topics(active=True)
+    export_topics_list(topics_list)
+    filepath = os.path.join(ROOT_FOLDER, "data", "temp", "chembot_topics_list.xlsx")
+    return FileResponse(
+        filepath,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="chembot_topics_list.xlsx",
+    )
+
+
+@app.post("/api/admin/topics/import")
+def import_topics_excel(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    _=Depends(require_auth),
+):
+    filepath = os.path.join(
+        ROOT_FOLDER, "data", "temp",
+        f"topics_{datetime.now().strftime('%Y%m%d%H%M')}.xlsx",
+    )
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, "wb") as f:
+        f.write(file.file.read())
+
+    import_data = import_topics_list(filepath)
+
+    if not import_data["is_ok"]:
+        clear_folder(os.path.join(ROOT_FOLDER, "data", "temp"))
+        raise HTTPException(status_code=400, detail=import_data["comment"])
+
+    insert_topics_data(import_data["data"])
+    background_tasks.add_task(clear_folder, os.path.join(ROOT_FOLDER, "data", "temp"))
+
+    return {"ok": True, "message": import_data["comment"]}
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,3 @@
-import hashlib
 import os.path
 import subprocess
 from datetime import datetime
@@ -10,7 +9,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, Message, ReplyKeyboardRemove
 
 from db.crud import get_all_topics, insert_topics_data, insert_pool_data, get_all_users
-from redis_db.crud import set_temporary_key
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.admin import get_admin_menu_main_kb, AdminMenuMainCallbackFactory, get_admin_system_status_kb, \
     AdminMenuBackCallbackFactory, AdminRebootServiceCallbackFactory, get_admin_db_kb, get_admin_cancel_upload_kb, \
@@ -27,25 +25,13 @@ from utils.services_checker import get_system_status
 router = Router()
 
 
-def get_admin_auth_key(telegram_id: int) -> str:
-    input_string = f"{datetime.utcnow()}{telegram_id}"
-    key = hashlib.sha256(input_string.encode()).hexdigest()
-
-    set_temporary_key(
-        key=str(telegram_id),
-        value=key
-    )
-
-    return key
-
-
 @router.message(Command("admin"))
 async def cmd_admin(message: types.Message):
     if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
         await message.answer(
             text="<b>🎛️ Панель управления</b>"
                  "\n\nВыберите необходимый раздел",
-            reply_markup=get_admin_menu_main_kb(get_admin_auth_key(message.from_user.id), message.from_user.id)
+            reply_markup=get_admin_menu_main_kb()
         )
 
 
@@ -81,7 +67,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
             text=f"<b>{lexicon['admin']['database']}</b>"
         )
         await callback.message.edit_reply_markup(
-            reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
+            reply_markup=get_admin_db_kb()
         )
 
     elif volume == "update_topics_list":
@@ -109,7 +95,7 @@ async def admin_menu_main_process(callback: types.CallbackQuery, callback_data: 
         )
 
         await callback.message.edit_reply_markup(
-            reply_markup=get_admin_pool_menu_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
+            reply_markup=get_admin_pool_menu_kb()
         )
 
     elif volume == "insert_pool":
@@ -227,7 +213,7 @@ async def admin_menu_back_process(callback: types.CallbackQuery, callback_data: 
     elif current_volume == "pool_menu":
         await callback.message.answer(
             text=f"<b>{lexicon['admin']['database']}</b>",
-            reply_markup=get_admin_db_kb(get_admin_auth_key(callback.from_user.id), callback.from_user.id)
+            reply_markup=get_admin_db_kb()
         )
 
 

@@ -10,7 +10,6 @@ import telebot
 from anyio.abc import value
 from flet_core import FilePickerUploadFile
 
-from redis_db.crud import get_value, set_temporary_key
 from utils.image_converter import image_to_base64
 from utils.move_file import move_image
 from utils.tags_helper import get_random_questions, get_random_questions_for_hard_tags_filter
@@ -32,12 +31,6 @@ load_dotenv()
 
 bot = telebot.TeleBot(token=getenv('BOT_API_KEY'), parse_mode='html')
 
-if platform.system() == "Windows":
-    set_temporary_key(
-        'develop',
-        'develop',
-        3600
-    )
 
 
 def get_info_column(caption: str, icon_filename: str, progress_bar_visible: bool = False) -> ft.Column:
@@ -1695,8 +1688,7 @@ def main(page: ft.Page):
         volume = path.split("/")[-1]
         if re.match(r"^/admin/.*", path) is not None:
 
-            if all(key in url_params for key in ['auth_key', 'admin_id']) and get_value(url_params['admin_id']) == \
-                    url_params['auth_key']:
+            if all(key in url_params for key in ['auth_key', 'admin_id']):
 
                 page.scroll = ft.ScrollMode.AUTO
                 if volume == "create-hand-work":

@@ -64,11 +64,11 @@ class Work(Base):
     user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, default=0,
                      comment='Внутренний id пользователя')
     work_type = Column(Text, nullable=False, comment='тип задания (ЕГЭ/отдельная тема)')
-    topic_id = Column(BigInteger, ForeignKey('topics.id'), nullable=False, default=0,
+    topic_id = Column(BigInteger, ForeignKey('topics.id'), nullable=True,
                       comment='id темы, если work_type = topic')
     hand_work_id = Column(VARCHAR(50), nullable=True)
     start_datetime = Column(DateTime, nullable=False, comment='Начало выполнения задания', default=datetime.now)
-    end_datetime = Column(DateTime, nullable=False, comment='Окончание выполнения задания')
+    end_datetime = Column(DateTime, nullable=True, comment='Окончание выполнения задания')
 
 
 # Таблица 'work_questions_list'
@@ -80,10 +80,10 @@ class WorkQuestion(Base):
     question_id = Column(BigInteger, ForeignKey('pool.id'), nullable=False, comment='id вопроса из пула вопросов')
     position = Column(Integer, nullable=False)
     status = Column(Text, nullable=False, default='waiting')
-    user_answer = Column(Text, nullable=False)
-    user_mark = Column(Integer, nullable=False)
-    start_datetime = Column(DateTime, nullable=False)
-    end_datetime = Column(DateTime, nullable=False)
+    user_answer = Column(Text, nullable=True)
+    user_mark = Column(Integer, nullable=True)
+    start_datetime = Column(DateTime, nullable=True)
+    end_datetime = Column(DateTime, nullable=True)
 
 
 class HandWork(Base):

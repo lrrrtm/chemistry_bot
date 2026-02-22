@@ -41,7 +41,7 @@ async def cmd_stats(message: Message, state: FSMContext):
                 stats_el['results']['final_mark'],
                 stats_el['results']['max_mark'],
                 stats_el['general']['time']['end'] - stats_el['general']['time']['start'],
-                getenv('STATS_HOST')
+                f"https://{getenv('DOMAIN')}"
             )
 
         # text_to_send += lexicon['statistics']['hint_to_open_stats']

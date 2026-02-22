@@ -181,6 +181,48 @@ export const api = {
       method: "DELETE",
     }),
 
+  // Topics Excel
+  exportTopicsExcel: () =>
+    fetch(`${BASE}/admin/topics/export`, { headers: authHeaders() }).then((r) => {
+      if (!r.ok) throw new Error("Export failed");
+      return r.blob();
+    }),
+
+  importTopicsExcel: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/topics/import`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then(async (r) => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Import failed");
+      return data as { ok: boolean; message: string };
+    });
+  },
+
+  // Pool Excel import
+  getPoolTemplate: () =>
+    fetch(`${BASE}/admin/pool/template`, { headers: authHeaders() }).then((r) => {
+      if (!r.ok) throw new Error("Download failed");
+      return r.blob();
+    }),
+
+  importPoolExcel: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/pool/import`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then(async (r) => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Import failed");
+      return data as { ok: boolean; imported_count: number; message: string };
+    });
+  },
+
   // EGE converting
   getEgeConverting: () =>
     request<Array<{ id: number; input_mark: number; output_mark: number }>>(

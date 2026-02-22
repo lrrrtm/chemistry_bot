@@ -17,19 +17,19 @@ class AdminMenuMainCallbackFactory(CallbackData, prefix="admin_menu_main"):
 
 class AdminRebootServiceCallbackFactory(CallbackData, prefix="admin_reboot_service"):
     filename: str
-    # name: str
 
 
-def get_admin_menu_main_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
+def get_admin_menu_main_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    domain = getenv('DOMAIN', '')
 
     builder.button(
         text=lexicon['admin']['create_topic_work'],
-        url=f"{getenv('STATS_HOST')}/admin/create-hand-work?auth_key={auth_key}&admin_id={tid}"
+        url=f"https://{domain}/admin/create-training"
     )
     builder.button(
         text=lexicon['admin']['students_stats'],
-        url=f"{getenv('STATS_HOST')}/admin/students-stats?auth_key={auth_key}&admin_id={tid}"
+        url=f"https://{domain}/admin/students"
     )
     builder.button(
         text=lexicon['admin']['database'],
@@ -67,8 +67,9 @@ def get_admin_system_status_kb(data: dict) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
+def get_admin_db_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    domain = getenv('DOMAIN', '')
 
     builder.button(
         text=lexicon['admin']['update_topics_list'],
@@ -80,7 +81,7 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     )
     builder.button(
         text=lexicon['admin']['ege_converting'],
-        url=f"{getenv('STATS_HOST')}/admin/ege-converting?auth_key={auth_key}&admin_id={tid}"
+        url=f"https://{domain}/admin/ege-converting"
     )
     builder.button(
         text=lexicon['service']['back'],
@@ -90,8 +91,9 @@ def get_admin_db_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
+def get_admin_pool_menu_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+    domain = getenv('DOMAIN', '')
 
     builder.button(
         text=lexicon['admin']['insert_pool'],
@@ -99,11 +101,11 @@ def get_admin_pool_menu_kb(auth_key: str, tid: int) -> InlineKeyboardMarkup:
     )
     builder.button(
         text=lexicon['admin']['insert_pool_flet'],
-        url=f"{getenv('STATS_HOST')}/admin/add-question?auth_key={auth_key}&admin_id={tid}"
+        url=f"https://{domain}/admin/add-question"
     )
     builder.button(
         text=lexicon['admin']['edit_pool'],
-        url=f"{getenv('STATS_HOST')}/admin/pool?auth_key={auth_key}&admin_id={tid}"
+        url=f"https://{domain}/admin/pool"
     )
     builder.button(
         text=lexicon['service']['back'],
