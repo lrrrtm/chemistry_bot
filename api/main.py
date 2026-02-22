@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -38,6 +39,37 @@ from utils.image_converter import image_to_base64
 from utils.move_file import move_image
 from utils.tags_helper import get_random_questions, get_random_questions_for_hard_tags_filter
 from utils.user_statistics import get_user_statistics
+from utils.backup_job import load_settings, save_settings, run_backup as _run_backup_job
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Scheduler
+# ──────────────────────────────────────────────────────────────────────────────
+
+_scheduler = BackgroundScheduler(timezone="UTC")
+
+
+def _reschedule(time_str: str) -> None:
+    if _scheduler.get_job("daily_backup"):
+        _scheduler.remove_job("daily_backup")
+    if time_str:
+        hour, minute = time_str.split(":", 1)
+        _scheduler.add_job(
+            _run_backup_job, "cron",
+            hour=int(hour), minute=int(minute),
+            id="daily_backup",
+            replace_existing=True,
+        )
+
+
+@asynccontextmanager
+async def lifespan(app):
+    _scheduler.start()
+    settings = load_settings()
+    if settings.get("time"):
+        _reschedule(settings["time"])
+    yield
+    _scheduler.shutdown(wait=False)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -136,11 +168,16 @@ class TopicTagsUpdate(BaseModel):
     tags_list: List[str]
 
 
+class BackupSettings(BaseModel):
+    time: str     # "HH:MM" or ""
+    chat_id: str  # Telegram chat ID
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # FastAPI app
 # ──────────────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="ChemBot Admin API", version="2.0.0")
+app = FastAPI(title="ChemBot Admin API", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -623,6 +660,33 @@ def update_ege(req: EgeConvertingUpdate, _=Depends(require_auth)):
     config = {int(k): {"value": int(v), "is_ok": True} for k, v in req.data.items()}
     update_ege_converting(config)
     return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Backup settings & on-demand backup
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/backup-settings")
+def get_backup_settings(_=Depends(require_auth)):
+    return load_settings()
+
+
+@app.post("/api/admin/backup-settings")
+def update_backup_settings(req: BackupSettings, _=Depends(require_auth)):
+    if req.time and len(req.time.split(":")) != 2:
+        raise HTTPException(status_code=400, detail="Формат времени: HH:MM")
+    settings = {"time": req.time.strip(), "chat_id": req.chat_id.strip()}
+    save_settings(settings)
+    _reschedule(settings["time"])
+    return {"ok": True}
+
+
+@app.post("/api/admin/backup-now")
+def backup_now(_=Depends(require_auth)):
+    result = _run_backup_job()
+    if not result.get("ok"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Ошибка"))
+    return {"ok": True, "message": "Резервная копия отправлена"}
 
 
 # ──────────────────────────────────────────────────────────────────────────────

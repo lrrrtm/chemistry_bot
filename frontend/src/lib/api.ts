@@ -238,6 +238,19 @@ export const api = {
     });
   },
 
+  // Backup settings
+  getBackupSettings: () =>
+    request<{ time: string; chat_id: string }>("/admin/backup-settings"),
+
+  saveBackupSettings: (data: { time: string; chat_id: string }) =>
+    request<{ ok: boolean }>("/admin/backup-settings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  runBackupNow: () =>
+    request<{ ok: boolean; message: string }>("/admin/backup-now", { method: "POST" }),
+
   // Backup restore
   restoreBackup: (file: File) => {
     const form = new FormData();

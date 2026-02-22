@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { UploadCloud, AlertTriangle, CheckCircle2, FileArchive, X } from "lucide-react";
+import { UploadCloud, AlertTriangle, CheckCircle2, FileArchive, X, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api";
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
@@ -14,6 +17,7 @@ const PHASE_LABELS: Record<Phase, string> = {
 };
 
 export function RestorePage() {
+  // ── Restore state ──────────────────────────────────────────────────────────
   const [file, setFile]           = useState<File | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [phase, setPhase]         = useState<Phase>("idle");
@@ -21,6 +25,43 @@ export function RestorePage() {
   const inputRef  = useRef<HTMLInputElement>(null);
   const crawlRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Backup settings state ──────────────────────────────────────────────────
+  const [backupTime,       setBackupTime]       = useState("");
+  const [backupChatId,     setBackupChatId]     = useState("");
+  const [settingsSaving,   setSettingsSaving]   = useState(false);
+  const [backupNowLoading, setBackupNowLoading] = useState(false);
+
+  useEffect(() => {
+    api.getBackupSettings()
+      .then((s) => { setBackupTime(s.time); setBackupChatId(s.chat_id); })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      await api.saveBackupSettings({ time: backupTime, chat_id: backupChatId });
+      toast.success("Настройки сохранены");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка сохранения");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleBackupNow = async () => {
+    setBackupNowLoading(true);
+    try {
+      const res = await api.runBackupNow();
+      toast.success(res.message || "Резервная копия отправлена");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка создания резервной копии");
+    } finally {
+      setBackupNowLoading(false);
+    }
+  };
+
+  // ── Restore logic ──────────────────────────────────────────────────────────
   const loading = phase === "uploading" || phase === "processing";
 
   const stopCrawl = () => {
@@ -48,12 +89,10 @@ export function RestorePage() {
     setPhase("uploading");
     setProgress(0);
 
-    // 0–60 % — реальный прогресс загрузки файла
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 60));
     };
 
-    // файл отправлен → ползём к 95 % пока сервер обрабатывает
     xhr.upload.onload = () => {
       setPhase("processing");
       setProgress(62);
@@ -108,6 +147,8 @@ export function RestorePage() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
+
+      {/* ── Restore section ────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--color-foreground)]">
           Восстановление из резервной копии
@@ -117,7 +158,6 @@ export function RestorePage() {
         </p>
       </div>
 
-      {/* Warning */}
       <div className="flex gap-3 p-4 rounded-lg border border-yellow-400/40 bg-yellow-400/10 text-yellow-700 dark:text-yellow-300">
         <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
         <div className="text-sm">
@@ -193,7 +233,6 @@ export function RestorePage() {
         </div>
       )}
 
-      {/* Confirmation + button (only when not in progress) */}
       {(phase === "idle" || phase === "error") && file && (
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input
@@ -209,18 +248,12 @@ export function RestorePage() {
       )}
 
       {(phase === "idle" || phase === "error") && (
-        <Button
-          disabled={!file || !confirmed}
-          onClick={handleRestore}
-          className="w-full"
-          variant="destructive"
-        >
+        <Button disabled={!file || !confirmed} onClick={handleRestore} className="w-full" variant="destructive">
           <CheckCircle2 className="h-4 w-4 mr-2" />
           {phase === "error" ? "Попробовать снова" : "Восстановить из резервной копии"}
         </Button>
       )}
 
-      {/* Format hint */}
       <div className="text-xs text-[var(--color-muted-foreground)] space-y-1">
         <p className="font-medium">Ожидаемая структура архива:</p>
         <pre className="font-mono bg-[var(--color-accent)] rounded p-2">{`backup.zip
@@ -229,6 +262,82 @@ export function RestorePage() {
     ├── answers/
     ├── questions/
     └── users/`}</pre>
+      </div>
+
+      {/* ── Backup settings section ────────────────────────────────────────── */}
+      <div className="border-t border-[var(--color-border)] pt-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+            Автоматические резервные копии
+          </h2>
+          <p className="text-sm text-[var(--color-muted-foreground)] mt-0.5">
+            Ежедневная отправка архива с БД и изображениями в Telegram
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="backup-time" className="flex items-center gap-1.5 text-sm">
+              <Clock className="h-3.5 w-3.5" />
+              Время (UTC)
+            </Label>
+            <Input
+              id="backup-time"
+              type="time"
+              value={backupTime}
+              onChange={(e) => setBackupTime(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="backup-chat" className="flex items-center gap-1.5 text-sm">
+              <Send className="h-3.5 w-3.5" />
+              Chat ID в Telegram
+            </Label>
+            <Input
+              id="backup-chat"
+              type="text"
+              value={backupChatId}
+              onChange={(e) => setBackupChatId(e.target.value)}
+              placeholder="-1001234567890"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button onClick={handleSaveSettings} disabled={settingsSaving} className="flex-1">
+            {settingsSaving ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Сохранение...
+              </span>
+            ) : "Сохранить расписание"}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleBackupNow}
+            disabled={backupNowLoading || !backupChatId.trim()}
+            className="flex-1"
+          >
+            {backupNowLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                Создание...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Send className="h-4 w-4" />
+                Создать сейчас
+              </span>
+            )}
+          </Button>
+        </div>
+
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          Убедитесь, что бот добавлен в чат и имеет права на отправку файлов.
+          Chat ID группы можно узнать, переслав сообщение из группы боту <code>@userinfobot</code>.
+        </p>
       </div>
     </div>
   );
