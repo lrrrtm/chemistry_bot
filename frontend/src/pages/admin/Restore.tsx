@@ -1,39 +1,109 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { UploadCloud, AlertTriangle, CheckCircle2, FileArchive, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
+
+type Phase = "idle" | "uploading" | "processing" | "done" | "error";
+
+const PHASE_LABELS: Record<Phase, string> = {
+  idle:       "",
+  uploading:  "Загрузка файла",
+  processing: "Восстановление базы данных",
+  done:       "Готово",
+  error:      "Ошибка",
+};
 
 export function RestorePage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [file, setFile]           = useState<File | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [phase, setPhase]         = useState<Phase>("idle");
+  const [progress, setProgress]   = useState(0);
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const crawlRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loading = phase === "uploading" || phase === "processing";
+
+  const stopCrawl = () => {
+    if (crawlRef.current) { clearInterval(crawlRef.current); crawlRef.current = null; }
+  };
+
+  useEffect(() => () => stopCrawl(), []);
 
   const handleFileChange = (f: File | null) => {
     setFile(f);
     setConfirmed(false);
+    setPhase("idle");
+    setProgress(0);
+    stopCrawl();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f) handleFileChange(f);
-  };
-
-  const handleRestore = async () => {
+  const handleRestore = () => {
     if (!file) return;
-    setLoading(true);
-    try {
-      const res = await api.restoreBackup(file);
-      toast.success(res.message || "Резервная копия восстановлена");
-      setFile(null);
-      setConfirmed(false);
-    } catch (e: any) {
-      toast.error(e.message || "Ошибка при восстановлении");
-    } finally {
-      setLoading(false);
-    }
+
+    const token = localStorage.getItem("admin_token");
+    const xhr   = new XMLHttpRequest();
+    const form  = new FormData();
+    form.append("file", file);
+
+    setPhase("uploading");
+    setProgress(0);
+
+    // 0–60 % — реальный прогресс загрузки файла
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 60));
+    };
+
+    // файл отправлен → ползём к 95 % пока сервер обрабатывает
+    xhr.upload.onload = () => {
+      setPhase("processing");
+      setProgress(62);
+      stopCrawl();
+      crawlRef.current = setInterval(() => {
+        setProgress((p) => {
+          if (p >= 94) { stopCrawl(); return 94; }
+          return p + 1;
+        });
+      }, 350);
+    };
+
+    xhr.onload = () => {
+      stopCrawl();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        setProgress(100);
+        setPhase("done");
+        setTimeout(() => { setPhase("idle"); setProgress(0); }, 3000);
+        try { toast.success(JSON.parse(xhr.responseText).message || "Восстановлено"); }
+        catch { toast.success("Восстановлено"); }
+        setFile(null);
+        setConfirmed(false);
+        if (inputRef.current) inputRef.current.value = "";
+      } else {
+        setPhase("error");
+        try { toast.error(JSON.parse(xhr.responseText).detail || "Ошибка"); }
+        catch { toast.error("Ошибка при восстановлении"); }
+      }
+    };
+
+    xhr.onerror = () => { stopCrawl(); setPhase("error"); toast.error("Ошибка сети"); };
+
+    xhr.open("POST", "/api/admin/restore");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.send(form);
+  };
+
+  const barColor =
+    phase === "error" ? "bg-red-500" :
+    phase === "done"  ? "bg-green-500" :
+    "bg-[var(--color-primary)]";
+
+  const labelColor =
+    phase === "error" ? "text-red-500" :
+    phase === "done"  ? "text-green-600 dark:text-green-400" :
+    "text-[var(--color-foreground)]";
+
+  const phaseSubtext: Partial<Record<Phase, string>> = {
+    uploading:  "Передача файла на сервер...",
+    processing: "Импорт базы данных и изображений, может занять некоторое время...",
   };
 
   return (
@@ -60,10 +130,14 @@ export function RestorePage() {
 
       {/* Drop zone */}
       <div
-        className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-8 text-center cursor-pointer hover:border-[var(--color-primary)] transition-colors"
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          loading
+            ? "opacity-50 pointer-events-none border-[var(--color-border)]"
+            : "cursor-pointer hover:border-[var(--color-primary)] border-[var(--color-border)]"
+        }`}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
+        onDrop={(e) => { e.preventDefault(); if (!loading) handleFileChange(e.dataTransfer.files[0] ?? null); }}
+        onClick={() => !loading && inputRef.current?.click()}
       >
         <input
           ref={inputRef}
@@ -81,16 +155,14 @@ export function RestorePage() {
                 {(file.size / 1024 / 1024).toFixed(2)} МБ
               </p>
             </div>
-            <button
-              className="ml-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleFileChange(null);
-                if (inputRef.current) inputRef.current.value = "";
-              }}
-            >
-              <X className="h-4 w-4" />
-            </button>
+            {!loading && (
+              <button
+                className="ml-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                onClick={(e) => { e.stopPropagation(); handleFileChange(null); if (inputRef.current) inputRef.current.value = ""; }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -102,8 +174,27 @@ export function RestorePage() {
         )}
       </div>
 
-      {/* Confirmation checkbox */}
-      {file && (
+      {/* Progress bar */}
+      {phase !== "idle" && (
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center text-sm">
+            <span className={`font-medium ${labelColor}`}>{PHASE_LABELS[phase]}</span>
+            <span className="text-[var(--color-muted-foreground)] tabular-nums">{progress}%</span>
+          </div>
+          <div className="h-3 rounded-full bg-[var(--color-accent)] overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-[width] duration-300 ${barColor}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          {phaseSubtext[phase] && (
+            <p className="text-xs text-[var(--color-muted-foreground)]">{phaseSubtext[phase]}</p>
+          )}
+        </div>
+      )}
+
+      {/* Confirmation + button (only when not in progress) */}
+      {(phase === "idle" || phase === "error") && file && (
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -117,25 +208,17 @@ export function RestorePage() {
         </label>
       )}
 
-      {/* Action button */}
-      <Button
-        disabled={!file || !confirmed || loading}
-        onClick={handleRestore}
-        className="w-full"
-        variant="destructive"
-      >
-        {loading ? (
-          <span className="flex items-center gap-2">
-            <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            Восстановление...
-          </span>
-        ) : (
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Восстановить из резервной копии
-          </span>
-        )}
-      </Button>
+      {(phase === "idle" || phase === "error") && (
+        <Button
+          disabled={!file || !confirmed}
+          onClick={handleRestore}
+          className="w-full"
+          variant="destructive"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          {phase === "error" ? "Попробовать снова" : "Восстановить из резервной копии"}
+        </Button>
+      )}
 
       {/* Format hint */}
       <div className="text-xs text-[var(--color-muted-foreground)] space-y-1">
