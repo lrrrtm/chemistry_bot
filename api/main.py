@@ -429,6 +429,33 @@ def create_hand_work(req: HandWorkCreate, _=Depends(require_auth)):
     }
 
 
+class SendTrainingRequest(BaseModel):
+    telegram_id: int
+    link: str
+    name: str
+
+
+@app.post("/api/admin/send-training")
+def send_training_to_user(req: SendTrainingRequest, _=Depends(require_auth)):
+    bot_token = os.getenv("BOT_API_KEY")
+    if not bot_token:
+        raise HTTPException(status_code=500, detail="BOT_API_KEY не настроен")
+    try:
+        bot = telebot.TeleBot(token=bot_token, parse_mode="html")
+        bot.send_message(
+            chat_id=req.telegram_id,
+            text=(
+                f"📝 <b>Новая тренировка</b>\n\n"
+                f"<b>{req.name}</b>\n\n"
+                f"Нажмите на ссылку, чтобы начать:\n"
+                f"{req.link}"
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ошибка отправки: {str(e)}")
+    return {"ok": True}
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Question pool
 # ──────────────────────────────────────────────────────────────────────────────

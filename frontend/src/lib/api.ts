@@ -99,6 +99,12 @@ export const api = {
       link: string | null;
     }>("/admin/hand-works", { method: "POST", body: JSON.stringify(payload) }),
 
+  sendTrainingToUser: (data: { telegram_id: number; link: string; name: string }) =>
+    request<{ ok: boolean }>("/admin/send-training", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   // Pool
   getPool: () =>
     request<Array<{ id: number; text: string; tags_list: string[] }>>(

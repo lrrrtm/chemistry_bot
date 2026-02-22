@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, Filter, ChevronDown, ChevronRight, Plus, X } from "lucide-react";
+import { Send, Filter, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+
+type User = { id: number; telegram_id: number; name: string };
 
 type TopicTag = { tag: string; count: number };
 type TopicItem = { id: number; name: string; tags: TopicTag[] };
@@ -32,6 +37,14 @@ export function CreateTraining() {
   const [hardCount, setHardCount] = useState(10);
   const [activeTagField, setActiveTagField] = useState<number | null>(null);
 
+  // Success dialog state
+  const [successDialog, setSuccessDialog] = useState<{ name: string; link: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [sending, setSending] = useState<number | null>(null);
+  const userSearchRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     api.getTopics()
       .then((data) => {
@@ -39,6 +52,7 @@ export function CreateTraining() {
       })
       .catch(() => toast.error("Ошибка загрузки тем"))
       .finally(() => setLoading(false));
+    api.getUsers().then(setUsers).catch(() => {});
   }, []);
 
   // All unique tags from all topics (for autocomplete)
@@ -84,11 +98,12 @@ export function CreateTraining() {
         questions: questionCounts,
         mode: "tags",
       });
-      toast.success(`Тренировка создана! Ссылка отправлена в Telegram.`);
-      if (result.link) {
-        navigator.clipboard.writeText(result.link).catch(() => {});
-      }
       setQuestionCounts({});
+      if (result.link) {
+        setSuccessDialog({ name: result.name, link: result.link });
+      } else {
+        toast.success("Тренировка создана!");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ошибка создания тренировки");
     } finally {
@@ -111,9 +126,10 @@ export function CreateTraining() {
         hard_tags: tags,
         questions_count: hardCount,
       });
-      toast.success(`Тренировка создана! Ссылка отправлена в Telegram.`);
       if (result.link) {
-        navigator.clipboard.writeText(result.link).catch(() => {});
+        setSuccessDialog({ name: result.name, link: result.link });
+      } else {
+        toast.success("Тренировка создана!");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ошибка создания тренировки");
@@ -121,6 +137,37 @@ export function CreateTraining() {
       setSubmitting(false);
     }
   };
+
+  const handleCopyLink = () => {
+    if (!successDialog) return;
+    navigator.clipboard.writeText(successDialog.link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleSendToUser = async (user: User) => {
+    if (!successDialog || sending) return;
+    setSending(user.telegram_id);
+    try {
+      await api.sendTrainingToUser({
+        telegram_id: user.telegram_id,
+        link: successDialog.link,
+        name: successDialog.name,
+      });
+      toast.success(`Отправлено ${user.name}`);
+    } catch {
+      toast.error(`Ошибка отправки ${user.name}`);
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const filteredUsers = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      String(u.telegram_id).includes(userSearch)
+  );
 
   const toggleVolume = (volume: string) => {
     setExpandedVolumes((prev) => {
@@ -332,6 +379,89 @@ export function CreateTraining() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Success dialog */}
+      <Dialog
+        open={!!successDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSuccessDialog(null);
+            setCopied(false);
+            setUserSearch("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Тренировка создана</DialogTitle>
+            <DialogDescription>
+              {successDialog?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Copy link */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[var(--color-muted-foreground)]">Ссылка</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={successDialog?.link ?? ""}
+                  className="text-sm"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button variant="outline" size="icon" className="shrink-0" onClick={handleCopyLink}>
+                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Send to student */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[var(--color-muted-foreground)]">Отправить ученику</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+                <Input
+                  ref={userSearchRef}
+                  placeholder="Поиск по имени..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="pl-8 text-sm"
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-md border">
+                {filteredUsers.length === 0 ? (
+                  <p className="text-center py-4 text-xs text-[var(--color-muted-foreground)]">
+                    {userSearch ? "Не найдено" : "Нет учеников"}
+                  </p>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <div
+                      key={user.telegram_id}
+                      className="flex items-center justify-between px-3 py-2 hover:bg-[var(--color-accent)] transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">{user.name}</p>
+                        <p className="text-[10px] text-[var(--color-muted-foreground)]">id{user.telegram_id}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 h-7 px-2"
+                        disabled={sending === user.telegram_id}
+                        onClick={() => handleSendToUser(user)}
+                      >
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                        {sending === user.telegram_id ? "..." : "Отправить"}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
