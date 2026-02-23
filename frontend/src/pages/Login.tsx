@@ -47,7 +47,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--color-background)] p-4">
+    <div className="h-screen flex flex-col items-center justify-center bg-[var(--color-background)] p-4 overflow-hidden">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
