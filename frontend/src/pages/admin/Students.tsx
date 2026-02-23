@@ -39,6 +39,7 @@ let _usersCache: User[] | null = null;
 
 type WorkStat = {
   work_id: number;
+  share_token: string | null;
   name: string;
   type: string;
   start: string | null;
@@ -53,6 +54,7 @@ type WorkStat = {
 
 type WorkDetail = {
   general: {
+    telegram_id: number | null;
     user_name: string | null;
     name: string;
     start: string | null;
@@ -74,7 +76,6 @@ type WorkDetail = {
     question_image: boolean;
     answer_image: boolean;
   }>;
-  detailed: boolean;
 };
 
 function getInitials(name: string) {
@@ -495,7 +496,7 @@ export function Students() {
   const [worksLoading, setWorksLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [selectedWorkId, setSelectedWorkId] = useState<number | null>(null);
+  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
   const [workDetail, setWorkDetail] = useState<WorkDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -529,19 +530,14 @@ export function Students() {
       .finally(() => setWorksLoading(false));
   };
 
-  const handleSelectWork = (workId: number) => {
-    if (!selectedUser || selectedWorkId === workId) return;
-    setSelectedWorkId(workId);
+  const handleSelectWork = (token: string | null) => {
+    if (!selectedUser || selectedWorkId === token || !token) return;
+    setSelectedWorkId(token);
     setWorkDetail(null);
     setDetailLoading(true);
     setMobileStep(2);
     scrollToTop();
-    api.getStudentWorkStats(
-      String(selectedUser.id),
-      String(selectedUser.telegram_id),
-      String(workId),
-      1
-    )
+    api.getWorkStats(token)
       .then(setWorkDetail)
       .catch(() => toast.error("Ошибка загрузки статистики"))
       .finally(() => setDetailLoading(false));
@@ -575,8 +571,8 @@ export function Students() {
       String(u.telegram_id).includes(search)
   );
 
-  const statsUrl = (workId: number) =>
-    `/student/view-stats?uuid=${selectedUser?.id}&tid=${selectedUser?.telegram_id}&work=${workId}&detailed=1`;
+  const statsUrl = (token: string) =>
+    `/student/view-stats?token=${token}`;
 
   if (loading) {
     return (
@@ -703,9 +699,9 @@ export function Students() {
               <div
                 key={w.work_id}
                 className={`group flex items-start gap-2 px-3 py-2.5 cursor-pointer hover:bg-[var(--color-accent)] transition-colors border-b last:border-b-0 ${
-                  selectedWorkId === w.work_id ? "bg-[var(--color-accent)]" : ""
+                  selectedWorkId === w.share_token ? "bg-[var(--color-accent)]" : ""
                 }`}
-                onClick={() => handleSelectWork(w.work_id)}
+                onClick={() => handleSelectWork(w.share_token)}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -731,8 +727,9 @@ export function Students() {
                     </span>
                   </div>
                 </div>
+                {w.share_token && (
                 <a
-                  href={statsUrl(w.work_id)}
+                  href={statsUrl(w.share_token)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity mt-0.5"
@@ -740,6 +737,7 @@ export function Students() {
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
+                )}
               </div>
             ))
           )}

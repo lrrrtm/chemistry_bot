@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 data
 fastapi_apps
+.claude
 .dockerfile
 # Frontend build artifacts and dependencies
 frontend/node_modules
