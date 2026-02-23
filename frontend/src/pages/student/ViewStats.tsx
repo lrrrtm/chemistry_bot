@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FlaskConical } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { type WorkDetail, WorkSummaryCard, QuestionsList } from "@/components/WorkStatsView";
+import logoImg from "@/assets/logo.png";
 
 export function StudentViewStats() {
   const [params] = useSearchParams();
@@ -32,7 +32,7 @@ export function StudentViewStats() {
       <header className="border-b bg-[var(--color-card)] sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5 text-[var(--color-primary)]" />
+            <img src={logoImg} alt="ХимБот" className="h-5 w-5" />
             <span className="font-semibold">ХимБот</span>
           </div>
           <ThemeToggle />
@@ -42,7 +42,7 @@ export function StudentViewStats() {
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {loading && (
           <div className="text-center py-16 text-[var(--color-muted-foreground)]">
-            <FlaskConical className="h-10 w-10 mx-auto mb-3 opacity-30 animate-pulse" />
+            <img src={logoImg} alt="" className="h-10 w-10 mx-auto mb-3 opacity-30 animate-pulse" />
             <p>Загружаем результаты...</p>
           </div>
         )}
