@@ -82,9 +82,13 @@ function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
+function toUtc(iso: string) {
+  return iso.endsWith("Z") || iso.includes("+") ? iso : iso.replace(" ", "T") + "Z";
+}
+
 function formatDate(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("ru-RU", {
+  return new Date(toUtc(iso)).toLocaleString("ru-RU", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
@@ -92,7 +96,7 @@ function formatDate(iso: string | null) {
 
 function formatDuration(start: string | null, end: string | null) {
   if (!start || !end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
+  const ms = new Date(toUtc(end)).getTime() - new Date(toUtc(start)).getTime();
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);

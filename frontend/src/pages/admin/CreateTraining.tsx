@@ -517,7 +517,7 @@ export function CreateTraining() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{t.name}</p>
                     <p className="text-[10px] text-[var(--color-muted-foreground)]">
-                      {new Date(t.created_at).toLocaleString("ru-RU")} &middot; {t.questions_count} вопр.
+                      {new Date(t.created_at.endsWith("Z") || t.created_at.includes("+") ? t.created_at : t.created_at.replace(" ", "T") + "Z").toLocaleString("ru-RU")} &middot; {t.questions_count} вопр.
                     </p>
                   </div>
                   {t.link && (

@@ -40,15 +40,20 @@ export type WorkDetail = {
 
 export function formatDate(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("ru-RU", {
+  const utc = iso.endsWith("Z") || iso.includes("+") ? iso : iso.replace(" ", "T") + "Z";
+  return new Date(utc).toLocaleString("ru-RU", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
 }
 
+function toUtc(iso: string) {
+  return iso.endsWith("Z") || iso.includes("+") ? iso : iso.replace(" ", "T") + "Z";
+}
+
 export function formatDuration(start: string | null, end: string | null) {
   if (!start || !end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
+  const ms = new Date(toUtc(end)).getTime() - new Date(toUtc(start)).getTime();
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
