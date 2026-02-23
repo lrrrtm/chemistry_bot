@@ -27,19 +27,38 @@ for _attempt in range(10):
         time.sleep(3 * (_attempt + 1))
 
 
+def _column_exists(conn, table: str, column: str) -> bool:
+    result = conn.execute(text(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS "
+        f"WHERE TABLE_NAME='{table}' AND COLUMN_NAME='{column}' "
+        f"AND TABLE_SCHEMA='{getenv('DB_NAME')}'"
+    ))
+    return result.scalar() > 0
+
+
 def _run_migrations():
     with engine.connect() as conn:
-        result = conn.execute(text(
-            "SELECT COUNT(*) FROM information_schema.COLUMNS "
-            "WHERE TABLE_NAME='works' AND COLUMN_NAME='share_token' "
-            f"AND TABLE_SCHEMA='{getenv('DB_NAME')}'"
-        ))
-        if result.scalar() == 0:
+        if not _column_exists(conn, 'works', 'share_token'):
             conn.execute(text(
-                "ALTER TABLE works ADD COLUMN share_token VARCHAR(36) NULL UNIQUE COMMENT 'UUID токен для публичной ссылки на результат'"
+                "ALTER TABLE works ADD COLUMN share_token VARCHAR(36) NULL UNIQUE "
+                "COMMENT 'UUID токен для публичной ссылки на результат'"
             ))
             conn.commit()
             logging.info("Migration: added share_token column to works table")
+
+        if not _column_exists(conn, 'users', 'is_deleted'):
+            conn.execute(text(
+                "ALTER TABLE users ADD COLUMN is_deleted INT NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+            logging.info("Migration: added is_deleted column to users table")
+
+        if not _column_exists(conn, 'hand_works', 'is_deleted'):
+            conn.execute(text(
+                "ALTER TABLE hand_works ADD COLUMN is_deleted INT NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+            logging.info("Migration: added is_deleted column to hand_works table")
 
 
 _run_migrations()
