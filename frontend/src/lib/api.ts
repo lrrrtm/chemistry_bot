@@ -258,9 +258,9 @@ export const api = {
 
   // Backup settings
   getBackupSettings: () =>
-    request<{ time: string; chat_id: string }>("/admin/backup-settings"),
+    request<{ time: string; chat_id: string; yadisk_token: string }>("/admin/backup-settings"),
 
-  saveBackupSettings: (data: { time: string; chat_id: string }) =>
+  saveBackupSettings: (data: { time: string; chat_id: string; yadisk_token: string }) =>
     request<{ ok: boolean }>("/admin/backup-settings", {
       method: "POST",
       body: JSON.stringify(data),
@@ -268,6 +268,18 @@ export const api = {
 
   runBackupNow: () =>
     request<{ ok: boolean; message: string }>("/admin/backup-now", { method: "POST" }),
+
+  // Yandex Disk backups
+  getYadiskBackups: () =>
+    request<Array<{ name: string; path: string; size: number; modified: string; created: string }>>(
+      "/admin/yadisk-backups"
+    ),
+
+  restoreFromYadisk: (path: string) =>
+    request<{ ok: boolean; message: string }>("/admin/yadisk-restore", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    }),
 
   // Backup restore
   restoreBackup: (file: File) => {

@@ -41,13 +41,12 @@ def run_backup() -> dict:
     db_name     = os.getenv("DB_NAME",     "chemistry_bot")
     bot_token   = os.getenv("BOT_API_KEY")
 
-    settings = load_settings()
-    chat_id  = settings.get("chat_id", "").strip()
+    settings     = load_settings()
+    chat_id      = settings.get("chat_id", "").strip()
+    yadisk_token = settings.get("yadisk_token", "").strip()
 
-    if not chat_id:
-        return {"ok": False, "error": "chat_id не задан в настройках"}
-    if not bot_token:
-        return {"ok": False, "error": "BOT_API_KEY не задан"}
+    if not chat_id and not yadisk_token:
+        return {"ok": False, "error": "Не задан ни Telegram chat_id, ни Yandex Disk токен"}
 
     temp_dir = tempfile.mkdtemp()
     try:
@@ -85,17 +84,32 @@ def run_backup() -> dict:
                             zf.write(fpath, f"{zip_folder}/{fname}")
 
         # ── Send to Telegram ──────────────────────────────────────────────────
-        bot = telebot.TeleBot(token=bot_token)
-        with open(zip_path, "rb") as f:
-            bot.send_document(
-                chat_id=chat_id,
-                document=f,
-                visible_file_name=f"chembot_backup_{timestamp}.zip",
-                caption=(
-                    f"Резервная копия системы от "
-                    f"{datetime.now().strftime('%d.%m.%Y %H:%M')} UTC"
-                ),
+        if chat_id and bot_token:
+            bot = telebot.TeleBot(token=bot_token)
+            with open(zip_path, "rb") as f:
+                bot.send_document(
+                    chat_id=chat_id,
+                    document=f,
+                    visible_file_name=f"chembot_backup_{timestamp}.zip",
+                    caption=(
+                        f"Резервная копия системы от "
+                        f"{datetime.now().strftime('%d.%m.%Y %H:%M')} UTC"
+                    ),
+                )
+
+        # ── Upload to Yandex Disk ─────────────────────────────────────────────
+        from utils.yandex_disk import upload_file as yadisk_upload
+
+        yadisk_token = settings.get("yadisk_token", "").strip()
+        if yadisk_token:
+            yd_result = yadisk_upload(
+                zip_path,
+                f"chembot_backup_{timestamp}.zip",
+                token=yadisk_token,
             )
+            if not yd_result["ok"]:
+                return {"ok": False, "error": f"Yandex Disk: {yd_result['error']}"}
+
         return {"ok": True}
 
     except Exception as e:

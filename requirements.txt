@@ -6,6 +6,7 @@ pyTelegramBotAPI~=4.23.0
 openpyxl~=3.1.5
 openpyxl-image-loader~=1.0.5
 apscheduler~=3.10.4
+requests~=2.32.0
 # FastAPI backend (React frontend)
 fastapi~=0.115.0
 uvicorn[standard]~=0.32.0
