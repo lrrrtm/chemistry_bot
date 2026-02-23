@@ -22,7 +22,10 @@ export function StudentViewStats() {
     }
 
     api.getWorkStats(token)
-      .then(setStats)
+      .then((data) => {
+        setStats(data);
+        document.title = `${data.general.name} — ХимБот`;
+      })
       .catch(() => setError("Тренировка не найдена или ссылка недействительна"))
       .finally(() => setLoading(false));
   }, [params]);
