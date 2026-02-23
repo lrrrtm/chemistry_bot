@@ -41,7 +41,7 @@ def _add_column_if_not_exists(conn, table: str, column_def: str, column_name: st
             raise
 
 
-def _run_migrations():
+def run_migrations():
     with engine.connect() as conn:
         _add_column_if_not_exists(
             conn, 'works',
@@ -72,4 +72,4 @@ def _run_migrations():
             logging.info("Migration: generated share_token for %d old works", len(rows))
 
 
-_run_migrations()
+run_migrations()

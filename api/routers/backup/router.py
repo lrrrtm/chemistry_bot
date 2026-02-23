@@ -90,6 +90,10 @@ def restore_backup(file: UploadFile = File(...), _: str = Depends(require_auth))
                 detail=f"Ошибка восстановления БД: {result.stderr.decode(errors='replace')}",
             )
 
+        # Re-run migrations to add columns that may be missing in the backup
+        from db.database import run_migrations
+        run_migrations()
+
         image_mapping = {
             "answers": os.path.join(ROOT_FOLDER, "data", "images", "answers"),
             "questions": os.path.join(ROOT_FOLDER, "data", "images", "questions"),
