@@ -224,7 +224,7 @@ export function Topics() {
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* ── Column 1: Volumes ────────────────────────────────────────────── */}
       <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-56 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
-        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[44px]">
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             Разделы
           </span>
@@ -328,7 +328,7 @@ export function Topics() {
 
       {/* ── Column 2: Topics ─────────────────────────────────────────────── */}
       <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col lg:w-64 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
-        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[44px]">
           <div className="flex items-center gap-1.5 min-w-0">
             <Button
               variant="ghost"
