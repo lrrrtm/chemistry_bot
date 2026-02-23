@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save } from "lucide-react";
+import { Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save, Pencil, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -399,6 +399,9 @@ export function Students() {
   const [works, setWorks] = useState<WorkStat[]>([]);
   const [worksLoading, setWorksLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
   const [workDetail, setWorkDetail] = useState<WorkDetail | null>(null);
@@ -469,6 +472,33 @@ export function Students() {
     }
   };
 
+  const handleStartEdit = () => {
+    if (!selectedUser) return;
+    setEditNameValue(selectedUser.name);
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!selectedUser || !editNameValue.trim()) return;
+    setSavingName(true);
+    try {
+      await api.renameUser(selectedUser.telegram_id, editNameValue.trim());
+      const newName = editNameValue.trim();
+      setSelectedUser({ ...selectedUser, name: newName });
+      const updated = users.map((u) =>
+        u.telegram_id === selectedUser.telegram_id ? { ...u, name: newName } : u
+      );
+      _usersCache = updated;
+      setUsers(updated);
+      setEditingName(false);
+      toast.success("Имя изменено");
+    } catch {
+      toast.error("Ошибка сохранения");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const filtered = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -533,49 +563,88 @@ export function Students() {
       {/* ── Column 2: Works list ───────────────────────────────────────────── */}
       <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col lg:w-72 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px]">
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 shrink-0 lg:hidden"
-              onClick={() => { setMobileStep(0); scrollToTop(); }}
+              onClick={() => { setMobileStep(0); setEditingName(false); scrollToTop(); }}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
-              {selectedUser ? selectedUser.name : "Работы"}
-            </span>
-          </div>
-          {selectedUser && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
+            {editingName && selectedUser ? (
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <Input
+                  value={editNameValue}
+                  onChange={(e) => setEditNameValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
+                  className="h-6 text-xs flex-1 min-w-0"
+                  autoFocus
+                />
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 shrink-0 text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
-                  disabled={deleting}
+                  className="h-6 w-6 shrink-0 text-green-600 hover:text-green-700"
+                  onClick={handleSaveName}
+                  disabled={savingName || !editNameValue.trim()}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Check className="h-3.5 w-3.5" />
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Удалить ученика?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Это действие нельзя отменить. Все данные ученика будут удалены.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Отмена</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-[var(--color-destructive)] hover:opacity-90"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() => setEditingName(false)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
+                {selectedUser ? selectedUser.name : "Работы"}
+              </span>
+            )}
+          </div>
+          {selectedUser && !editingName && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleStartEdit}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
+                    disabled={deleting}
                   >
-                    Удалить
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Удалить ученика?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Это действие нельзя отменить. Все данные ученика будут удалены.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-[var(--color-destructive)] hover:opacity-90"
+                    >
+                      Удалить
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           )}
         </div>
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import require_auth
-from db.crud import get_all_users, remove_user
+from db.crud import get_all_users, remove_user, rename_user
 from utils.user_statistics import get_user_statistics
 
 router = APIRouter(prefix="/api/admin/users", tags=["users"])
@@ -14,6 +14,15 @@ def list_users(_: str = Depends(require_auth)):
         {"id": u.id, "telegram_id": u.telegram_id, "name": u.name}
         for u in sorted(users, key=lambda u: u.name)
     ]
+
+
+@router.put("/{telegram_id}")
+def update_user(telegram_id: int, body: dict, _: str = Depends(require_auth)):
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Имя не может быть пустым")
+    rename_user(telegram_id=telegram_id, new_name=name)
+    return {"ok": True}
 
 
 @router.delete("/{telegram_id}")

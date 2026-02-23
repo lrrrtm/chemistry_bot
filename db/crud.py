@@ -144,6 +144,14 @@ def get_topic_by_volume(volume: str) -> List[Topic]:
         return data
 
 
+def rename_user(telegram_id: int, new_name: str) -> None:
+    with get_session() as session:
+        user = session.query(User).filter_by(telegram_id=telegram_id).first()
+        if user:
+            user.name = new_name
+            session.commit()
+
+
 def get_all_users() -> List[User]:
     with get_session() as session:
         users = session.query(User).filter_by(is_deleted=0).all()

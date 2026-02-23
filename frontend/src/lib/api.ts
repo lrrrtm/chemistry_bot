@@ -52,6 +52,12 @@ export const api = {
       "/admin/users"
     ),
 
+  renameUser: (telegram_id: number, name: string) =>
+    request<{ ok: boolean }>(`/admin/users/${telegram_id}`, {
+      method: "PUT",
+      body: JSON.stringify({ name }),
+    }),
+
   deleteUser: (telegram_id: number) =>
     request<{ ok: boolean }>(`/admin/users/${telegram_id}`, {
       method: "DELETE",
