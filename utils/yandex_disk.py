@@ -10,7 +10,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 YADISK_API = "https://cloud-api.yandex.net/v1/disk/resources"
-BACKUP_FOLDER = "/chembot_backups"
+BACKUP_FOLDER = "app:/"
 
 
 def _token() -> Optional[str]:
@@ -22,21 +22,6 @@ def _token() -> Optional[str]:
 
 def _headers(token: str) -> dict:
     return {"Authorization": f"OAuth {token}", "Accept": "application/json"}
-
-
-# ── Folder helpers ─────────────────────────────────────────────────────────────
-
-def ensure_folder(token: str, path: str = BACKUP_FOLDER) -> None:
-    """Create folder on Yandex Disk (ignore if already exists)."""
-    r = requests.put(
-        YADISK_API,
-        params={"path": path},
-        headers=_headers(token),
-        timeout=15,
-    )
-    # 201 = created, 409 = already exists — both are fine
-    if r.status_code not in (201, 409):
-        r.raise_for_status()
 
 
 # ── Upload ─────────────────────────────────────────────────────────────────────
@@ -52,9 +37,7 @@ def upload_file(local_path: str, disk_filename: str,
         return {"ok": False, "error": "Yandex Disk токен не задан"}
 
     try:
-        ensure_folder(token)
-
-        disk_path = f"{BACKUP_FOLDER}/{disk_filename}"
+        disk_path = f"{BACKUP_FOLDER}{disk_filename}"
 
         # Step 1 — get upload URL
         r = requests.get(
@@ -91,8 +74,6 @@ def list_backups(token: Optional[str] = None, limit: int = 100) -> list[dict]:
         return []
 
     try:
-        ensure_folder(token)
-
         r = requests.get(
             YADISK_API,
             params={
