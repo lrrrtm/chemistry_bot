@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  UploadCloud, AlertTriangle, CheckCircle2, FileArchive, X, Clock, Send,
-  HardDrive, RotateCcw, RefreshCw, Loader2,
+  AlertTriangle, CheckCircle2, Clock, Send,
+  HardDrive, RotateCcw, RefreshCw, Loader2, FileArchive,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FileDropZone } from "@/components/ui/FileDropZone";
 import { api } from "@/lib/api";
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
@@ -67,7 +68,6 @@ export function RestorePage() {
   const [confirmed, setConfirmed] = useState(false);
   const [phase, setPhase]         = useState<Phase>("idle");
   const [progress, setProgress]   = useState(0);
-  const inputRef  = useRef<HTMLInputElement>(null);
   const crawlRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Backup settings state ──────────────────────────────────────────────────
@@ -203,7 +203,6 @@ export function RestorePage() {
         catch { toast.success("Восстановлено"); }
         setFile(null);
         setConfirmed(false);
-        if (inputRef.current) inputRef.current.value = "";
       } else {
         setPhase("error");
         try { toast.error(JSON.parse(xhr.responseText).detail || "Ошибка"); }
@@ -423,50 +422,13 @@ export function RestorePage() {
         </div>
 
         {/* Drop zone */}
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            loading
-              ? "opacity-50 pointer-events-none border-[var(--color-border)]"
-              : "cursor-pointer hover:border-[var(--color-primary)] border-[var(--color-border)]"
-          }`}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); if (!loading) handleFileChange(e.dataTransfer.files[0] ?? null); }}
-          onClick={() => !loading && inputRef.current?.click()}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".zip"
-            className="hidden"
-            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
-          />
-          {file ? (
-            <div className="flex items-center justify-center gap-3">
-              <FileArchive className="h-8 w-8 text-[var(--color-primary)]" />
-              <div className="text-left">
-                <p className="font-medium text-[var(--color-foreground)] text-sm">{file.name}</p>
-                <p className="text-xs text-[var(--color-muted-foreground)]">
-                  {(file.size / 1024 / 1024).toFixed(2)} МБ
-                </p>
-              </div>
-              {!loading && (
-                <button
-                  className="ml-2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                  onClick={(e) => { e.stopPropagation(); handleFileChange(null); if (inputRef.current) inputRef.current.value = ""; }}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <UploadCloud className="h-10 w-10 mx-auto text-[var(--color-muted-foreground)]" />
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                Перетащите .zip-архив или нажмите для выбора
-              </p>
-            </div>
-          )}
-        </div>
+        <FileDropZone
+          file={file}
+          onChange={handleFileChange}
+          accept=".zip"
+          disabled={loading}
+          hint="Перетащите .zip-архив или нажмите для выбора"
+        />
 
         {/* Progress bar */}
         {phase !== "idle" && (

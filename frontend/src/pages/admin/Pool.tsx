@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileDropZone } from "@/components/ui/FileDropZone";
 import { Textarea } from "@/components/ui/textarea";
 import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +53,6 @@ export function PoolPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
-  const importFileRef = useRef<HTMLInputElement>(null);
 
   // Mobile step: 0 = question list, 1 = question editor
   const [mobileStep, setMobileStep] = useState<0 | 1>(0);
@@ -548,12 +548,13 @@ export function PoolPage() {
             </Button>
 
             <div className="space-y-2">
-              <Input
-                ref={importFileRef}
-                type="file"
+              <FileDropZone
+                file={importFile}
+                onChange={setImportFile}
                 accept=".xlsx"
-                className="text-sm"
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                disabled={importing}
+                hint="Перетащите .xlsx или нажмите для выбора"
+                compact
               />
               <Button
                 className="w-full"
@@ -565,7 +566,6 @@ export function PoolPage() {
                     const result = await api.importPoolExcel(importFile);
                     toast.success(result.message);
                     setImportFile(null);
-                    if (importFileRef.current) importFileRef.current.value = "";
                     const updatedPool = await api.getPool();
                     setPool(updatedPool);
                     setAddDialogOpen(false);
