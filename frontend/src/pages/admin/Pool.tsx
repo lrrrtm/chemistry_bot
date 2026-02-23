@@ -18,20 +18,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-
-type QuestionFull = {
-  id: number;
-  text: string;
-  answer: string;
-  level: number;
-  full_mark: number;
-  tags_list: string[];
-  is_rotate: number;
-  is_selfcheck: number;
-  question_image: boolean;
-  answer_image: boolean;
-  type: string;
-};
+import { SearchInput } from "@/components/ui/SearchInput";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { scrollToTop } from "@/lib/utils";
+import type { QuestionFull } from "@/lib/types";
 
 type PoolItem = { id: number; text: string; tags_list: string[] };
 
@@ -228,10 +218,6 @@ export function PoolPage() {
 
   if (loading) return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
 
-  function scrollToTop() {
-    document.querySelector("main")?.scrollTo(0, 0);
-  }
-
   return (
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* Left panel — question list */}
@@ -255,24 +241,18 @@ export function PoolPage() {
           </div>
 
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-            <Input
-              placeholder="ID, текст или тег..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-8 text-sm"
-            />
-          </div>
+          <SearchInput
+            placeholder="ID, текст или тег..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 text-sm"
+          />
         </div>
 
         {/* Question list */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="text-center py-12 text-[var(--color-muted-foreground)]">
-              <Database className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Вопросы не найдены</p>
-            </div>
+            <EmptyState icon={Database} text="Вопросы не найдены" />
           ) : (
             <>
               {filtered.slice(0, 100).map((q) => (
@@ -328,10 +308,7 @@ export function PoolPage() {
             <p className="text-sm">Загрузка вопроса...</p>
           </div>
         ) : !selected ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-muted-foreground)] gap-2">
-            <Database className="h-12 w-12 opacity-20" />
-            <p className="text-sm">Выберите вопрос из списка</p>
-          </div>
+          <EmptyState icon={Database} text="Выберите вопрос из списка" className="flex-1" />
         ) : (
           <>
             {/* Editor header */}

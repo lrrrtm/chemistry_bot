@@ -5,40 +5,21 @@ import { ArrowLeft, Trash2, ExternalLink, BookOpen, FlaskConical } from "lucide-
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { EmptyState } from "@/components/ui/EmptyState";
+import type { WorkStat, User } from "@/lib/types";
 import {
   type WorkDetail,
   formatDate,
+  getWorkTypeBadge,
   WorkSummaryCard,
   QuestionsList,
 } from "@/components/WorkStatsView";
 
-type WorkStat = {
-  work_id: number;
-  share_token: string | null;
-  name: string;
-  type: string;
-  start: string | null;
-  end: string | null;
-  final_mark: number;
-  max_mark: number;
-  fully: number;
-  semi: number;
-  zero: number;
-  questions_amount: number;
-};
-
-type UserInfo = { id: number; telegram_id: number; name: string };
-
-function getWorkTypeBadge(type: string) {
-  if (type === "ege") return <Badge variant="default">ЕГЭ</Badge>;
-  if (type === "topic") return <Badge variant="secondary">Тема</Badge>;
-  return <Badge variant="outline">Тренировка</Badge>;
-}
+type UserInfo = User;
 
 function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; zero: number; total: number }) {
   if (total === 0) return null;
@@ -53,12 +34,7 @@ function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; z
 
 function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loading: boolean }) {
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-20 text-[var(--color-muted-foreground)]">
-        <FlaskConical className="h-10 w-10 mb-3 opacity-30 animate-pulse" />
-        <p className="text-sm">Загрузка...</p>
-      </div>
-    );
+    return <EmptyState icon={FlaskConical} text="Загрузка..." animate className="h-full py-20" />;
   }
 
   if (!detail) {
@@ -181,10 +157,7 @@ export function StudentDetail() {
 
         {/* Works list */}
         {works.length === 0 ? (
-          <div className="text-center py-16 text-[var(--color-muted-foreground)]">
-            <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p>Завершённых тренировок нет</p>
-          </div>
+          <EmptyState icon={BookOpen} text="Завершённых тренировок нет" className="py-16" />
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
             {works.map((w) => (

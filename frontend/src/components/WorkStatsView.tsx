@@ -80,6 +80,12 @@ export function ResultBadge({ mark, fullMark }: { mark: number; fullMark: number
   return <Badge variant="destructive">Неверно</Badge>;
 }
 
+export function getWorkTypeBadge(type: string) {
+  if (type === "ege") return <Badge variant="default">ЕГЭ</Badge>;
+  if (type === "topic") return <Badge variant="secondary">Тема</Badge>;
+  return <Badge variant="outline">Тренировка</Badge>;
+}
+
 /* ── Summary card ─────────────────────────────────────────────────────── */
 
 export function WorkSummaryCard({ general, userName }: {

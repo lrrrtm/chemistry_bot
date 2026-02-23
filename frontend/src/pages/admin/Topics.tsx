@@ -8,14 +8,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { scrollToTop } from "@/lib/utils";
 
 type TopicTag = { tag: string; count: number };
 type TopicItem = { id: number; name: string; tags: TopicTag[] };
 type TopicsData = Record<string, TopicItem[]>;
-
-function scrollToTop() {
-  document.querySelector("main")?.scrollTo(0, 0);
-}
 
 export function Topics() {
   const [data, setData] = useState<TopicsData>({});

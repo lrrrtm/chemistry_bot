@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, ChevronDown, ChevronRight, Plus, X, Copy, Check, Search, Clock, ExternalLink, Trash2 } from "lucide-react";
+import { Send, ChevronDown, ChevronRight, Plus, X, Copy, Check, Clock, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,13 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SearchInput } from "@/components/ui/SearchInput";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-type User = { id: number; telegram_id: number; name: string };
+import type { User } from "@/lib/types";
+import { getInitials } from "@/lib/utils";
 type HandWork = { id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null };
 
 type TopicTag = { tag: string; count: number };
@@ -47,8 +48,8 @@ export function CreateTraining() {
   const [trainings, setTrainings] = useState<HandWork[]>([]);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Success dialog state
-  const [successDialog, setSuccessDialog] = useState<{ name: string; link: string } | null>(null);
+  // Send dialog state
+  const [sendDialog, setSendDialog] = useState<{ name: string; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState("");
@@ -116,7 +117,7 @@ export function CreateTraining() {
       setQuestionCounts({});
       loadTrainings();
       if (result.link) {
-        setSuccessDialog({ name: result.name, link: result.link });
+        setSendDialog({ name: result.name, link: result.link });
       } else {
         toast.success("Тренировка создана!");
       }
@@ -144,7 +145,7 @@ export function CreateTraining() {
       });
       loadTrainings();
       if (result.link) {
-        setSuccessDialog({ name: result.name, link: result.link });
+        setSendDialog({ name: result.name, link: result.link });
       } else {
         toast.success("Тренировка создана!");
       }
@@ -169,21 +170,21 @@ export function CreateTraining() {
   };
 
   const handleCopyLink = () => {
-    if (!successDialog) return;
-    navigator.clipboard.writeText(successDialog.link).then(() => {
+    if (!sendDialog) return;
+    navigator.clipboard.writeText(sendDialog.link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
   const handleSendToUser = async (user: User) => {
-    if (!successDialog || sending) return;
+    if (!sendDialog || sending) return;
     setSending(user.telegram_id);
     try {
       await api.sendTrainingToUser({
         telegram_id: user.telegram_id,
-        link: successDialog.link,
-        name: successDialog.name,
+        link: sendDialog.link,
+        name: sendDialog.name,
       });
       toast.success(`Отправлено ${user.name}`);
     } catch {
@@ -413,12 +414,12 @@ export function CreateTraining() {
         </TabsContent>
       </Tabs>
 
-      {/* Success dialog */}
+      {/* Send dialog */}
       <Dialog
-        open={!!successDialog}
+        open={!!sendDialog}
         onOpenChange={(open) => {
           if (!open) {
-            setSuccessDialog(null);
+            setSendDialog(null);
             setCopied(false);
             setUserSearch("");
           }
@@ -426,9 +427,9 @@ export function CreateTraining() {
       >
         <DialogContent className="sm:max-w-md overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle>Тренировка создана</DialogTitle>
+            <DialogTitle>Отправить тренировку</DialogTitle>
             <DialogDescription>
-              {successDialog?.name}
+              {sendDialog?.name}
             </DialogDescription>
           </DialogHeader>
 
@@ -439,7 +440,7 @@ export function CreateTraining() {
               <div className="flex gap-2">
                 <Input
                   readOnly
-                  value={successDialog?.link ?? ""}
+                  value={sendDialog?.link ?? ""}
                   className="text-sm min-w-0"
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
@@ -452,16 +453,13 @@ export function CreateTraining() {
             {/* Send to student */}
             <div className="space-y-1.5">
               <Label className="text-xs text-[var(--color-muted-foreground)]">Отправить ученику</Label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-                <Input
-                  ref={userSearchRef}
-                  placeholder="Поиск по имени..."
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="pl-8 text-sm"
-                />
-              </div>
+              <SearchInput
+                ref={userSearchRef}
+                placeholder="Поиск по имени..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="text-sm"
+              />
               <div className="max-h-48 overflow-y-auto rounded-md border">
                 {filteredUsers.length === 0 ? (
                   <p className="text-center py-4 text-xs text-[var(--color-muted-foreground)]">
@@ -476,7 +474,7 @@ export function CreateTraining() {
                       <Avatar className="h-7 w-7 shrink-0">
                         <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} />
                         <AvatarFallback className="text-[10px] font-semibold">
-                          {user.name.slice(0, 2).toUpperCase()}
+                          {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
@@ -533,11 +531,14 @@ export function CreateTraining() {
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
-                      <a href={t.link} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon" className="h-7 w-7 shrink-0">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </Button>
-                      </a>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => setSendDialog({ name: t.name, link: t.link! })}
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                      </Button>
                     </>
                   )}
                   <AlertDialog>

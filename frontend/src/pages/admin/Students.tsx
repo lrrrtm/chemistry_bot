@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save } from "lucide-react";
+import { Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save } from "lucide-react";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,112 +17,21 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-type QuestionFull = {
-  id: number;
-  text: string;
-  answer: string;
-  level: number;
-  full_mark: number;
-  tags_list: string[];
-  is_rotate: number;
-  is_selfcheck: number;
-  question_image: boolean;
-  answer_image: boolean;
-  type: string;
-};
-
-type User = { id: number; telegram_id: number; name: string };
+import { SearchInput } from "@/components/ui/SearchInput";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getInitials, scrollToTop } from "@/lib/utils";
+import type { User, QuestionFull, WorkStat } from "@/lib/types";
+import {
+  type WorkDetail,
+  formatDate,
+  formatDuration,
+  getResultColor,
+  ResultBadge,
+  getWorkTypeBadge,
+} from "@/components/WorkStatsView";
 
 // Module-level cache — survives component unmount/remount within the same session
 let _usersCache: User[] | null = null;
-
-type WorkStat = {
-  work_id: number;
-  share_token: string | null;
-  name: string;
-  type: string;
-  start: string | null;
-  end: string | null;
-  final_mark: number;
-  max_mark: number;
-  fully: number;
-  semi: number;
-  zero: number;
-  questions_amount: number;
-};
-
-type WorkDetail = {
-  general: {
-    telegram_id: number | null;
-    user_name: string | null;
-    name: string;
-    start: string | null;
-    end: string | null;
-    final_mark: number;
-    max_mark: number;
-    fully: number;
-    semi: number;
-    zero: number;
-  };
-  questions: Array<{
-    index: number;
-    question_id: number;
-    text: string;
-    answer: string;
-    user_answer: string;
-    user_mark: number;
-    full_mark: number;
-    question_image: boolean;
-    answer_image: boolean;
-  }>;
-};
-
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
-
-function toUtc(iso: string) {
-  return iso.endsWith("Z") || iso.includes("+") ? iso : iso.replace(" ", "T") + "Z";
-}
-
-function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(toUtc(iso)).toLocaleString("ru-RU", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function formatDuration(start: string | null, end: string | null) {
-  if (!start || !end) return "—";
-  const ms = new Date(toUtc(end)).getTime() - new Date(toUtc(start)).getTime();
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  if (h > 0) return `${h}ч ${m}м ${s}с`;
-  if (m > 0) return `${m}м ${s}с`;
-  return `${s}с`;
-}
-
-function getWorkTypeBadge(type: string) {
-  if (type === "ege") return <Badge variant="default">ЕГЭ</Badge>;
-  if (type === "topic") return <Badge variant="secondary">Тема</Badge>;
-  return <Badge variant="outline">Тренировка</Badge>;
-}
-
-
-function getResultColor(mark: number, fullMark: number) {
-  if (mark === fullMark) return "text-green-600 dark:text-green-400";
-  if (mark > 0) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-500 dark:text-red-400";
-}
-
-function ResultBadge({ mark, fullMark }: { mark: number; fullMark: number }) {
-  if (mark === fullMark) return <Badge variant="success">Верно</Badge>;
-  if (mark > 0) return <Badge variant="warning">Частично</Badge>;
-  return <Badge variant="destructive">Неверно</Badge>;
-}
 
 function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loading: boolean }) {
   const navigate = useNavigate();
@@ -184,12 +93,7 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-20 text-[var(--color-muted-foreground)]">
-        <FlaskConical className="h-10 w-10 mb-3 opacity-30 animate-pulse" />
-        <p className="text-sm">Загрузка...</p>
-      </div>
-    );
+    return <EmptyState icon={FlaskConical} text="Загрузка..." animate className="h-full py-20" />;
   }
 
   if (!detail) {
@@ -486,10 +390,6 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
   );
 }
 
-function scrollToTop() {
-  document.querySelector("main")?.scrollTo(0, 0);
-}
-
 export function Students() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -589,23 +489,18 @@ export function Students() {
       {/* ── Column 1: Student list ─────────────────────────────────────────── */}
       <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px] flex items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
-            <Input
-              placeholder="Поиск..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-7 pl-8 text-xs"
-            />
-          </div>
+          <SearchInput
+            placeholder="Поиск..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-7 text-xs"
+            wrapperClassName="flex-1"
+          />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-[var(--color-muted-foreground)]">
-              <Users className="h-8 w-8 mb-2 opacity-30" />
-              <p className="text-xs">{search ? "Не найдено" : "Нет учеников"}</p>
-            </div>
+            <EmptyState icon={Users} text={search ? "Не найдено" : "Нет учеников"} />
           ) : (
             filtered.map((user) => (
               <div
@@ -694,10 +589,7 @@ export function Students() {
               Загрузка...
             </p>
           ) : works.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-[var(--color-muted-foreground)]">
-              <BookOpen className="h-8 w-8 mb-2 opacity-30" />
-              <p className="text-xs">Нет завершённых тренировок</p>
-            </div>
+            <EmptyState icon={BookOpen} text="Нет завершённых тренировок" />
           ) : (
             works.map((w) => (
               <div
