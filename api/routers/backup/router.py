@@ -4,7 +4,7 @@ import shutil
 import zipfile
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 
 from api.config import ROOT_FOLDER
 from api.dependencies import require_auth
@@ -42,11 +42,9 @@ def update_backup_settings(req: BackupSettings, _: str = Depends(require_auth)):
 
 
 @router.post("/backup-now")
-def backup_now(_: str = Depends(require_auth)):
-    result = _run_backup_job()
-    if not result.get("ok"):
-        raise HTTPException(status_code=500, detail=result.get("error", "Ошибка"))
-    return {"ok": True, "message": "Резервная копия создана"}
+def backup_now(bg: BackgroundTasks, _: str = Depends(require_auth)):
+    bg.add_task(_run_backup_job)
+    return {"ok": True, "message": "Резервная копия создаётся в фоне"}
 
 
 # ── Yandex Disk backups ───────────────────────────────────────────────────────
