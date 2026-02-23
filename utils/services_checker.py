@@ -1,5 +1,4 @@
 import subprocess
-import os
 
 services = [
     {
@@ -61,13 +60,3 @@ def get_system_status():
             'status_text': status,
         })
     return result
-
-
-def restart_service(container_name: str):
-    try:
-        subprocess.run(
-            ["docker", "restart", container_name],
-            capture_output=True, text=True, timeout=30
-        )
-    except Exception as e:
-        print(e)

@@ -3,7 +3,6 @@ from os import getenv
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from db.models import User
 from tgbot.lexicon.buttons import lexicon
 
 from aiogram.filters.callback_data import CallbackData
@@ -108,12 +107,12 @@ def get_start_work_kb(work_type: str, topic_id: int = -1, hand_work_id: str = ""
     return builder.as_markup()
 
 
-def get_view_result_kb(user: User, work_id: int, detailed: bool = False) -> InlineKeyboardMarkup:
+def get_view_result_kb(share_token: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.button(
         text=lexicon['new_work']['view_results'],
-        url=f"https://{getenv('DOMAIN')}/student/view-stats?uuid={user.id}&tid={user.telegram_id}&work={work_id}&detailed={int(detailed)}"
+        url=f"https://{getenv('DOMAIN')}/student/view-stats?token={share_token}"
     )
 
     builder.adjust(1)

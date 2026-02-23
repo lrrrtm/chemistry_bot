@@ -6,11 +6,11 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 
-from db.crud import (get_user, get_user_works, get_topic_by_id, get_work_questions, get_all_topics, create_new_work,
+from db.crud import (get_user, get_user_works, get_work_questions, get_all_topics, create_new_work,
                      insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name_and_volume,
                      update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
-                     get_all_questions, remove_work, get_all_pool, get_topic_by_volume)
+                     remove_work, get_all_pool, get_topic_by_volume)
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
     SelectNewWorkTypeCallbackFactory, get_topics_kb, get_start_work_kb, StartNewWorkCallbackFactory, get_view_result_kb, \
@@ -227,9 +227,6 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
         if work_type == "ege":
             tags_list = get_ege_tags_list(each_question_limit=1)
 
-        # elif work_type == "topic":
-        #     tags_list = {tag: 20 for tag in get_topic_by_id(topic_id).tags_list}
-
         elif work_type == "hand_work":
             hand_work = get_hand_work(identificator=hand_work_id)
 
@@ -324,10 +321,10 @@ async def go_next_question(user_tid: int, state: FSMContext, add_skipped_questio
                 q_info.is_selfcheck) else f"\n\n{q_info.text}"
 
             if bool(q_info.question_image):
-                if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")):
-                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/{q_info.id}.png")
+                if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/images/questions/{q_info.id}.png")):
+                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/images/questions/{q_info.id}.png")
                 else:
-                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png")
+                    src = os.path.join(getenv('ROOT_FOLDER'), f"data/images/questions/error.png")
 
                 await bot.send_photo(
                     chat_id=user.telegram_id,
@@ -373,10 +370,10 @@ async def save_and_check_user_answer(message: Message, state: FSMContext):
 
         if bool(question_data.answer_image):
 
-            if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")):
-                src = os.path.join(getenv('ROOT_FOLDER'), f"data/answers_images/{question_data.id}.png")
+            if os.path.exists(os.path.join(getenv('ROOT_FOLDER'), f"data/images/answers/{question_data.id}.png")):
+                src = os.path.join(getenv('ROOT_FOLDER'), f"data/images/answers/{question_data.id}.png")
             else:
-                src = os.path.join(getenv('ROOT_FOLDER'), f"data/questions_images/error.png")
+                src = os.path.join(getenv('ROOT_FOLDER'), f"data/images/questions/error.png")
 
             await message.answer_photo(
                 photo=FSInputFile(src),
@@ -464,19 +461,19 @@ async def try_to_open_next_question(work_id: int, message: Message, user_tid: in
             await state.clear()
 
         else:
+            work_data = end_work(work_id)
             await bot.send_message(
                 chat_id=user_tid,
                 text=msg_lexicon['new_work']['view_results'],
-                reply_markup=get_view_result_kb(get_user(user_tid), work_id)
+                reply_markup=get_view_result_kb(work_data.share_token)
             )
-            work_data = end_work(work_id)
             if work_data.work_type == "hand_work":
                 user = get_user(user_tid)
                 hand_work_data = get_hand_work(work_data.hand_work_id)
                 await bot.send_message(
                     chat_id=getenv('ADMIN_ID'),
                     text=msg_lexicon['new_work']['hand_work_ended'].format(user.name, hand_work_data.name),
-                    reply_markup=get_view_result_kb(get_user(user_tid), work_id, detailed=True)
+                    reply_markup=get_view_result_kb(work_data.share_token)
                 )
             await state.clear()
     else:

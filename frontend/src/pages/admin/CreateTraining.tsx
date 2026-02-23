@@ -424,7 +424,7 @@ export function CreateTraining() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Тренировка создана</DialogTitle>
             <DialogDescription>
@@ -432,7 +432,7 @@ export function CreateTraining() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {/* Copy link */}
             <div className="space-y-1.5">
               <Label className="text-xs text-[var(--color-muted-foreground)]">Ссылка</Label>
@@ -440,7 +440,7 @@ export function CreateTraining() {
                 <Input
                   readOnly
                   value={successDialog?.link ?? ""}
-                  className="text-sm"
+                  className="text-sm min-w-0"
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
                 <Button variant="outline" size="icon" className="shrink-0" onClick={handleCopyLink}>
@@ -485,11 +485,11 @@ export function CreateTraining() {
                       </div>
                       <Button
                         size="sm"
-                        className="shrink-0 h-7 px-2.5"
+                        className="shrink-0"
                         disabled={sending === user.telegram_id}
                         onClick={() => handleSendToUser(user)}
                       >
-                        <Send className="h-3.5 w-3.5 mr-1" />
+                        <Send className="h-3.5 w-3.5" />
                         {sending === user.telegram_id ? "..." : "Отправить"}
                       </Button>
                     </div>

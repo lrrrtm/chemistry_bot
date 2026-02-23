@@ -7,7 +7,10 @@
       "Bash(docker stop:*)",
       "Bash(docker rm:*)",
       "Bash(docker network rm:*)",
-      "Bash(docker compose exec:*)"
+      "Bash(docker compose exec:*)",
+      "Bash(DB_HOST=localhost DB_PORT=3306 DB_USER=chemistry DB_PASSWORD=chempass123 DB_NAME=chemistry_bot BOT_API_KEY=7547692730:AAEkWrl-Gqt450CIoeC2T9lIiWLOuvD07oI BOT_NAME=l3rtm_beta_bot PANEL_PASSWORD=testpass123 ADMIN_ID=409801981 ROOT_FOLDER=e:/projects/chemistry_bot PYTHONPATH=e:/projects/chemistry_bot uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(mysql:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }

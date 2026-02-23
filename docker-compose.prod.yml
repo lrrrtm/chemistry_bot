@@ -1,0 +1,18 @@
+# Production overlay — use pre-built image from GHCR instead of building locally.
+#
+# Usage on server:
+#   GHCR_IMAGE=ghcr.io/lrrrtm/chemistry_bot \
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# The GHCR_IMAGE variable is injected by the CI/CD pipeline.
+# Fallback default matches the known repository path.
+
+services:
+  bot:
+    image: ${GHCR_IMAGE:-ghcr.io/lrrrtm/chemistry_bot}:${IMAGE_TAG:-latest}
+
+  api:
+    image: ${GHCR_IMAGE:-ghcr.io/lrrrtm/chemistry_bot}:${IMAGE_TAG:-latest}
+
+  backup:
+    image: ${GHCR_IMAGE:-ghcr.io/lrrrtm/chemistry_bot}:${IMAGE_TAG:-latest}

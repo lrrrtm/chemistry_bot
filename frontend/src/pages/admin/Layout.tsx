@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/admin/create-training", icon: Plus, label: "Создание тренировки" },
   { to: "/admin/students", icon: Users, label: "Ученики" },
-  { to: "/admin/ege-converting", icon: Calculator, label: "Баллы ЕГЭ" },
-  { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
-  { to: "/admin/add-question", icon: BookPlus, label: "Добавить вопрос" },
   { to: "/admin/topics", icon: Tags, label: "Темы и теги" },
+  { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
+  { to: "/admin/add-question", icon: BookPlus, label: "Создание вопроса" },
+  { to: "/admin/ege-converting", icon: Calculator, label: "Конвертация баллов" },
 ];
 
 export function AdminLayout() {

@@ -4,15 +4,22 @@ import { toast } from "sonner";
 import { ArrowLeft, Trash2, ExternalLink, BookOpen, FlaskConical } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  type WorkDetail,
+  formatDate,
+  WorkSummaryCard,
+  QuestionsList,
+} from "@/components/WorkStatsView";
 
 type WorkStat = {
   work_id: number;
+  share_token: string | null;
   name: string;
   type: string;
   start: string | null;
@@ -26,51 +33,6 @@ type WorkStat = {
 };
 
 type UserInfo = { id: number; telegram_id: number; name: string };
-
-type WorkDetail = {
-  general: {
-    user_name: string | null;
-    name: string;
-    start: string | null;
-    end: string | null;
-    final_mark: number;
-    max_mark: number;
-    fully: number;
-    semi: number;
-    zero: number;
-  };
-  questions: Array<{
-    index: number;
-    question_id: number;
-    text: string;
-    answer: string;
-    user_answer: string;
-    user_mark: number;
-    full_mark: number;
-    question_image: boolean;
-    answer_image: boolean;
-  }>;
-  detailed: boolean;
-};
-
-function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("ru-RU", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function formatDuration(start: string | null, end: string | null) {
-  if (!start || !end) return "—";
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  if (h > 0) return `${h}ч ${m}м ${s}с`;
-  if (m > 0) return `${m}м ${s}с`;
-  return `${s}с`;
-}
 
 function getWorkTypeBadge(type: string) {
   if (type === "ege") return <Badge variant="default">ЕГЭ</Badge>;
@@ -87,18 +49,6 @@ function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; z
       <div className="bg-red-500 transition-all" style={{ width: `${(zero / total) * 100}%` }} />
     </div>
   );
-}
-
-function getResultColor(mark: number, fullMark: number) {
-  if (mark === fullMark) return "text-green-600 dark:text-green-400";
-  if (mark > 0) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-500 dark:text-red-400";
-}
-
-function ResultBadge({ mark, fullMark }: { mark: number; fullMark: number }) {
-  if (mark === fullMark) return <Badge variant="success">Верно</Badge>;
-  if (mark > 0) return <Badge variant="warning">Частично</Badge>;
-  return <Badge variant="destructive">Неверно</Badge>;
 }
 
 function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loading: boolean }) {
@@ -120,130 +70,10 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
     );
   }
 
-  const total = detail.general.fully + detail.general.semi + detail.general.zero;
-
   return (
     <div className="space-y-4">
-      {/* General */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{detail.general.name}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="space-y-1">
-              <p className="text-lg font-bold text-[var(--color-primary)]">
-                {detail.general.final_mark} из {detail.general.max_mark} б.
-              </p>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-center gap-2 text-lg font-semibold">
-                <span className="flex items-center gap-1 text-green-600">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />
-                  {detail.general.fully}
-                </span>
-                <span className="flex items-center gap-1 text-yellow-500">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-500 shrink-0" />
-                  {detail.general.semi}
-                </span>
-                <span className="flex items-center gap-1 text-red-500">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 shrink-0" />
-                  {detail.general.zero}
-                </span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                {formatDuration(detail.general.start, detail.general.end)}
-              </p>
-              <p className="text-xs text-[var(--color-muted-foreground)]">затрачено</p>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex rounded-full overflow-hidden h-3">
-              {detail.general.fully > 0 && (
-                <div className="bg-green-500" style={{ width: `${(detail.general.fully / total) * 100}%` }} />
-              )}
-              {detail.general.semi > 0 && (
-                <div className="bg-yellow-500" style={{ width: `${(detail.general.semi / total) * 100}%` }} />
-              )}
-              {detail.general.zero > 0 && (
-                <div className="bg-red-500" style={{ width: `${(detail.general.zero / total) * 100}%` }} />
-              )}
-            </div>
-            <p className="text-xs text-[var(--color-muted-foreground)] text-right">
-              Завершено: {formatDate(detail.general.end)}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Questions */}
-      <h2 className="font-semibold flex items-center gap-2 text-sm">
-        <BookOpen className="h-4 w-4" />
-        Подробности
-      </h2>
-
-      {detail.questions.map((q) => (
-        <Card
-          key={q.question_id}
-          className={`border-l-4 ${
-            q.user_mark === q.full_mark
-              ? "border-l-green-500"
-              : q.user_mark > 0
-              ? "border-l-yellow-500"
-              : "border-l-red-500"
-          }`}
-        >
-          <CardContent className="pt-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                Вопрос №{q.index} (id{q.question_id})
-              </span>
-              <ResultBadge mark={q.user_mark} fullMark={q.full_mark} />
-            </div>
-
-            {q.text && <p className="text-sm whitespace-pre-wrap">{q.text}</p>}
-
-            {q.question_image && (
-              <img
-                src={api.imageUrl.question(q.question_id)}
-                alt="вопрос"
-                className="w-full max-h-64 object-contain rounded-lg border"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            )}
-
-            <div className="space-y-1.5 text-sm border-t pt-3">
-              <div className="flex gap-2">
-                <span className="text-[var(--color-muted-foreground)] shrink-0">Ответ ученика:</span>
-                <span className={getResultColor(q.user_mark, q.full_mark)}>
-                  {q.user_answer || "—"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-[var(--color-muted-foreground)] shrink-0">Верный ответ:</span>
-                <span className="text-green-600 dark:text-green-400 font-medium">{q.answer}</span>
-              </div>
-              {q.answer_image && (
-                <img
-                  src={api.imageUrl.answer(q.question_id)}
-                  alt="ответ"
-                  className="w-full max-h-48 object-contain rounded-lg border mt-2"
-                  onError={(e) => (e.currentTarget.style.display = "none")}
-                />
-              )}
-              <div className="flex gap-2 text-xs text-[var(--color-muted-foreground)]">
-                <span>Баллы:</span>
-                <span className={`font-medium ${getResultColor(q.user_mark, q.full_mark)}`}>
-                  {q.user_mark} из {q.full_mark}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      <WorkSummaryCard general={detail.general} />
+      <QuestionsList questions={detail.questions} answerLabel="Ответ ученика" />
     </div>
   );
 }
@@ -257,7 +87,7 @@ export function StudentDetail() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const [selectedWorkId, setSelectedWorkId] = useState<number | null>(null);
+  const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
   const [workDetail, setWorkDetail] = useState<WorkDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -277,15 +107,15 @@ export function StudentDetail() {
       .finally(() => setLoading(false));
   }, [telegramId]);
 
-  const handleSelectWork = (workId: number) => {
-    if (!user || !telegramId) return;
-    if (selectedWorkId === workId) return;
+  const handleSelectWork = (token: string | null) => {
+    if (!token) return;
+    if (selectedWorkId === token) return;
 
-    setSelectedWorkId(workId);
+    setSelectedWorkId(token);
     setWorkDetail(null);
     setDetailLoading(true);
 
-    api.getStudentWorkStats(String(user.id), telegramId, String(workId), 1)
+    api.getWorkStats(token)
       .then(setWorkDetail)
       .catch(() => toast.error("Ошибка загрузки статистики работы"))
       .finally(() => setDetailLoading(false));
@@ -308,8 +138,7 @@ export function StudentDetail() {
     return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
   }
 
-  const statsUrl = (workId: number) =>
-    `/student/view-stats?uuid=${user?.id}&tid=${telegramId}&work=${workId}&detailed=1`;
+  const statsUrl = (token: string) => `/student/view-stats?token=${token}`;
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:h-full lg:min-h-0">
@@ -362,11 +191,11 @@ export function StudentDetail() {
               <Card
                 key={w.work_id}
                 className={`cursor-pointer transition-colors hover:bg-[var(--color-accent)] ${
-                  selectedWorkId === w.work_id
+                  selectedWorkId === w.share_token
                     ? "bg-[var(--color-accent)]"
                     : ""
                 }`}
-                onClick={() => handleSelectWork(w.work_id)}
+                onClick={() => handleSelectWork(w.share_token)}
               >
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-start gap-2">
@@ -395,8 +224,9 @@ export function StudentDetail() {
                       </div>
                       <ScoreBar fully={w.fully} semi={w.semi} zero={w.zero} total={w.questions_amount} />
                     </div>
+                    {w.share_token && (
                     <a
-                      href={statsUrl(w.work_id)}
+                      href={statsUrl(w.share_token)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="shrink-0"
@@ -406,6 +236,7 @@ export function StudentDetail() {
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     </a>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginPage } from "@/pages/Login";
 import { AdminLayout } from "@/pages/admin/Layout";
@@ -27,9 +28,21 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    document.documentElement.classList.contains("dark") ? "dark" : "light"
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <BrowserRouter>
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-right" theme={theme} />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/student/view-stats" element={<StudentViewStats />} />

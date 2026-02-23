@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from db.crud import (get_user, get_user_works)
+from db.crud import get_user_works
 from tgbot.lexicon.messages import lexicon
 from tgbot.lexicon.buttons import lexicon as btns_lexicon
 from utils.user_statistics import get_user_statistics
@@ -30,18 +30,14 @@ async def cmd_stats(message: Message, state: FSMContext):
         stats_list = get_user_statistics(message.from_user.id)
         for index, stats_el in enumerate(stats_list):
             text_to_send += lexicon['statistics']['stats_block'].format(
-                # index + 1,
                 '',
+                f"https://{getenv('DOMAIN')}",
+                stats_el['general']['share_token'] or '',
                 stats_el['general']['name'],
-                get_user(message.from_user.id).id,
-                message.from_user.id,
-                stats_el['general']['work_id'],
                 '',
-                # stats_el['general']['work_id'],
                 stats_el['results']['final_mark'],
                 stats_el['results']['max_mark'],
                 stats_el['general']['time']['end'] - stats_el['general']['time']['start'],
-                f"https://{getenv('DOMAIN')}"
             )
 
         # text_to_send += lexicon['statistics']['hint_to_open_stats']

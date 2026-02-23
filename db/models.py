@@ -54,6 +54,7 @@ class User(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     telegram_id = Column(BigInteger, nullable=False)
     name = Column(Text, nullable=False)
+    is_deleted = Column(Integer, nullable=False, default=0)
 
 
 # Таблица 'works'
@@ -69,6 +70,7 @@ class Work(Base):
     hand_work_id = Column(VARCHAR(50), nullable=True)
     start_datetime = Column(DateTime, nullable=False, comment='Начало выполнения задания', default=datetime.now)
     end_datetime = Column(DateTime, nullable=True, comment='Окончание выполнения задания')
+    share_token = Column(VARCHAR(36), nullable=True, unique=True, comment='UUID токен для публичной ссылки на результат')
 
 
 # Таблица 'work_questions_list'
@@ -94,3 +96,4 @@ class HandWork(Base):
     identificator = Column(VARCHAR(100), nullable=False, unique=True)
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     questions_list = Column(JSON, nullable=False)
+    is_deleted = Column(Integer, nullable=False, default=0)

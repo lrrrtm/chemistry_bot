@@ -70,9 +70,9 @@ def run_backup() -> dict:
         zip_path  = os.path.join(temp_dir, f"chembot_backup_{timestamp}.zip")
 
         image_dirs = {
-            "images/answers":   os.path.join(root, "data", "answers_images"),
-            "images/questions": os.path.join(root, "data", "questions_images"),
-            "images/users":     os.path.join(root, "data", "users_photos"),
+            "images/answers":   os.path.join(root, "data", "images", "answers"),
+            "images/questions": os.path.join(root, "data", "images", "questions"),
+            "images/users":     os.path.join(root, "data", "images", "users"),
         }
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

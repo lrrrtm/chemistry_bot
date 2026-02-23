@@ -6,9 +6,9 @@ def image_to_base64(image_type: str, question_id):
     image_path = 'temp'
 
     if image_type == "question":
-        image_path = os.path.join(os.getenv('ROOT_FOLDER'), f"data/questions_images/{question_id}.png")
+        image_path = os.path.join(os.getenv('ROOT_FOLDER'), f"data/images/questions/{question_id}.png")
     elif image_type == "answer":
-        image_path = os.path.join(os.getenv('ROOT_FOLDER'), f"data/answers_images/{question_id}.png")
+        image_path = os.path.join(os.getenv('ROOT_FOLDER'), f"data/images/answers/{question_id}.png")
     elif image_type == "temp":
         image_path = os.path.join(os.getenv('ROOT_FOLDER'), f"data/temp/{question_id}.png")
 

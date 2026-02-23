@@ -38,8 +38,8 @@ async def cmd_admin(message: types.Message):
 @router.message(Command("cleardb"))
 async def cmd_cleardb(message: types.Message):
     if message.chat.id in [int(getenv('ADMIN_ID')), int(getenv('DEVELOPER_ID'))]:
-        for dir in [f"{os.getenv('ROOT_FOLDER')}/data/questions_images",
-                    f"{os.getenv('ROOT_FOLDER')}/data/answers_images"]:
+        for dir in [f"{os.getenv('ROOT_FOLDER')}/data/images/questions",
+                    f"{os.getenv('ROOT_FOLDER')}/data/images/answers"]:
             count = clear_trash_by_db(dir)
             await message.answer(
                 text=f"{dir.split('/')[-1]}: {count}"
@@ -307,7 +307,7 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
                         if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png"):
                             move_image(
                                 source_path=f"{getenv('ROOT_FOLDER')}/data/temp/q_{el.import_id}.png",
-                                destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{el.id}.png"
+                                destination_path=f"{getenv('ROOT_FOLDER')}/data/images/questions/{el.id}.png"
                             )
                         else:
                             pass
@@ -316,16 +316,10 @@ async def catch_pool_list_table(message: Message, state: FSMContext):
                         if os.path.exists(f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png"):
                             move_image(
                                 source_path=f"{getenv('ROOT_FOLDER')}/data/temp/a_{el.import_id}.png",
-                                destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{el.id}.png"
+                                destination_path=f"{getenv('ROOT_FOLDER')}/data/images/answers/{el.id}.png"
                             )
                         else:
                             pass
-
-                # if import_data['errors']:
-                #     ids = "\n".join(str(a) for a in import_data['errors'])
-                #     errors_text = f"\n\n<b>Некоторые вопросы не удалось добавить, их строки:</b> \n{ids}"
-                # else:
-                #     errors_text = ""
 
                 await message.answer(
                     text=f"<b>{lexicon['admin']['insert_pool']}</b>"

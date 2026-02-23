@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, Database, Save, Trash2, Upload, X, Download, FileSpreadsheet, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Search, Database, Save, Trash2, Upload, X, Download, Plus, ChevronLeft, BookPlus, FileSpreadsheet } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 type QuestionFull = {
   id: number;
@@ -43,6 +46,7 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function PoolPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const autoOpenId = (location.state as { openQuestionId?: number } | null)?.openQuestionId;
   const [pool, setPool] = useState<PoolItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,11 +58,14 @@ export function PoolPage() {
   const [edited, setEdited] = useState<Partial<QuestionFull>>({});
   const [newTagInput, setNewTagInput] = useState("");
   const newTagRef = useRef<HTMLInputElement>(null);
-  const [importOpen, setImportOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const importFileRef = useRef<HTMLInputElement>(null);
+
+  // Mobile step: 0 = question list, 1 = question editor
+  const [mobileStep, setMobileStep] = useState<0 | 1>(0);
 
   useEffect(() => {
     api.getPool()
@@ -92,6 +99,8 @@ export function PoolPage() {
     setSelected(null);
     setLoadingQuestion(true);
     setNewTagInput("");
+    setMobileStep(1);
+    scrollToTop();
     try {
       const q = await api.getQuestion(id);
       setSelected(q);
@@ -139,6 +148,8 @@ export function PoolPage() {
       setPool((p) => p.filter((q) => q.id !== selected.id));
       setSelected(null);
       setSelectedId(null);
+      setMobileStep(0);
+      scrollToTop();
     } catch {
       toast.error("Ошибка удаления");
     }
@@ -217,10 +228,14 @@ export function PoolPage() {
 
   if (loading) return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
 
+  function scrollToTop() {
+    document.querySelector("main")?.scrollTo(0, 0);
+  }
+
   return (
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* Left panel — question list */}
-      <div className="lg:w-80 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+      <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         {/* Header */}
         <div className="px-4 pt-4 pb-2 border-b shrink-0 space-y-3">
           <div className="flex items-center justify-between">
@@ -232,73 +247,12 @@ export function PoolPage() {
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs gap-1"
-              onClick={() => setImportOpen(!importOpen)}
+              onClick={() => setAddDialogOpen(true)}
             >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Excel
-              {importOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              <Plus className="h-3.5 w-3.5" />
+              Добавить
             </Button>
           </div>
-
-          {/* Collapsible import section */}
-          {importOpen && (
-            <div className="space-y-2 pb-1">
-              <p className="text-xs text-[var(--color-muted-foreground)]">
-                Скачайте шаблон, заполните его и загрузите обратно.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-7"
-                disabled={downloadingTemplate}
-                onClick={async () => {
-                  setDownloadingTemplate(true);
-                  try {
-                    const blob = await api.getPoolTemplate();
-                    downloadBlob(blob, "chembot_pool_list.xlsx");
-                  } catch {
-                    toast.error("Ошибка скачивания шаблона");
-                  } finally {
-                    setDownloadingTemplate(false);
-                  }
-                }}
-              >
-                <Download className="h-3 w-3 mr-1.5" />
-                {downloadingTemplate ? "Скачивание..." : "Скачать шаблон"}
-              </Button>
-              <Input
-                ref={importFileRef}
-                type="file"
-                accept=".xlsx"
-                className="text-xs h-7"
-                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-              />
-              <Button
-                size="sm"
-                className="w-full text-xs h-7"
-                disabled={importing || !importFile}
-                onClick={async () => {
-                  if (!importFile) return;
-                  setImporting(true);
-                  try {
-                    const result = await api.importPoolExcel(importFile);
-                    toast.success(result.message);
-                    setImportFile(null);
-                    if (importFileRef.current) importFileRef.current.value = "";
-                    const updatedPool = await api.getPool();
-                    setPool(updatedPool);
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Ошибка импорта");
-                  } finally {
-                    setImporting(false);
-                  }
-                }}
-              >
-                <Upload className="h-3 w-3 mr-1.5" />
-                {importing ? "Импорт..." : "Импортировать"}
-              </Button>
-            </div>
-          )}
 
           {/* Search */}
           <div className="relative">
@@ -356,7 +310,19 @@ export function PoolPage() {
       </div>
 
       {/* Right panel — question editor */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col flex-1 min-w-0 min-h-0`}>
+        {/* Mobile back bar */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-[var(--color-card)] lg:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 h-7 px-2 text-xs"
+            onClick={() => { setMobileStep(0); scrollToTop(); }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            К списку
+          </Button>
+        </div>
         {loadingQuestion ? (
           <div className="flex-1 flex items-center justify-center text-[var(--color-muted-foreground)]">
             <p className="text-sm">Загрузка вопроса...</p>
@@ -561,6 +527,85 @@ export function PoolPage() {
           </>
         )}
       </div>
+
+      {/* Add question dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Добавить вопросы</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => { setAddDialogOpen(false); navigate("/admin/add-question"); }}
+            >
+              <BookPlus className="h-4 w-4" />
+              Создать вопрос вручную
+            </Button>
+
+            <div className="relative flex items-center gap-3 py-2">
+              <div className="flex-1 border-t border-[var(--color-border)]" />
+              <span className="text-xs text-[var(--color-muted-foreground)]">или через Excel</span>
+              <div className="flex-1 border-t border-[var(--color-border)]" />
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              disabled={downloadingTemplate}
+              onClick={async () => {
+                setDownloadingTemplate(true);
+                try {
+                  const blob = await api.getPoolTemplate();
+                  downloadBlob(blob, "chembot_pool_list.xlsx");
+                } catch {
+                  toast.error("Ошибка скачивания шаблона");
+                } finally {
+                  setDownloadingTemplate(false);
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              {downloadingTemplate ? "Скачивание..." : "Скачать шаблон"}
+            </Button>
+
+            <div className="space-y-2">
+              <Input
+                ref={importFileRef}
+                type="file"
+                accept=".xlsx"
+                className="text-sm"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              />
+              <Button
+                className="w-full"
+                disabled={importing || !importFile}
+                onClick={async () => {
+                  if (!importFile) return;
+                  setImporting(true);
+                  try {
+                    const result = await api.importPoolExcel(importFile);
+                    toast.success(result.message);
+                    setImportFile(null);
+                    if (importFileRef.current) importFileRef.current.value = "";
+                    const updatedPool = await api.getPool();
+                    setPool(updatedPool);
+                    setAddDialogOpen(false);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Ошибка импорта");
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                {importing ? "Импорт..." : "Импортировать Excel"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

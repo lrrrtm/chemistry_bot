@@ -28,7 +28,7 @@ async function request<T>(
       const json = JSON.parse(text);
       detail = json.detail ?? text;
     } catch {}
-    throw new Error(detail);
+    throw new Error(detail || `Ошибка ${res.status}`);
   }
   return res.json();
 }
@@ -42,6 +42,9 @@ export const api = {
     }),
 
   verify: () => request<{ ok: boolean }>("/auth/verify"),
+
+  recoverPassword: () =>
+    request<{ ok: boolean }>("/auth/recover-password", { method: "POST" }),
 
   // Users
   getUsers: () =>
@@ -58,6 +61,7 @@ export const api = {
     request<
       Array<{
         work_id: number;
+        share_token: string | null;
         name: string;
         type: string;
         start: string | null;
@@ -293,9 +297,10 @@ export const api = {
     }),
 
   // Student (public)
-  getStudentWorkStats: (uuid: string, tid: string, work: string, detailed = 0) =>
+  getWorkStats: (token: string) =>
     request<{
       general: {
+        telegram_id: number;
         user_name: string | null;
         name: string;
         start: string | null;
@@ -317,8 +322,7 @@ export const api = {
         question_image: boolean;
         answer_image: boolean;
       }>;
-      detailed: boolean;
-    }>(`/student/work-stats?uuid=${uuid}&tid=${tid}&work=${work}&detailed=${detailed}`),
+    }>(`/student/work-stats?token=${token}`),
 
   imageUrl: {
     question: (id: number) => `${BASE}/images/question/${id}`,

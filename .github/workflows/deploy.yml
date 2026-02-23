@@ -1,0 +1,156 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Lint · type-check · unit tests
+  # ───────────────────────────────────────────────────────────────────────────
+  check:
+    name: Lint & tests
+    runs-on: ubuntu-latest
+
+    env:
+      # Minimal env so api.config doesn't crash during import
+      PANEL_PASSWORD: ci_test_secret
+      ROOT_FOLDER: "."
+      BOT_API_KEY: ""
+      ADMIN_ID: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Python ──────────────────────────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short
+
+      # ── Frontend ─────────────────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+      - name: ESLint
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Production build
+        run: npm run build
+        working-directory: frontend
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Build Docker image and push to GHCR
+  # ───────────────────────────────────────────────────────────────────────────
+  build-push:
+    name: Build & push image
+    runs-on: ubuntu-latest
+    needs: check
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Deploy to production server via SSH
+  # ───────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: production  # enables manual approval gate (optional)
+
+    steps:
+      # Compute lowercase image name: GHCR requires lowercase owner/repo
+      - name: Set image name
+        run: |
+          IMAGE=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "GHCR_IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_IMAGE: ${{ env.GHCR_IMAGE }}
+        with:
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT }}
+          envs:     GHCR_IMAGE
+          script: |
+            set -e
+
+            # Move to project directory
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Pull latest compose files
+            git pull origin master
+
+            # Pull the new Docker image from GHCR
+            GHCR_IMAGE="$GHCR_IMAGE" \
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+
+            # Recreate only changed containers, keep db running
+            GHCR_IMAGE="$GHCR_IMAGE" \
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --remove-orphans
+
+            # Clean up dangling images older than 24h
+            docker image prune -f --filter "until=24h"
+
+            echo "Deploy complete:  $(date -u '+%Y-%m-%d %H:%M:%S UTC')"

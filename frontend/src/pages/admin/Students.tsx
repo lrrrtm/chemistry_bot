@@ -1,17 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, Users, BookOpen, FlaskConical, ExternalLink, Trash2 } from "lucide-react";
+import { Search, Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save } from "lucide-react";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+type QuestionFull = {
+  id: number;
+  text: string;
+  answer: string;
+  level: number;
+  full_mark: number;
+  tags_list: string[];
+  is_rotate: number;
+  is_selfcheck: number;
+  question_image: boolean;
+  answer_image: boolean;
+  type: string;
+};
 
 type User = { id: number; telegram_id: number; name: string };
 
@@ -87,16 +106,6 @@ function getWorkTypeBadge(type: string) {
   return <Badge variant="outline">Тренировка</Badge>;
 }
 
-function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; zero: number; total: number }) {
-  if (total === 0) return null;
-  return (
-    <div className="flex rounded-full overflow-hidden h-2 mt-2">
-      <div className="bg-green-500 transition-all" style={{ width: `${(fully / total) * 100}%` }} />
-      <div className="bg-yellow-500 transition-all" style={{ width: `${(semi / total) * 100}%` }} />
-      <div className="bg-red-500 transition-all" style={{ width: `${(zero / total) * 100}%` }} />
-    </div>
-  );
-}
 
 function getResultColor(mark: number, fullMark: number) {
   if (mark === fullMark) return "text-green-600 dark:text-green-400";
@@ -112,6 +121,62 @@ function ResultBadge({ mark, fullMark }: { mark: number; fullMark: number }) {
 
 function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loading: boolean }) {
   const navigate = useNavigate();
+  const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
+  const [questionData, setQuestionData] = useState<QuestionFull | null>(null);
+  const [questionEdited, setQuestionEdited] = useState<Partial<QuestionFull>>({});
+  const [questionLoading, setQuestionLoading] = useState(false);
+  const [questionSaving, setQuestionSaving] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
+  const newTagRef = useRef<HTMLInputElement>(null);
+
+  const openQuestionDialog = async (id: number) => {
+    setQuestionDialogOpen(true);
+    setQuestionData(null);
+    setQuestionEdited({});
+    setQuestionLoading(true);
+    setNewTagInput("");
+    try {
+      const q = await api.getQuestion(id);
+      setQuestionData(q);
+      setQuestionEdited({ ...q });
+    } catch {
+      toast.error("Ошибка загрузки вопроса");
+      setQuestionDialogOpen(false);
+    } finally {
+      setQuestionLoading(false);
+    }
+  };
+
+  const handleQuestionSave = async () => {
+    if (!questionData) return;
+    setQuestionSaving(true);
+    try {
+      await api.updateQuestion(questionData.id, {
+        text: questionEdited.text ?? questionData.text,
+        answer: questionEdited.answer ?? questionData.answer,
+        level: questionEdited.level ?? questionData.level,
+        full_mark: questionEdited.full_mark ?? questionData.full_mark,
+        tags_list: questionEdited.tags_list ?? questionData.tags_list,
+        is_rotate: questionEdited.is_rotate ?? questionData.is_rotate,
+        is_selfcheck: questionEdited.is_selfcheck ?? questionData.is_selfcheck,
+      });
+      toast.success("Вопрос обновлён");
+    } catch {
+      toast.error("Ошибка сохранения");
+    } finally {
+      setQuestionSaving(false);
+    }
+  };
+
+  const addTag = () => {
+    const tag = newTagInput.trim();
+    if (!tag || !questionData) return;
+    const current = questionEdited.tags_list ?? questionData.tags_list;
+    if (current.includes(tag)) { toast.warning("Такой тег уже есть"); return; }
+    setQuestionEdited((p) => ({ ...p, tags_list: [...current, tag] }));
+    setNewTagInput("");
+    newTagRef.current?.focus();
+  };
 
   if (loading) {
     return (
@@ -178,9 +243,10 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
               <div className="bg-red-500" style={{ width: `${(detail.general.zero / total) * 100}%` }} />
             )}
           </div>
-          <p className="text-xs text-[var(--color-muted-foreground)] text-right">
-            Завершено: {formatDate(detail.general.end)}
-          </p>
+          <div className="flex justify-between text-xs text-[var(--color-muted-foreground)]">
+            <span>Начало: {formatDate(detail.general.start)}</span>
+            <span>Завершено: {formatDate(detail.general.end)}</span>
+          </div>
         </div>
       </div>
 
@@ -192,29 +258,29 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
       {detail.questions.map((q) => (
         <Card
           key={q.question_id}
-          className={`border-l-4 ${
-            q.user_mark === q.full_mark
-              ? "border-l-green-500"
-              : q.user_mark > 0
-              ? "border-l-yellow-500"
-              : "border-l-red-500"
-          }`}
+          className="border-l-4"
+          style={{
+            borderLeftColor:
+              q.user_mark === q.full_mark
+                ? "#22c55e"
+                : q.user_mark > 0
+                ? "#eab308"
+                : "#ef4444",
+          }}
         >
           <CardContent className="pt-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                Вопрос №{q.index} (id{q.question_id})
-              </span>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
-                  title="Открыть в пуле вопросов"
-                  onClick={() => navigate("/admin/pool", { state: { openQuestionId: q.question_id } })}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
+                  Вопрос №{q.index}
+                </span>
+                <span
+                  className="inline-flex items-center rounded-md bg-[var(--color-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-muted-foreground)] cursor-pointer hover:bg-[var(--color-accent)] hover:text-[var(--color-accent-foreground)] transition-colors"
+                  title="Просмотр вопроса"
+                  onClick={() => openQuestionDialog(q.question_id)}
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Button>
+                  #{q.question_id}
+                </span>
                 <ResultBadge mark={q.user_mark} fullMark={q.full_mark} />
               </div>
             </div>
@@ -230,16 +296,14 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
               />
             )}
 
-            <div className="space-y-1.5 text-sm border-t pt-3">
-              <div className="flex gap-2">
-                <span className="text-[var(--color-muted-foreground)] shrink-0">Ответ ученика:</span>
-                <span className={getResultColor(q.user_mark, q.full_mark)}>
-                  {q.user_answer || "—"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-[var(--color-muted-foreground)] shrink-0">Верный ответ:</span>
+            <div className="border-t pt-3">
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="text-[var(--color-muted-foreground)]">Ответ ученика</span>
+                <span className="text-[var(--color-muted-foreground)]">Верный ответ</span>
+                <span className="text-[var(--color-muted-foreground)]">Баллы</span>
+                <span className={`font-medium ${getResultColor(q.user_mark, q.full_mark)}`}>{q.user_answer || "—"}</span>
                 <span className="text-green-600 dark:text-green-400 font-medium">{q.answer}</span>
+                <span className={`font-medium ${getResultColor(q.user_mark, q.full_mark)}`}>{q.user_mark} из {q.full_mark}</span>
               </div>
               {q.answer_image && (
                 <img
@@ -249,18 +313,176 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
                   onError={(e) => (e.currentTarget.style.display = "none")}
                 />
               )}
-              <div className="flex gap-2 text-xs text-[var(--color-muted-foreground)]">
-                <span>Баллы:</span>
-                <span className={`font-medium ${getResultColor(q.user_mark, q.full_mark)}`}>
-                  {q.user_mark} из {q.full_mark}
-                </span>
-              </div>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      <Dialog open={questionDialogOpen} onOpenChange={setQuestionDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {questionLoading ? (
+            <div className="flex items-center justify-center py-12 text-[var(--color-muted-foreground)]">
+              <p className="text-sm">Загрузка вопроса...</p>
+            </div>
+          ) : questionData && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  Вопрос #{questionData.id}
+                  <Badge variant="outline" className="text-xs">{questionData.type}</Badge>
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label>Текст вопроса</Label>
+                  <Textarea
+                    value={questionEdited.text ?? questionData.text}
+                    onChange={(e) => setQuestionEdited((p) => ({ ...p, text: e.target.value }))}
+                    rows={4}
+                  />
+                </div>
+
+                {questionData.question_image && (
+                  <img
+                    src={api.imageUrl.question(questionData.id)}
+                    alt="вопрос"
+                    className="w-full max-h-48 object-contain rounded-lg border"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                )}
+
+                <div className="space-y-2">
+                  <Label>Текст ответа</Label>
+                  <Textarea
+                    value={questionEdited.answer ?? questionData.answer}
+                    onChange={(e) => setQuestionEdited((p) => ({ ...p, answer: e.target.value }))}
+                    rows={4}
+                  />
+                </div>
+
+                {questionData.answer_image && (
+                  <img
+                    src={api.imageUrl.answer(questionData.id)}
+                    alt="ответ"
+                    className="w-full max-h-48 object-contain rounded-lg border"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Сложность (1–5)</Label>
+                    <Select
+                      value={String(questionEdited.level ?? questionData.level)}
+                      onValueChange={(v) => setQuestionEdited((p) => ({ ...p, level: Number(v) }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Максимальный балл</Label>
+                    <Select
+                      value={String(questionEdited.full_mark ?? questionData.full_mark)}
+                      onValueChange={(v) => setQuestionEdited((p) => ({ ...p, full_mark: Number(v) }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Теги</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      ref={newTagRef}
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      placeholder="Новый тег..."
+                      className="h-8 text-sm"
+                      onKeyDown={(e) => { if (e.key === "Enter") addTag(); }}
+                    />
+                    <Button size="sm" className="h-8 shrink-0" disabled={!newTagInput.trim()} onClick={addTag}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Добавить
+                    </Button>
+                  </div>
+                  {(questionEdited.tags_list ?? questionData.tags_list).length === 0 ? (
+                    <p className="text-sm text-[var(--color-muted-foreground)]">Нет тегов</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {(questionEdited.tags_list ?? questionData.tags_list).map((tag) => (
+                        <div key={tag} className="flex items-center gap-1.5 bg-[var(--color-accent)] rounded-full px-3 py-1 text-sm">
+                          <span>{tag}</span>
+                          <button
+                            className="ml-0.5 hover:text-[var(--color-destructive)] transition-colors"
+                            onClick={() => setQuestionEdited((p) => ({
+                              ...p,
+                              tags_list: (p.tags_list ?? questionData.tags_list).filter((t) => t !== tag),
+                            }))}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={Boolean(questionEdited.is_rotate ?? questionData.is_rotate)}
+                      onCheckedChange={(v) => setQuestionEdited((p) => ({ ...p, is_rotate: Number(v) }))}
+                    />
+                    <Label>Вращение ответа</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={Boolean(questionEdited.is_selfcheck ?? questionData.is_selfcheck)}
+                      onCheckedChange={(v) => setQuestionEdited((p) => ({ ...p, is_selfcheck: Number(v) }))}
+                    />
+                    <Label>Самопроверка</Label>
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setQuestionDialogOpen(false);
+                      navigate("/admin/pool", { state: { openQuestionId: questionData.id } });
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Открыть в пуле
+                  </Button>
+                  <Button onClick={handleQuestionSave} disabled={questionSaving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {questionSaving ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function scrollToTop() {
+  document.querySelector("main")?.scrollTo(0, 0);
 }
 
 export function Students() {
@@ -276,6 +498,9 @@ export function Students() {
   const [selectedWorkId, setSelectedWorkId] = useState<number | null>(null);
   const [workDetail, setWorkDetail] = useState<WorkDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Mobile step: 0 = student list, 1 = works list, 2 = work detail
+  const [mobileStep, setMobileStep] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
     if (_usersCache) {
@@ -296,6 +521,8 @@ export function Students() {
     setSelectedWorkId(null);
     setWorkDetail(null);
     setWorksLoading(true);
+    setMobileStep(1);
+    scrollToTop();
     api.getUserStats(user.telegram_id)
       .then(setWorks)
       .catch(() => toast.error("Ошибка загрузки работ"))
@@ -307,6 +534,8 @@ export function Students() {
     setSelectedWorkId(workId);
     setWorkDetail(null);
     setDetailLoading(true);
+    setMobileStep(2);
+    scrollToTop();
     api.getStudentWorkStats(
       String(selectedUser.id),
       String(selectedUser.telegram_id),
@@ -330,6 +559,8 @@ export function Students() {
       setWorks([]);
       setSelectedWorkId(null);
       setWorkDetail(null);
+      setMobileStep(0);
+      scrollToTop();
       toast.success("Ученик удалён");
     } catch {
       toast.error("Ошибка удаления");
@@ -356,7 +587,7 @@ export function Students() {
   return (
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* ── Column 1: Student list ─────────────────────────────────────────── */}
-      <div className="lg:w-80 shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+      <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
@@ -405,11 +636,21 @@ export function Students() {
       </div>
 
       {/* ── Column 2: Works list ───────────────────────────────────────────── */}
-      <div className="lg:w-72 shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+      <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col lg:w-72 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px]">
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
-            {selectedUser ? selectedUser.name : "Работы"}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 lg:hidden"
+              onClick={() => { setMobileStep(0); scrollToTop(); }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
+              {selectedUser ? selectedUser.name : "Работы"}
+            </span>
+          </div>
           {selectedUser && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -475,7 +716,7 @@ export function Students() {
                     {formatDate(w.end)}
                   </p>
                   <div className="flex items-center gap-2 mt-1 text-xs">
-                    <span className="font-semibold">{w.final_mark} из {w.max_mark} б.</span>
+                    <span className="font-semibold">{w.final_mark}/{w.max_mark} б.</span>
                     <span className="flex items-center gap-0.5 text-green-600">
                       <span className="inline-block h-2 w-2 rounded-full bg-green-500 shrink-0" />
                       {w.fully}
@@ -489,7 +730,6 @@ export function Students() {
                       {w.zero}
                     </span>
                   </div>
-                  <ScoreBar fully={w.fully} semi={w.semi} zero={w.zero} total={w.questions_amount} />
                 </div>
                 <a
                   href={statsUrl(w.work_id)}
@@ -507,7 +747,31 @@ export function Students() {
       </div>
 
       {/* ── Column 3: Work detail ──────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+      <div className={`${mobileStep !== 2 ? "hidden lg:flex" : "flex"} flex-col flex-1 min-w-0 min-h-0`}>
+        {/* Mobile nav bar */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-[var(--color-card)] lg:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 h-7 px-2 text-xs"
+            onClick={() => { setMobileStep(1); scrollToTop(); }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Работы
+          </Button>
+          {selectedUser && selectedWorkId && (
+            <a
+              href={statsUrl(selectedWorkId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto"
+            >
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </a>
+          )}
+        </div>
         <div className="flex-1 min-h-0 overflow-y-auto p-4">
           <WorkDetailPanel detail={workDetail} loading={detailLoading} />
         </div>

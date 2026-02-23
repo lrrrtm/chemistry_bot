@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, X, ChevronRight, Tags } from "lucide-react";
+import { Plus, Trash2, X, ChevronRight, ChevronLeft, Tags } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ import {
 type TopicTag = { tag: string; count: number };
 type TopicItem = { id: number; name: string; tags: TopicTag[] };
 type TopicsData = Record<string, TopicItem[]>;
+
+function scrollToTop() {
+  document.querySelector("main")?.scrollTo(0, 0);
+}
 
 export function Topics() {
   const [data, setData] = useState<TopicsData>({});
@@ -32,6 +36,9 @@ export function Topics() {
 
   const [newTagText, setNewTagText] = useState("");
   const [savingTags, setSavingTags] = useState(false);
+
+  // Mobile step: 0 = volumes, 1 = topics, 2 = tags
+  const [mobileStep, setMobileStep] = useState<0 | 1 | 2>(0);
 
   const newVolumeRef = useRef<HTMLInputElement>(null);
   const newTopicRef = useRef<HTMLInputElement>(null);
@@ -67,6 +74,8 @@ export function Topics() {
     setSelectedTopicId(null);
     setNewVolumeName("");
     setShowNewVolume(false);
+    setMobileStep(1);
+    scrollToTop();
   };
 
   const handleDeleteVolume = async (volume: string) => {
@@ -82,6 +91,8 @@ export function Topics() {
       if (selectedVolume === volume) {
         setSelectedVolume(null);
         setSelectedTopicId(null);
+        setMobileStep(0);
+        scrollToTop();
       }
       toast.success("Раздел удалён");
     } catch {
@@ -108,6 +119,8 @@ export function Topics() {
       setSelectedTopicId(t.id);
       setNewTopicName("");
       setShowNewTopic(false);
+      setMobileStep(2);
+      scrollToTop();
       toast.success("Тема создана");
     } catch {
       toast.error("Ошибка создания темы");
@@ -127,7 +140,11 @@ export function Topics() {
         }
         return next;
       });
-      if (selectedTopicId === topicId) setSelectedTopicId(null);
+      if (selectedTopicId === topicId) {
+        setSelectedTopicId(null);
+        setMobileStep(1);
+        scrollToTop();
+      }
       toast.success("Тема удалена");
     } catch {
       toast.error("Ошибка удаления темы");
@@ -206,7 +223,7 @@ export function Topics() {
   return (
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* ── Column 1: Volumes ────────────────────────────────────────────── */}
-      <div className="lg:w-56 shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+      <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-56 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
           <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
             Разделы
@@ -259,6 +276,8 @@ export function Topics() {
                   setSelectedVolume(volume);
                   setSelectedTopicId(null);
                   setShowNewTopic(false);
+                  setMobileStep(1);
+                  scrollToTop();
                 }}
               >
                 <span className="flex-1 truncate">{volume}</span>
@@ -308,11 +327,21 @@ export function Topics() {
       </div>
 
       {/* ── Column 2: Topics ─────────────────────────────────────────────── */}
-      <div className="lg:w-64 shrink-0 flex flex-col min-h-0 border-b lg:border-b-0 lg:border-r">
+      <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col lg:w-64 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
         <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
-            {selectedVolume ? selectedVolume : "Темы"}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 lg:hidden"
+              onClick={() => { setMobileStep(0); scrollToTop(); }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
+              {selectedVolume ? selectedVolume : "Темы"}
+            </span>
+          </div>
           {selectedVolume && (
             <Button
               variant="ghost"
@@ -370,7 +399,11 @@ export function Topics() {
                     ? "bg-[var(--color-accent)] font-medium"
                     : ""
                 }`}
-                onClick={() => setSelectedTopicId(topic.id)}
+                onClick={() => {
+                  setSelectedTopicId(topic.id);
+                  setMobileStep(2);
+                  scrollToTop();
+                }}
               >
                 <span className="flex-1 truncate">{topic.name}</span>
                 <span className="text-xs text-[var(--color-muted-foreground)] shrink-0">
@@ -417,14 +450,24 @@ export function Topics() {
       </div>
 
       {/* ── Column 3: Tags ───────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+      <div className={`${mobileStep !== 2 ? "hidden lg:flex" : "flex"} flex-col flex-1 min-w-0 min-h-0`}>
         <div className="flex items-center justify-between px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[44px]">
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-            {selectedTopic ? selectedTopic.name : "Теги"}
-          </span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 lg:hidden"
+              onClick={() => { setMobileStep(1); scrollToTop(); }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)] truncate">
+              {selectedTopic ? selectedTopic.name : "Теги"}
+            </span>
+          </div>
           {selectedTopic && (
-            <span className="text-xs text-[var(--color-muted-foreground)] ml-2">
-              — {selectedTopic.tags.length} тегов
+            <span className="text-xs text-[var(--color-muted-foreground)] ml-2 shrink-0">
+              {selectedTopic.tags.length} тегов
             </span>
           )}
         </div>

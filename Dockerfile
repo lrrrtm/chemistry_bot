@@ -32,9 +32,9 @@ COPY --from=frontend-builder /frontend/dist ./frontend/dist
 
 # Ensure persistent data directories exist
 RUN mkdir -p \
-    data/questions_images \
-    data/answers_images \
-    data/users_photos \
+    data/images/questions \
+    data/images/answers \
+    data/images/users \
     data/temp \
     data/uploads \
     data/excel_templates \

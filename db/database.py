@@ -1,6 +1,6 @@
 import time
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 from db.models import Base
 from dotenv import load_dotenv
@@ -25,3 +25,21 @@ for _attempt in range(10):
         if _attempt == 9:
             raise
         time.sleep(3 * (_attempt + 1))
+
+
+def _run_migrations():
+    with engine.connect() as conn:
+        result = conn.execute(text(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            "WHERE TABLE_NAME='works' AND COLUMN_NAME='share_token' "
+            f"AND TABLE_SCHEMA='{getenv('DB_NAME')}'"
+        ))
+        if result.scalar() == 0:
+            conn.execute(text(
+                "ALTER TABLE works ADD COLUMN share_token VARCHAR(36) NULL UNIQUE COMMENT 'UUID токен для публичной ссылки на результат'"
+            ))
+            conn.commit()
+            logging.info("Migration: added share_token column to works table")
+
+
+_run_migrations()

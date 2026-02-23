@@ -296,10 +296,10 @@ def main(page: ft.Page):
             upload_image_config = page.session.get('upload_image_config')
 
             if upload_image_config['type'] == "question":
-                filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/{upload_image_config['id']}.png"
+                filepath = f"{getenv('ROOT_FOLDER')}/data/images/questions/{upload_image_config['id']}.png"
 
             elif upload_image_config['type'] == "answer":
-                filepath = f"{getenv('ROOT_FOLDER')}/data/answers_images/{upload_image_config['id']}.png"
+                filepath = f"{getenv('ROOT_FOLDER')}/data/images/answers/{upload_image_config['id']}.png"
 
             move_image(
                 source_path=f"{getenv('ROOT_FOLDER')}/data/uploads/{e.file_name}",
@@ -348,12 +348,12 @@ def main(page: ft.Page):
         image_data = e.control.data
 
         if image_data['type'] == "question":
-            old_filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/{image_data['id']}.png"
-            new_filepath = f"{getenv('ROOT_FOLDER')}/data/questions_images/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
+            old_filepath = f"{getenv('ROOT_FOLDER')}/data/images/questions/{image_data['id']}.png"
+            new_filepath = f"{getenv('ROOT_FOLDER')}/data/images/questions/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
 
         elif image_data['type'] == "answer":
-            old_filepath = f"{getenv('ROOT_FOLDER')}/data/answers_images/{image_data['id']}.png"
-            new_filepath = f"{getenv('ROOT_FOLDER')}/data/answers_images/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
+            old_filepath = f"{getenv('ROOT_FOLDER')}/data/images/answers/{image_data['id']}.png"
+            new_filepath = f"{getenv('ROOT_FOLDER')}/data/images/answers/removed_{datetime.now().timestamp()}_{image_data['id']}.png"
 
         if os.path.exists(old_filepath):
             os.rename(
@@ -1508,13 +1508,13 @@ def main(page: ft.Page):
             if data['q_img']['uploaded']:
                 move_image(
                     source_path=f"{getenv('ROOT_FOLDER')}/data/temp/{data['q_img']['id']}.png",
-                    destination_path=f"{getenv('ROOT_FOLDER')}/data/questions_images/{question.id}.png",
+                    destination_path=f"{getenv('ROOT_FOLDER')}/data/images/questions/{question.id}.png",
                 )
 
             if data['a_img']['uploaded']:
                 move_image(
                     source_path=f"{getenv('ROOT_FOLDER')}/data/temp/{data['a_img']['id']}.png",
-                    destination_path=f"{getenv('ROOT_FOLDER')}/data/answers_images/{question.id}.png",
+                    destination_path=f"{getenv('ROOT_FOLDER')}/data/images/answers/{question.id}.png",
                 )
 
             page.session.remove('gen_upload_data')

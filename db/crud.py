@@ -1,9 +1,8 @@
-import random
 from datetime import datetime
 from typing import List
 from contextlib import contextmanager
+import uuid
 
-from sqlalchemy import select, or_
 from sqlalchemy.orm import aliased
 
 from db.models import Pool, Topic, User, Work, WorkQuestion, Converting, HandWork
@@ -35,8 +34,9 @@ def create_user(name: str, tid: int) -> User:
 def remove_user(telegram_id: int):
     with get_session() as session:
         user = session.query(User).filter_by(telegram_id=telegram_id).first()
-        session.delete(user)
-        session.commit()
+        if user:
+            user.is_deleted = 1
+            session.commit()
         return user
 
 
@@ -44,14 +44,24 @@ def end_work(work_id: int) -> Work:
     with get_session() as session:
         work = session.query(Work).filter_by(id=work_id).first()
         work.end_datetime = datetime.now()
+        work.share_token = str(uuid.uuid4())
         session.commit()
         return work
+
+
+def get_work_by_token(token: str) -> Work:
+    with get_session() as session:
+        return session.query(Work).filter_by(share_token=token).first()
+
+
+def get_user_by_id(user_id: int) -> User:
+    with get_session() as session:
+        return session.query(User).filter_by(id=user_id).first()
 
 
 def remove_last_user_work(user: User):
     with get_session() as session:
         work = session.query(Work).filter_by(user_id=user.id).order_by(Work.id.desc()).first()
-        # print(work.start_datetime, '!!!!!!!!')
         session.delete(work)
         session.commit()
 
@@ -62,17 +72,6 @@ def remove_work(work_id: int) -> Work:
         session.delete(work)
         session.commit()
         return work
-
-
-def add_work_questions(work_id: int, questions_ids: List[int]) -> List[int]:
-    with get_session() as session:
-        ids = []
-        for question_id in questions_ids:
-            work_question = WorkQuestion(work_id=work_id, question_id=question_id)
-            session.add(work_question)
-            ids.append(work_question.id)
-        session.commit()
-        return ids
 
 
 def get_user_works(tid: int) -> List[Work]:
@@ -116,21 +115,10 @@ def get_all_pool(active: bool) -> List[Pool]:
         return data
 
 
-def get_paginated_pool(page_num, per_page=15) -> List[Pool]:
-    offset = (page_num - 1) * per_page
+def get_pool_by_tags(tags: list) -> List[Pool]:
     with get_session() as session:
-        items = session.query(Pool).filter_by(is_active=1).limit(per_page).offset(offset).all()
-        return items
-
-
-def get_pool_by_query(query: str) -> List[Pool]:
-    with get_session() as session:
-        if query.isnumeric():
-            items = session.query(Pool).filter_by(is_active=1, id=int(query)).all()
-        else:
-            items = session.query(Pool).filter_by(is_active=1).filter(Pool.text.like(f'%{query}%')).all()
-
-        return items
+        all_pool = session.query(Pool).filter_by(is_active=1).all()
+        return [q for q in all_pool if any(tag in q.tags_list for tag in tags)]
 
 
 def get_pool_by_id(id: int) -> Pool:
@@ -138,17 +126,6 @@ def get_pool_by_id(id: int) -> Pool:
         result = session.query(Pool).filter_by(id=id).first()
 
         return result
-
-
-def get_pool_by_tags(tags: List[str]) -> List[Pool]:
-    all_pool = get_all_pool(active=True)
-    result = set()
-    with get_session() as session:
-        for cur_tag in tags:
-            for q in all_pool:
-                if cur_tag in q.tags_list and cur_tag not in result:
-                    result.add(q)
-    return list(result)
 
 
 def get_all_topics(active: bool) -> List[Topic]:
@@ -167,16 +144,9 @@ def get_topic_by_volume(volume: str) -> List[Topic]:
         return data
 
 
-def get_all_tags() -> List[str]:
-    with get_session() as session:
-        stmt = select(Topic.tags_list)
-        tags_lists = session.execute(stmt).scalars().all()
-        return tags_lists
-
-
 def get_all_users() -> List[User]:
     with get_session() as session:
-        users = session.query(User).all()
+        users = session.query(User).filter_by(is_deleted=0).all()
         return users
 
 
@@ -238,32 +208,6 @@ def get_work_questions_joined_pool(work_id: int) -> List[WorkQuestion]:
             .all()
         )
         return results
-
-
-def get_random_questions_by_tag_list(tag_list: list) -> List[Pool]:
-    with get_session() as session:
-        selected_questions = []
-
-        for tag_data in tag_list:
-            tag = tag_data['tag']
-            limit = tag_data['limit']
-
-            t = tag
-            # todo: разобраться
-            # if "ege" in tag:
-            #     t = [tag]
-
-            questions = session.query(Pool).filter(Pool.tags_list.contains(t)).all()
-            if tag_data['limit'] is not None:
-                if len(questions) < limit:
-                    return None
-                else:
-                    selected_questions.extend(random.sample(questions, limit))
-
-            else:
-                selected_questions.extend(questions)
-
-        return selected_questions
 
 
 def create_new_work(user_id: int, work_type: str, topic_id: int, hand_work_id: str = None) -> Work:
@@ -400,7 +344,7 @@ def get_hand_work(identificator: str) -> HandWork:
 
 def get_all_hand_works() -> List[HandWork]:
     with get_session() as session:
-        return session.query(HandWork).order_by(HandWork.created_at.desc()).all()
+        return session.query(HandWork).filter_by(is_deleted=0).order_by(HandWork.created_at.desc()).all()
 
 
 def delete_hand_work(hand_work_id: int) -> bool:
@@ -408,7 +352,7 @@ def delete_hand_work(hand_work_id: int) -> bool:
         hw = session.query(HandWork).filter_by(id=hand_work_id).first()
         if not hw:
             return False
-        session.delete(hw)
+        hw.is_deleted = 1
         session.commit()
         return True
 
@@ -431,10 +375,11 @@ def get_ege_converting() -> List[Converting]:
 
 def update_ege_converting(data: dict):
     with get_session() as session:
-        for key, value in data.items():
-            el = session.query(Converting).filter_by(id=key).first()
-            el.output_mark = value['value']
-            session.commit()
+        for input_mark, value in data.items():
+            el = session.query(Converting).filter_by(input_mark=input_mark).first()
+            if el is not None:
+                el.output_mark = value['value']
+        session.commit()
 
 
 def insert_pool_data(data: List[Pool]):
@@ -490,7 +435,6 @@ def insert_topics_data(data):
         for volume, topics_data in data.items():
             for topic_name, tags_list in topics_data.items():
                 if len(list(filter(lambda item: item['volume'] == volume and item['topic_name'].lower() == topic_name.lower(), old_topic_names))) == 1:
-                # if topic_name.lower() in old_topic_names:
                     topic = session.query(Topic).filter_by(name=topic_name).first()
                     topic.tags_list = tags_list
                     topic.volume = volume
@@ -505,35 +449,3 @@ def insert_topics_data(data):
                     session.add(t)
 
         session.commit()
-
-        # for name, data in data.items():
-        #     if name.lower() in old_topic_names:
-        #         print("exists")
-        #         topic = session.query(Topic).filter_by(name=name).first()
-        #         topic.tags_list = data['tags']
-        #         topic.volume = data['volume']
-        #         topic.is_active = 1
-        #
-        #         print(topic.name, topic.volume, topic.tags_list)
-        #
-        #     else:
-        #         print("new")
-        #         t = Topic(
-        #             name=name,
-        #             tags_list=data['tags'],
-        #             volume=data['volume'],
-        #             is_active=1
-        #         )
-        #         print(t.name, t.volume, t.tags_list)
-        #         session.add(t)
-        # session.commit()
-
-
-if __name__ == "__main__":
-    data = get_pool_by_tags(['соли'])
-    try:
-        print(len(data))
-        for el in data:
-            print(el.id, el.text)
-    except Exception as e:
-        print(e)

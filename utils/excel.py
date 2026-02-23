@@ -75,25 +75,6 @@ def import_pool(filepath: str):
         return {'is_ok': False, 'comment': f"Ошибка при чтении данных таблицы: {str(e)}", 'errors': errors}
 
 
-def export_pool(data: List[Pool]):
-    wb = openpyxl.load_workbook(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_pool_list.xlsx")
-
-    sheet_name = "MAIN"
-    sheet = wb[sheet_name]
-
-    for index, q in enumerate(data):
-        sheet.cell(row=index + 2, column=1, value=q.type)
-        sheet.cell(row=index + 2, column=2, value=str(q.level))
-        sheet.cell(row=index + 2, column=3, value=q.text)
-        sheet.cell(row=index + 2, column=5, value=str(q.answer))
-        sheet.cell(row=index + 2, column=7, value=str(q.full_mark))
-        sheet.cell(row=index + 2, column=8, value="Да" if bool(q.is_rotate) else "Нет")
-        sheet.cell(row=index + 2, column=9, value="Да" if bool(q.is_selfcheck) else "Нет")
-        sheet.cell(row=index + 2, column=10, value=", ".join(q.tags_list))
-
-    wb.save(f"{getenv('ROOT_FOLDER')}/data/temp/chembot_pool_list.xlsx")
-
-
 def export_topics_list(db_data: List[Topic]):
     wb = openpyxl.load_workbook(f"{getenv('ROOT_FOLDER')}/data/excel_templates/chembot_topics_list.xlsx")
 

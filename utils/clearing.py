@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from db.crud import get_pool_by_tags, get_pool_by_id
+from db.crud import get_pool_by_id
 
 
 def clear_folder(folder_path):
