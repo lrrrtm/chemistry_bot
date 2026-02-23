@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, Database, Save, Trash2, Upload, X, Download, Plus, ChevronLeft, BookPlus, FileSpreadsheet } from "lucide-react";
+import { Database, Save, Trash2, Upload, X, Download, Plus, ChevronLeft, BookPlus, FileSpreadsheet } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
