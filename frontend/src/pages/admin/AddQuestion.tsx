@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Upload, X } from "lucide-react";
+import { Save } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { FileDropZone } from "@/components/ui/FileDropZone";
 
 interface FormData {
   text: string;
@@ -104,39 +105,14 @@ export function AddQuestion() {
   const ImageUpload = ({ type, file, preview }: { type: "question" | "answer"; file: File | null; preview: string | null }) => (
     <div className="space-y-2">
       <Label>{type === "question" ? "Изображение вопроса" : "Изображение ответа"}</Label>
-      {preview && (
-        <div className="relative rounded-lg overflow-hidden border">
-          <img src={preview} alt="preview" className="w-full max-h-40 object-contain" />
-          <button
-            className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
-            onClick={() => clearImage(type)}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      <label>
-        <input
-          type="file"
-          accept="image/png"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && handleImageSelect(type, e.target.files[0])}
-        />
-        <div
-          className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-[var(--color-primary)] transition-colors"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const f = e.dataTransfer.files[0];
-            if (f && f.type === "image/png") handleImageSelect(type, f);
-          }}
-        >
-          <Upload className="h-6 w-6 mx-auto text-[var(--color-muted-foreground)] mb-1" />
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            {file ? "Перетащите PNG или нажмите для замены" : "Перетащите PNG или нажмите для загрузки"}
-          </p>
-        </div>
-      </label>
+      <FileDropZone
+        file={file}
+        onChange={(f) => f ? handleImageSelect(type, f) : clearImage(type)}
+        accept="image/png"
+        compact
+        previewUrl={preview}
+        hint={file ? "Перетащите PNG или нажмите для замены" : "Перетащите PNG или нажмите для загрузки"}
+      />
     </div>
   );
 
