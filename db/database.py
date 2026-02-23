@@ -1,5 +1,6 @@
 import time
 import logging
+import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 from db.models import Base
@@ -57,6 +58,18 @@ def _run_migrations():
             'is_deleted INT NOT NULL DEFAULT 0',
             'is_deleted'
         )
+
+        # Fill share_token for old works that don't have one
+        rows = conn.execute(text(
+            "SELECT id FROM works WHERE share_token IS NULL"
+        )).fetchall()
+        for row in rows:
+            conn.execute(text(
+                "UPDATE works SET share_token = :token WHERE id = :wid"
+            ), {"token": str(uuid.uuid4()), "wid": row[0]})
+        if rows:
+            conn.commit()
+            logging.info("Migration: generated share_token for %d old works", len(rows))
 
 
 _run_migrations()
