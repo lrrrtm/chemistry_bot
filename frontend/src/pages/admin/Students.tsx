@@ -588,8 +588,8 @@ export function Students() {
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* ── Column 1: Student list ─────────────────────────────────────────── */}
       <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
-        <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)]">
-          <div className="relative">
+        <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px] flex items-center">
+          <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
             <Input
               placeholder="Поиск..."

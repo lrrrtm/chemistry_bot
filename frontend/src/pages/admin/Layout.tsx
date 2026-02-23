@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
-  Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw,
+  Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw, Sun, Moon,
 } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -20,8 +19,17 @@ const navItems = [
 
 export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDark, setIsDark] = useState(
+    () => localStorage.getItem("theme") === "dark" ||
+      (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  );
   const { logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   const handleLogout = () => {
     logout();
@@ -60,6 +68,13 @@ export function AdminLayout() {
       </nav>
 
       <div className="p-3 border-t border-[var(--color-sidebar-muted)] space-y-1">
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-[var(--color-sidebar-foreground)] hover:bg-[var(--color-sidebar-muted)] w-full text-left"
+        >
+          {isDark ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+          {isDark ? "Светлая тема" : "Тёмная тема"}
+        </button>
         <NavLink
           to="/admin/restore"
           onClick={() => setSidebarOpen(false)}
@@ -114,20 +129,15 @@ export function AdminLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-4 py-5 border-b bg-[var(--color-card)] shrink-0">
+        {/* Mobile top bar */}
+        <header className="flex items-center px-4 py-3 border-b bg-[var(--color-card)] shrink-0 md:hidden">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <div className="hidden md:block" />
-          <div className="flex items-center gap-2 ml-auto">
-            <ThemeToggle />
-          </div>
         </header>
 
         {/* Page content */}
