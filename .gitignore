@@ -9,6 +9,10 @@ fastapi_apps
 # Frontend build artifacts and dependencies
 frontend/node_modules
 frontend/.vite
+tma/node_modules
+tma/.vite
+tma_demo/node_modules
+tma_demo/.vite
 # Keep dist for deployment
 # frontend/dist
 # Docker backups volume (host-side)

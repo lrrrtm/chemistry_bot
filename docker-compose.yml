@@ -1,6 +1,6 @@
 services:
 
-  # ── MySQL ────────────────────────────────────────────────────────────────
+  # ── MySQL ─────────────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
     container_name: chemistry_db
@@ -24,7 +24,7 @@ services:
       retries:  10
       start_period: 30s
 
-  # ── Telegram Bot ─────────────────────────────────────────────────────────
+  # ── Telegram Bot ──────────────────────────────────────────────────────────
   bot:
     build:
       context:    .
@@ -43,13 +43,15 @@ services:
       DB_PORT:     "3306"
     volumes:
       - app_data:/app/data
-      # Mount Docker socket so the bot can restart other containers
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - internal
     command: python tgbot/start.py
 
-  # ── FastAPI Backend ───────────────────────────────────────────────────────
+  # ── FastAPI (Admin panel + TMA API) ───────────────────────────────────────
+  # Serves: /api/* — REST API
+  #         /      — Admin panel SPA
+  #         /tma/  — Telegram Mini App
   api:
     image: chemistry_app:latest
     container_name: chemistry_api
@@ -77,7 +79,7 @@ services:
       --port 8000
       --workers 2
 
-  # ── Database Backup (run manually or on schedule) ─────────────────────────
+  # ── Database Backup ───────────────────────────────────────────────────────
   # Usage: docker compose run --rm backup
   backup:
     image: chemistry_app:latest

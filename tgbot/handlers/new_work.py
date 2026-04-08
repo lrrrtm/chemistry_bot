@@ -9,7 +9,7 @@ from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 from db.crud import (get_user, get_user_works, get_work_questions, get_all_topics, create_new_work,
                      insert_work_questions, remove_last_user_work,
                      get_question_from_pool, close_question, open_next_question, end_work, get_topic_by_name_and_volume,
-                     update_question_status, get_skipped_questions, get_hand_work, get_questions_list_by_id,
+                     update_question_status, get_skipped_questions, get_hand_work, get_hand_work_questions, get_questions_list_by_id,
                      remove_work, get_all_pool, get_topic_by_volume)
 from tgbot.handlers.trash import bot
 from tgbot.keyboards.new_work import get_user_work_way_kb, SelectWorkWayCallbackFactory, get_new_work_types_kb, \
@@ -220,15 +220,26 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
         )
 
         user = get_user(callback.from_user.id)
+
+        if work_type == "topic" and not topic_id:
+            await msg.delete()
+            await callback.message.answer(text=msg_lexicon['new_work']['topic_is_not_exists'])
+            return
+
+        if work_type == "hand_work":
+            hand_work = get_hand_work(identificator=hand_work_id)
+            if hand_work is None or hand_work.is_deleted:
+                await msg.delete()
+                await callback.message.answer(
+                    text="Тренировка больше недоступна. Попроси преподавателя отправить новую ссылку."
+                )
+                return
+
         work = create_new_work(user_id=user.id, work_type=work_type, topic_id=topic_id, hand_work_id=hand_work_id)
 
-        pool = get_all_pool(active=True)
-
         if work_type == "ege":
+            pool = get_all_pool(active=True)
             tags_list = get_ege_tags_list(each_question_limit=1)
-
-        elif work_type == "hand_work":
-            hand_work = get_hand_work(identificator=hand_work_id)
 
         if work_type == "ege":
             questions_ids_list = get_random_questions(
@@ -270,7 +281,7 @@ async def process_starting_work(callback: types.CallbackQuery, callback_data: St
 
 
         elif work_type == "hand_work":
-            questions_list = get_questions_list_by_id(hand_work.questions_list)
+            questions_list = get_hand_work_questions(hand_work_id)
 
         insert_work_questions(work, questions_list)
 

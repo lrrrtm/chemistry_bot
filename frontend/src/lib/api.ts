@@ -1,4 +1,7 @@
+import type { AdminTopicsTree } from "@/lib/types";
+
 const BASE = "/api";
+const NGROK_SKIP_WARNING_HEADER = { "ngrok-skip-browser-warning": "1" } as const;
 
 function getToken(): string | null {
   return localStorage.getItem("admin_token");
@@ -6,7 +9,10 @@ function getToken(): string | null {
 
 function authHeaders(): HeadersInit {
   const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {
+    ...NGROK_SKIP_WARNING_HEADER,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 }
 
 async function request<T>(
@@ -16,6 +22,7 @@ async function request<T>(
   const res = await fetch(`${BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...NGROK_SKIP_WARNING_HEADER,
       ...authHeaders(),
       ...(options.headers ?? {}),
     },
@@ -48,22 +55,43 @@ export const api = {
 
   // Users
   getUsers: () =>
-    request<Array<{ id: number; telegram_id: number; name: string }>>(
+    request<Array<{ id: number; telegram_id: number | null; name: string; username: string | null; has_credentials: boolean; telegram_linked: boolean }>>(
       "/admin/users"
     ),
 
-  renameUser: (telegram_id: number, name: string) =>
-    request<{ ok: boolean }>(`/admin/users/${telegram_id}`, {
+  createStudent: (name: string) =>
+    request<{
+      user: { id: number; telegram_id: number | null; name: string; username: string | null; has_credentials: boolean; telegram_linked: boolean };
+      invite_token: string;
+      invite_url: string | null;
+      invite_expires_at: string;
+    }>("/admin/users", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+
+  regenerateStudentInvite: (userId: number) =>
+    request<{
+      user: { id: number; telegram_id: number | null; name: string; username: string | null; has_credentials: boolean; telegram_linked: boolean };
+      invite_token: string;
+      invite_url: string | null;
+      invite_expires_at: string;
+    }>(`/admin/users/${userId}/invite`, {
+      method: "POST",
+    }),
+
+  renameUser: (userId: number, name: string) =>
+    request<{ ok: boolean }>(`/admin/users/${userId}`, {
       method: "PUT",
       body: JSON.stringify({ name }),
     }),
 
-  deleteUser: (telegram_id: number) =>
-    request<{ ok: boolean }>(`/admin/users/${telegram_id}`, {
+  deleteUser: (userId: number) =>
+    request<{ ok: boolean }>(`/admin/users/${userId}`, {
       method: "DELETE",
     }),
 
-  getUserStats: (telegram_id: number) =>
+  getUserStats: (userId: number) =>
     request<
       Array<{
         work_id: number;
@@ -79,20 +107,101 @@ export const api = {
         zero: number;
         questions_amount: number;
       }>
-    >(`/admin/users/${telegram_id}/stats`),
+    >(`/admin/users/${userId}/stats`),
 
   // Topics
-  getTopics: () =>
-    request<
-      Record<
-        string,
-        Array<{
+  getTopics: () => request<AdminTopicsTree>("/admin/topics"),
+
+  // Theory documents
+  getTheoryDocuments: (query = "") =>
+    request<Array<{
+      id: number;
+      title: string;
+      tags_list: string[];
+      file_size: number;
+      mime_type: string;
+      created_at: string | null;
+    }>>(`/admin/theory-documents?query=${encodeURIComponent(query)}`),
+
+  createTheoryDocument: (payload: {
+    title: string;
+    tags_list: string[];
+    file: File;
+  }) => {
+    const form = new FormData();
+    form.append("title", payload.title);
+    form.append("tags_json", JSON.stringify(payload.tags_list));
+    form.append("file", payload.file);
+    return fetch(`${BASE}/admin/theory-documents`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then(async (r) => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Upload failed");
+      return data as {
+        ok: boolean;
+        document: {
           id: number;
-          name: string;
-          tags: Array<{ tag: string; count: number }>;
-        }>
-      >
-    >("/admin/topics"),
+          title: string;
+          tags_list: string[];
+          file_size: number;
+          mime_type: string;
+          created_at: string | null;
+        };
+      };
+    });
+  },
+
+  updateTheoryDocument: (
+    id: number,
+    data: { title: string; tags_list: string[] }
+  ) =>
+    request<{
+      ok: boolean;
+      document: {
+        id: number;
+        title: string;
+        tags_list: string[];
+        file_size: number;
+        mime_type: string;
+        created_at: string | null;
+      };
+    }>(`/admin/theory-documents/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  replaceTheoryDocumentFile: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/admin/theory-documents/${id}/file`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    }).then(async (r) => {
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || "Replace failed");
+      return data as {
+        ok: boolean;
+        document: {
+          id: number;
+          title: string;
+          tags_list: string[];
+          file_size: number;
+          mime_type: string;
+          created_at: string | null;
+        };
+      };
+    });
+  },
+
+  deleteTheoryDocument: (id: number) =>
+    request<{ ok: boolean }>(`/admin/theory-documents/${id}`, {
+      method: "DELETE",
+    }),
+
+  theoryDocumentUrl: (id: number) => `${BASE}/theory-documents/${id}/file`,
 
   // Hand works
   createHandWork: (payload: {
@@ -107,17 +216,27 @@ export const api = {
       name: string;
       identificator: string;
       link: string | null;
+      web_link: string | null;
     }>("/admin/hand-works", { method: "POST", body: JSON.stringify(payload) }),
 
   getHandWorks: () =>
-    request<Array<{ id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null }>>(
+    request<Array<{ id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null; web_link: string | null }>>(
       "/admin/hand-works"
     ),
+
+  downloadHandWorkPdf: (identificator: string) =>
+    fetch(`${BASE}/admin/hand-works/${identificator}/pdf`, { headers: authHeaders() }).then(async (r) => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(text || "Download failed");
+      }
+      return r.blob();
+    }),
 
   deleteHandWork: (id: number) =>
     request<{ ok: boolean }>(`/admin/hand-works/${id}`, { method: "DELETE" }),
 
-  sendTrainingToUser: (data: { telegram_id: number; link: string; name: string }) =>
+  sendTrainingToUser: (data: { telegram_id: number; identificator: string; name: string }) =>
     request<{ ok: boolean }>("/admin/send-training", {
       method: "POST",
       body: JSON.stringify(data),

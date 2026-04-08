@@ -22,8 +22,8 @@ class SelectNewWorkVolumeCallbackFactory(CallbackData, prefix="new_work_volume")
 class StartNewWorkCallbackFactory(CallbackData, prefix="start_new_work"):
     action: str
     work_type: str
-    topic_id: int
-    hand_work_id: str
+    topic_id: int | None
+    hand_work_id: str | None
 
 
 class SelfCheckCallbackFactory(CallbackData, prefix="self_check"):
@@ -93,7 +93,11 @@ def get_topics_kb(topics_list: list) -> ReplyKeyboardMarkup:
     return builder.as_markup(resize_keyboard=True)
 
 
-def get_start_work_kb(work_type: str, topic_id: int = -1, hand_work_id: str = "") -> InlineKeyboardMarkup:
+def get_start_work_kb(
+    work_type: str,
+    topic_id: int | None = None,
+    hand_work_id: str | None = None,
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text=lexicon['new_work']['start'],

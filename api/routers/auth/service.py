@@ -4,7 +4,7 @@ import os
 import re
 import secrets
 import string
-from datetime import datetime
+from datetime import UTC, datetime
 
 import telebot
 
@@ -13,7 +13,7 @@ import api.config as _config
 
 def create_token(admin_id: str) -> str:
     """Create a simple HMAC token: <admin_id>:<timestamp>.<signature>"""
-    timestamp = str(int(datetime.utcnow().timestamp()))
+    timestamp = str(int(datetime.now(UTC).timestamp()))
     payload = f"{admin_id}:{timestamp}"
     sig = hmac.new(_config.SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}.{sig}"
@@ -29,8 +29,8 @@ def verify_token(token: str) -> bool:
         ).hexdigest()
         if not hmac.compare_digest(sig, expected_sig):
             return False
-        age = datetime.utcnow().timestamp() - int(timestamp)
-        return age < 86400  # 24 h
+        age = datetime.now(UTC).timestamp() - int(timestamp)
+        return 0 <= age < 86400  # 24 h
     except Exception:
         return False
 

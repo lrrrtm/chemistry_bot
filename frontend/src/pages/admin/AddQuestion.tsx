@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Save } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-
+import { TagHierarchySelector } from "@/components/TagHierarchySelector";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ interface FormData {
   type: string;
   level: number;
   full_mark: number;
-  tags_list: string;
+  tags_list: string[];
   is_rotate: boolean;
   is_selfcheck: boolean;
 }
@@ -28,7 +28,7 @@ const DEFAULT_FORM: FormData = {
   type: "ege",
   level: 1,
   full_mark: 1,
-  tags_list: "",
+  tags_list: [],
   is_rotate: false,
   is_selfcheck: false,
 };
@@ -71,9 +71,7 @@ export function AddQuestion() {
     if (!form.text.trim()) { toast.warning("Введите текст вопроса"); return; }
     if (!form.answer.trim()) { toast.warning("Введите текст ответа"); return; }
     if (!form.type) { toast.warning("Выберите тип вопроса"); return; }
-
-    const tags = form.tags_list.split("\n").map((t) => t.trim().toLowerCase().replace("ё", "е")).filter(Boolean);
-    if (tags.length === 0) { toast.warning("Добавьте хотя бы один тег"); return; }
+    if (form.tags_list.length === 0) { toast.warning("Добавьте хотя бы один тег"); return; }
 
     setSaving(true);
     try {
@@ -83,7 +81,7 @@ export function AddQuestion() {
         type: form.type,
         level: form.level,
         full_mark: form.full_mark,
-        tags_list: tags,
+        tags_list: form.tags_list,
         is_rotate: form.is_rotate,
         is_selfcheck: form.is_selfcheck,
       });
@@ -91,7 +89,7 @@ export function AddQuestion() {
       if (questionImg) await api.uploadQuestionImage(result.id, questionImg);
       if (answerImg) await api.uploadAnswerImage(result.id, answerImg);
 
-      toast.success(`Вопрос id${result.id} успешно добавлен!`);
+      toast.success(`Вопрос id${result.id} успешно добавлен`);
       setForm(DEFAULT_FORM);
       clearImage("question");
       clearImage("answer");
@@ -126,7 +124,6 @@ export function AddQuestion() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Question */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Вопрос</CardTitle>
@@ -146,7 +143,6 @@ export function AddQuestion() {
           </CardContent>
         </Card>
 
-        {/* Answer */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Ответ</CardTitle>
@@ -167,7 +163,6 @@ export function AddQuestion() {
         </Card>
       </div>
 
-      {/* Settings */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Параметры</CardTitle>
@@ -213,13 +208,10 @@ export function AddQuestion() {
           </div>
 
           <div className="space-y-2">
-            <Label>Теги (по одному на строку)</Label>
-            <Textarea
+            <Label>Теги</Label>
+            <TagHierarchySelector
               value={form.tags_list}
-              onChange={(e) => update("tags_list", e.target.value)}
-              placeholder={"тег1\nтег2\nтег3"}
-              rows={4}
-              className="font-mono text-sm"
+              onChange={(tags) => update("tags_list", tags)}
             />
           </div>
 

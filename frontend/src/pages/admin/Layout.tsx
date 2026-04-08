@@ -1,7 +1,19 @@
 import { useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
-  Plus, Users, Calculator, Database, BookPlus, Menu, X, LogOut, Tags, RotateCcw, Sun, Moon,
+  Plus,
+  Users,
+  Calculator,
+  Database,
+  BookPlus,
+  Menu,
+  X,
+  LogOut,
+  Tags,
+  RotateCcw,
+  Sun,
+  Moon,
+  FileText,
 } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,6 +25,7 @@ const navItems = [
   { to: "/admin/create-training", icon: Plus, label: "Создание тренировки" },
   { to: "/admin/students", icon: Users, label: "Ученики" },
   { to: "/admin/topics", icon: Tags, label: "Темы и теги" },
+  { to: "/admin/theory-documents", icon: FileText, label: "Теория" },
   { to: "/admin/pool", icon: Database, label: "Пул вопросов" },
   { to: "/admin/add-question", icon: BookPlus, label: "Создание вопроса" },
   { to: "/admin/ege-converting", icon: Calculator, label: "Конвертация баллов" },
@@ -97,12 +110,10 @@ export function AdminLayout() {
 
   return (
     <div className="flex h-screen bg-[var(--color-background)] overflow-hidden">
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 flex-col bg-[var(--color-sidebar)] shrink-0">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 md:hidden"
@@ -110,7 +121,6 @@ export function AdminLayout() {
         />
       )}
 
-      {/* Mobile sidebar drawer */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[var(--color-sidebar)] transform transition-transform duration-200 md:hidden",
@@ -120,9 +130,7 @@ export function AdminLayout() {
         <SidebarContent />
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile top bar */}
         <header className="flex items-center px-2 py-1 border-b bg-[var(--color-card)] shrink-0 md:hidden">
           <Button
             variant="ghost"
@@ -134,7 +142,6 @@ export function AdminLayout() {
           </Button>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </main>

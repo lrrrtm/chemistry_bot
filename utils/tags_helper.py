@@ -2,7 +2,7 @@ from typing import List
 
 import random
 
-from db.crud import get_topic_by_id, get_pool_by_tags
+from db.crud import get_pool_by_tags, get_topic_tags
 from db.models import Pool
 
 
@@ -80,8 +80,7 @@ def get_random_questions(pool: List[Pool], request_dict: dict) -> dict:
 def get_questions_list_for_topic_work(topic_id: int, questions_limit: int = 20) -> dict:
     result_questions_list = []
 
-    topic_data = get_topic_by_id(topic_id)
-    topic_tags_list = topic_data.tags_list
+    topic_tags_list = get_topic_tags(topic_id)
     pool_by_topic_tags = get_pool_by_tags(topic_tags_list)
     # print("LEN", len(pool_by_topic_tags))
     # print("TOPIC TAGS", topic_tags_list)

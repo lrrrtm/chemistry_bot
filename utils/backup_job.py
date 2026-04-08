@@ -72,6 +72,7 @@ def run_backup() -> dict:
             "images/answers":   os.path.join(root, "data", "images", "answers"),
             "images/questions": os.path.join(root, "data", "images", "questions"),
             "images/users":     os.path.join(root, "data", "images", "users"),
+            "theory_documents": os.path.join(root, "data", "theory_documents"),
         }
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:

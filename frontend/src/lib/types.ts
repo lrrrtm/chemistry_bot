@@ -1,6 +1,26 @@
 /* ── Shared types used across multiple pages ─────────────────────────── */
 
-export type User = { id: number; telegram_id: number; name: string };
+export type User = {
+  id: number;
+  telegram_id: number | null;
+  name: string;
+  username: string | null;
+  has_credentials: boolean;
+  telegram_linked: boolean;
+};
+
+export type AdminTopicTag = {
+  tag: string;
+  count: number;
+};
+
+export type AdminTopic = {
+  id: number;
+  name: string;
+  tags: AdminTopicTag[];
+};
+
+export type AdminTopicsTree = Record<string, AdminTopic[]>;
 
 export type QuestionFull = {
   id: number;

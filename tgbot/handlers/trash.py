@@ -19,6 +19,11 @@ async def save_user_photo(message: Message):
         file_info = await bot.get_file(photo_file_id)
 
         file_path = file_info.file_path
-        destination = f"{os.getenv('ROOT_FOLDER')}/flet_apps/assets/users_photos/{message.from_user.id}.jpg"
+        destinations = [
+            f"{os.getenv('ROOT_FOLDER')}/flet_apps/assets/users_photos/{message.from_user.id}.jpg",
+            f"{os.getenv('ROOT_FOLDER')}/data/images/users/{message.from_user.id}.jpg",
+        ]
 
-        await bot.download_file(file_path, destination)
+        for destination in destinations:
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            await bot.download_file(file_path, destination)

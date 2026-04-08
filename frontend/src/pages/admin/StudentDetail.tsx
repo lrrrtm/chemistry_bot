@@ -1,30 +1,36 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, ExternalLink, BookOpen, FlaskConical } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, Trash2 } from "lucide-react";
+
 import { api } from "@/lib/api";
+import type { User, WorkStat } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { WorkStat, User } from "@/lib/types";
 import {
   type WorkDetail,
+  QuestionsList,
+  WorkSummaryCard,
   formatDate,
   getWorkTypeBadge,
-  WorkSummaryCard,
-  QuestionsList,
 } from "@/components/WorkStatsView";
-
-type UserInfo = User;
 
 function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; zero: number; total: number }) {
   if (total === 0) return null;
   return (
-    <div className="flex rounded-full overflow-hidden h-2 mt-2">
+    <div className="mt-2 flex h-2 overflow-hidden rounded-full">
       <div className="bg-green-500 transition-all" style={{ width: `${(fully / total) * 100}%` }} />
       <div className="bg-yellow-500 transition-all" style={{ width: `${(semi / total) * 100}%` }} />
       <div className="bg-red-500 transition-all" style={{ width: `${(zero / total) * 100}%` }} />
@@ -34,16 +40,11 @@ function ScoreBar({ fully, semi, zero, total }: { fully: number; semi: number; z
 
 function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loading: boolean }) {
   if (loading) {
-    return <EmptyState icon={FlaskConical} text="Загрузка..." animate className="h-full py-20" />;
+    return <div className="py-12 text-center text-[var(--color-muted-foreground)]">Загрузка...</div>;
   }
 
   if (!detail) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full py-20 text-[var(--color-muted-foreground)]">
-        <BookOpen className="h-12 w-12 mb-3 opacity-20" />
-        <p className="text-sm">Выберите работу для просмотра статистики</p>
-      </div>
-    );
+    return <EmptyState icon={BookOpen} text="Выберите работу для просмотра статистики" className="py-16" />;
   }
 
   return (
@@ -55,41 +56,38 @@ function WorkDetailPanel({ detail, loading }: { detail: WorkDetail | null; loadi
 }
 
 export function StudentDetail() {
-  const { telegramId } = useParams<{ telegramId: string }>();
+  const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
 
+  const [user, setUser] = useState<User | null>(null);
   const [works, setWorks] = useState<WorkStat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<UserInfo | null>(null);
   const [deleting, setDeleting] = useState(false);
-
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null);
   const [workDetail, setWorkDetail] = useState<WorkDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    if (!telegramId) return;
-    const tid = Number(telegramId);
+    if (!userId) return;
+    const numericUserId = Number(userId);
 
     Promise.all([
-      api.getUsers().then((users) => users.find((u) => u.telegram_id === tid)),
-      api.getUserStats(tid),
+      api.getUsers().then((items) => items.find((item) => item.id === numericUserId) ?? null),
+      api.getUserStats(numericUserId),
     ])
       .then(([userInfo, stats]) => {
-        setUser(userInfo ?? null);
+        setUser(userInfo);
         setWorks(stats);
       })
       .catch(() => toast.error("Ошибка загрузки данных"))
       .finally(() => setLoading(false));
-  }, [telegramId]);
+  }, [userId]);
 
   const handleSelectWork = (token: string | null) => {
-    if (!token) return;
-    if (selectedWorkId === token) return;
-
+    if (!token || token === selectedWorkId) return;
     setSelectedWorkId(token);
-    setWorkDetail(null);
     setDetailLoading(true);
+    setWorkDetail(null);
 
     api.getWorkStats(token)
       .then(setWorkDetail)
@@ -98,10 +96,10 @@ export function StudentDetail() {
   };
 
   const handleDelete = async () => {
-    if (!telegramId) return;
+    if (!userId) return;
     setDeleting(true);
     try {
-      await api.deleteUser(Number(telegramId));
+      await api.deleteUser(Number(userId));
       toast.success("Ученик удалён");
       navigate("/admin/students");
     } catch {
@@ -111,23 +109,26 @@ export function StudentDetail() {
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
+    return <div className="py-12 text-center text-[var(--color-muted-foreground)]">Загрузка...</div>;
   }
 
   const statsUrl = (token: string) => `/student/view-stats?token=${token}`;
+  const subtitle = user?.username
+    ? `@${user.username}`
+    : user?.telegram_id
+      ? `Telegram id${user.telegram_id}`
+      : `ID ${userId}`;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:h-full lg:min-h-0">
-      {/* Left panel */}
-      <div className="lg:w-80 xl:w-96 shrink-0 flex flex-col min-h-0">
-        {/* Header */}
-        <div className="flex items-center gap-3 pb-4 shrink-0">
+    <div className="flex flex-col gap-4 lg:h-full lg:min-h-0 lg:flex-row">
+      <div className="flex min-h-0 flex-col lg:w-80 xl:w-96">
+        <div className="flex items-center gap-3 pb-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin/students")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold truncate">{user?.name ?? `id${telegramId}`}</h1>
-            <p className="text-sm text-[var(--color-muted-foreground)]">id{telegramId}</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-bold">{user?.name ?? "Ученик"}</h1>
+            <p className="text-sm text-[var(--color-muted-foreground)]">{subtitle}</p>
           </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -144,71 +145,46 @@ export function StudentDetail() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-[var(--color-destructive)] hover:opacity-90"
-                >
-                  Удалить
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleDelete}>Удалить</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
 
-        {/* Works list */}
         {works.length === 0 ? (
           <EmptyState icon={BookOpen} text="Завершённых тренировок нет" className="py-16" />
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
-            {works.map((w) => (
+          <div className="flex-1 space-y-2 overflow-y-auto">
+            {works.map((work) => (
               <Card
-                key={w.work_id}
+                key={work.work_id}
                 className={`cursor-pointer transition-colors hover:bg-[var(--color-accent)] ${
-                  selectedWorkId === w.share_token
-                    ? "bg-[var(--color-accent)]"
-                    : ""
+                  selectedWorkId === work.share_token ? "bg-[var(--color-accent)]" : ""
                 }`}
-                onClick={() => handleSelectWork(w.share_token)}
+                onClick={() => handleSelectWork(work.share_token)}
               >
-                <CardContent className="pt-3 pb-3">
+                <CardContent className="pb-3 pt-3">
                   <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm truncate">{w.name}</span>
-                        {getWorkTypeBadge(w.type)}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-medium">{work.name}</span>
+                        {getWorkTypeBadge(work.type)}
                       </div>
-                      <p className="text-xs text-[var(--color-muted-foreground)] mt-0.5">
-                        {formatDate(w.end)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs">
-                        <span className="font-semibold">{w.final_mark} из {w.max_mark} б.</span>
-                        <span className="flex items-center gap-0.5 text-green-600">
-                          <span className="inline-block h-2 w-2 rounded-full bg-green-500 shrink-0" />
-                          {w.fully}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-yellow-600">
-                          <span className="inline-block h-2 w-2 rounded-full bg-yellow-500 shrink-0" />
-                          {w.semi}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-red-500">
-                          <span className="inline-block h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                          {w.zero}
-                        </span>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted-foreground)]">{formatDate(work.end)}</p>
+                      <div className="mt-1.5 flex items-center gap-2 text-xs">
+                        <span className="font-semibold">{work.final_mark} из {work.max_mark} б.</span>
+                        <span className="flex items-center gap-0.5 text-green-600">{work.fully}</span>
+                        <span className="flex items-center gap-0.5 text-yellow-600">{work.semi}</span>
+                        <span className="flex items-center gap-0.5 text-red-500">{work.zero}</span>
                       </div>
-                      <ScoreBar fully={w.fully} semi={w.semi} zero={w.zero} total={w.questions_amount} />
+                      <ScoreBar fully={work.fully} semi={work.semi} zero={work.zero} total={work.questions_amount} />
                     </div>
-                    {w.share_token && (
-                    <a
-                      href={statsUrl(w.share_token)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                    </a>
+                    {work.share_token && (
+                      <a href={statsUrl(work.share_token)} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </a>
                     )}
                   </div>
                 </CardContent>
@@ -218,8 +194,7 @@ export function StudentDetail() {
         )}
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 min-w-0 overflow-y-auto lg:border-l lg:pl-4">
+      <div className="min-w-0 flex-1 overflow-y-auto lg:border-l lg:pl-4">
         <WorkDetailPanel detail={workDetail} loading={detailLoading} />
       </div>
     </div>

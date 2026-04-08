@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Database, Save, Trash2, Upload, X, Download, Plus, ChevronLeft, BookPlus, FileSpreadsheet } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TagHierarchySelector } from "@/components/TagHierarchySelector";
 import { Label } from "@/components/ui/label";
 import { FileDropZone } from "@/components/ui/FileDropZone";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,14 +47,11 @@ export function PoolPage() {
   const [loadingQuestion, setLoadingQuestion] = useState(false);
   const [saving, setSaving] = useState(false);
   const [edited, setEdited] = useState<Partial<QuestionFull>>({});
-  const [newTagInput, setNewTagInput] = useState("");
-  const newTagRef = useRef<HTMLInputElement>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
-  // Mobile step: 0 = question list, 1 = question editor
   const [mobileStep, setMobileStep] = useState<0 | 1>(0);
 
   useEffect(() => {
@@ -64,7 +61,6 @@ export function PoolPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Auto-open question when navigated from another page with openQuestionId state
   useEffect(() => {
     if (!loading && autoOpenId) {
       setSearch(String(autoOpenId));
@@ -88,7 +84,6 @@ export function PoolPage() {
     setSelectedId(id);
     setSelected(null);
     setLoadingQuestion(true);
-    setNewTagInput("");
     setMobileStep(1);
     scrollToTop();
     try {
@@ -105,6 +100,13 @@ export function PoolPage() {
 
   const handleSave = async () => {
     if (!selected) return;
+
+    const tags = edited.tags_list ?? selected.tags_list;
+    if (tags.length === 0) {
+      toast.warning("Добавьте хотя бы один тег");
+      return;
+    }
+
     setSaving(true);
     try {
       await api.updateQuestion(selected.id, {
@@ -112,16 +114,15 @@ export function PoolPage() {
         answer: edited.answer ?? selected.answer,
         level: edited.level ?? selected.level,
         full_mark: edited.full_mark ?? selected.full_mark,
-        tags_list: edited.tags_list ?? selected.tags_list,
+        tags_list: tags,
         is_rotate: edited.is_rotate ?? selected.is_rotate,
         is_selfcheck: edited.is_selfcheck ?? selected.is_selfcheck,
       });
       toast.success("Вопрос обновлён");
-      // Sync updated text/tags back to the list
-      const newTags = edited.tags_list ?? selected.tags_list;
+
       const newText = edited.text ?? selected.text;
-      setPool((p) =>
-        p.map((q) => q.id === selected.id ? { ...q, text: newText, tags_list: newTags } : q)
+      setPool((items) =>
+        items.map((q) => q.id === selected.id ? { ...q, text: newText, tags_list: tags } : q)
       );
     } catch {
       toast.error("Ошибка сохранения");
@@ -135,7 +136,7 @@ export function PoolPage() {
     try {
       await api.deleteQuestion(selected.id);
       toast.success("Вопрос удалён");
-      setPool((p) => p.filter((q) => q.id !== selected.id));
+      setPool((items) => items.filter((q) => q.id !== selected.id));
       setSelected(null);
       setSelectedId(null);
       setMobileStep(0);
@@ -216,13 +217,13 @@ export function PoolPage() {
     </div>
   );
 
-  if (loading) return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
+  if (loading) {
+    return <div className="text-center py-12 text-[var(--color-muted-foreground)]">Загрузка...</div>;
+  }
 
   return (
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
-      {/* Left panel — question list */}
       <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
-        {/* Header */}
         <div className="px-4 pt-4 pb-2 border-b shrink-0 space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -240,7 +241,6 @@ export function PoolPage() {
             </Button>
           </div>
 
-          {/* Search */}
           <SearchInput
             placeholder="ID, текст или тег..."
             value={search}
@@ -249,7 +249,6 @@ export function PoolPage() {
           />
         </div>
 
-        {/* Question list */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {filtered.length === 0 ? (
             <EmptyState icon={Database} text="Вопросы не найдены" />
@@ -267,7 +266,9 @@ export function PoolPage() {
                     {q.id}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm line-clamp-2">{q.text || <span className="text-[var(--color-muted-foreground)] italic">Вопрос на картинке</span>}</p>
+                    <p className="text-sm line-clamp-2">
+                      {q.text || <span className="text-[var(--color-muted-foreground)] italic">Вопрос на картинке</span>}
+                    </p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {q.tags_list.slice(0, 3).map((t) => (
                         <Badge key={t} variant="secondary" className="text-xs px-1.5 py-0">{t}</Badge>
@@ -281,7 +282,7 @@ export function PoolPage() {
               ))}
               {filtered.length > 100 && (
                 <p className="text-center text-xs text-[var(--color-muted-foreground)] py-3 px-3">
-                  Первые 100 из {filtered.length}. Уточните поиск.
+                  Показаны первые 100 из {filtered.length}. Уточните поиск.
                 </p>
               )}
             </>
@@ -289,9 +290,7 @@ export function PoolPage() {
         </div>
       </div>
 
-      {/* Right panel — question editor */}
       <div className={`${mobileStep !== 1 ? "hidden lg:flex" : "flex"} flex-col flex-1 min-w-0 min-h-0`}>
-        {/* Mobile back bar */}
         <div className="flex items-center gap-2 px-3 py-2 border-b shrink-0 bg-[var(--color-card)] lg:hidden">
           <Button
             variant="ghost"
@@ -303,6 +302,7 @@ export function PoolPage() {
             К списку
           </Button>
         </div>
+
         {loadingQuestion ? (
           <div className="flex-1 flex items-center justify-center text-[var(--color-muted-foreground)]">
             <p className="text-sm">Загрузка вопроса...</p>
@@ -311,7 +311,6 @@ export function PoolPage() {
           <EmptyState icon={Database} text="Выберите вопрос из списка" className="flex-1" />
         ) : (
           <>
-            {/* Editor header */}
             <div className="px-5 py-3 border-b shrink-0 flex items-center justify-between">
               <div>
                 <span className="font-semibold text-sm">Вопрос id{selected.id}</span>
@@ -347,10 +346,8 @@ export function PoolPage() {
               </div>
             </div>
 
-            {/* Editor form */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <CardContent className="py-4 space-y-4">
-                {/* Question text */}
                 <div className="space-y-2">
                   <Label>Текст вопроса</Label>
                   <Textarea
@@ -362,7 +359,6 @@ export function PoolPage() {
 
                 <ImageSection type="question" hasImage={selected.question_image} />
 
-                {/* Answer text */}
                 <div className="space-y-2">
                   <Label>Текст ответа</Label>
                   <Textarea
@@ -376,7 +372,7 @@ export function PoolPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>Сложность (1–5)</Label>
+                    <Label>Сложность (1-5)</Label>
                     <Select
                       value={String(edited.level ?? selected.level)}
                       onValueChange={(v) => setEdited((p) => ({ ...p, level: Number(v) }))}
@@ -412,75 +408,10 @@ export function PoolPage() {
 
                 <div className="space-y-2">
                   <Label>Теги</Label>
-                  {/* Add tag input */}
-                  <div className="flex gap-2">
-                    <Input
-                      ref={newTagRef}
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value)}
-                      placeholder="Новый тег..."
-                      className="h-8 text-sm"
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter") return;
-                        const tag = newTagInput.trim();
-                        if (!tag) return;
-                        const current = edited.tags_list ?? selected.tags_list;
-                        if (current.includes(tag)) {
-                          toast.warning("Такой тег уже есть");
-                          return;
-                        }
-                        setEdited((p) => ({ ...p, tags_list: [...current, tag] }));
-                        setNewTagInput("");
-                        newTagRef.current?.focus();
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      className="h-8 shrink-0"
-                      disabled={!newTagInput.trim()}
-                      onClick={() => {
-                        const tag = newTagInput.trim();
-                        if (!tag) return;
-                        const current = edited.tags_list ?? selected.tags_list;
-                        if (current.includes(tag)) {
-                          toast.warning("Такой тег уже есть");
-                          return;
-                        }
-                        setEdited((p) => ({ ...p, tags_list: [...current, tag] }));
-                        setNewTagInput("");
-                        newTagRef.current?.focus();
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Добавить
-                    </Button>
-                  </div>
-                  {/* Tag chips */}
-                  {(edited.tags_list ?? selected.tags_list).length === 0 ? (
-                    <p className="text-sm text-[var(--color-muted-foreground)]">Нет тегов</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {(edited.tags_list ?? selected.tags_list).map((tag) => (
-                        <div
-                          key={tag}
-                          className="flex items-center gap-1.5 bg-[var(--color-accent)] rounded-full px-3 py-1 text-sm"
-                        >
-                          <span>{tag}</span>
-                          <button
-                            className="ml-0.5 hover:text-[var(--color-destructive)] transition-colors"
-                            onClick={() =>
-                              setEdited((p) => ({
-                                ...p,
-                                tags_list: (p.tags_list ?? selected!.tags_list).filter((t) => t !== tag),
-                              }))
-                            }
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <TagHierarchySelector
+                    value={edited.tags_list ?? selected.tags_list}
+                    onChange={(tags) => setEdited((p) => ({ ...p, tags_list: tags }))}
+                  />
                 </div>
 
                 <div className="flex gap-6">
@@ -505,7 +436,6 @@ export function PoolPage() {
         )}
       </div>
 
-      {/* Add question dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

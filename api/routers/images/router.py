@@ -28,7 +28,11 @@ def get_answer_image(question_id: int):
 
 @router.get("/user/{telegram_id}")
 def get_user_photo(telegram_id: int):
-    path = os.path.join(ROOT_FOLDER, "data", "images", "users", f"{telegram_id}.jpg")
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="Photo not found")
-    return FileResponse(path, media_type="image/jpeg", headers=_CACHE_HEADERS)
+    candidates = [
+        os.path.join(ROOT_FOLDER, "data", "images", "users", f"{telegram_id}.jpg"),
+        os.path.join(ROOT_FOLDER, "flet_apps", "assets", "users_photos", f"{telegram_id}.jpg"),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="image/jpeg", headers=_CACHE_HEADERS)
+    raise HTTPException(status_code=404, detail="Photo not found")

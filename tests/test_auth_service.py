@@ -9,7 +9,7 @@ import hashlib
 import hmac
 import os
 import string
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -94,18 +94,15 @@ class TestVerifyToken:
 
     def test_expired_token(self) -> None:
         """Token older than 24 hours must be rejected."""
-        old_ts = int(datetime.utcnow().timestamp()) - 90_000  # ~25 h ago
+        old_ts = int(datetime.now(UTC).timestamp()) - 90_000  # ~25 h ago
         expired = _make_token_with_timestamp(old_ts)
         assert verify_token(expired) is False
 
     def test_future_timestamp_is_invalid_age(self) -> None:
-        """Timestamp far in the future results in negative age → rejected (age >= 0 check)."""
-        future_ts = int(datetime.utcnow().timestamp()) + 90_000
+        """Timestamp far in the future must be rejected."""
+        future_ts = int(datetime.now(UTC).timestamp()) + 90_000
         future_token = _make_token_with_timestamp(future_ts)
-        # age is negative so age < 86400 is True — this is debatable behaviour,
-        # but we at least verify it doesn't raise an exception
-        result = verify_token(future_token)
-        assert isinstance(result, bool)
+        assert verify_token(future_token) is False
 
     def test_empty_string(self) -> None:
         assert verify_token("") is False

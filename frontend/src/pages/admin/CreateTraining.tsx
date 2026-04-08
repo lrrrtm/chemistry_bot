@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Send, ChevronDown, ChevronRight, Plus, X, Copy, Check, Clock, Trash2 } from "lucide-react";
+import { Send, ChevronDown, ChevronRight, Plus, X, Copy, Check, Clock, Trash2, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { User } from "@/lib/types";
 import { getInitials } from "@/lib/utils";
-type HandWork = { id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null };
+type HandWork = { id: number; name: string; identificator: string; created_at: string; questions_count: number; link: string | null; web_link: string | null };
 
 type TopicTag = { tag: string; count: number };
 type TopicItem = { id: number; name: string; tags: TopicTag[] };
@@ -49,7 +49,7 @@ export function CreateTraining() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Send dialog state
-  const [sendDialog, setSendDialog] = useState<{ name: string; link: string } | null>(null);
+  const [sendDialog, setSendDialog] = useState<{ name: string; link: string | null; webLink: string | null; identificator: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState("");
@@ -102,6 +102,9 @@ export function CreateTraining() {
 
   const totalSelected = Object.values(questionCounts).reduce((a, b) => a + b, 0);
 
+  const hasSelectedTagsInVolume = (topicList: TopicItem[]) =>
+    topicList.some((topic) => topic.tags.some(({ tag }) => (questionCounts[tag] ?? 0) > 0));
+
   const handleCreateByTags = async () => {
     if (totalSelected === 0) {
       toast.warning("Добавьте хотя бы один вопрос");
@@ -116,8 +119,8 @@ export function CreateTraining() {
       });
       setQuestionCounts({});
       loadTrainings();
-      if (result.link) {
-        setSendDialog({ name: result.name, link: result.link });
+      if (result.link || result.web_link) {
+        setSendDialog({ name: result.name, link: result.link, webLink: result.web_link, identificator: result.identificator });
       } else {
         toast.success("Тренировка создана!");
       }
@@ -144,8 +147,8 @@ export function CreateTraining() {
         questions_count: hardCount,
       });
       loadTrainings();
-      if (result.link) {
-        setSendDialog({ name: result.name, link: result.link });
+      if (result.link || result.web_link) {
+        setSendDialog({ name: result.name, link: result.link, webLink: result.web_link, identificator: result.identificator });
       } else {
         toast.success("Тренировка создана!");
       }
@@ -169,21 +172,46 @@ export function CreateTraining() {
     }
   };
 
+  const handleDownloadTrainingPdf = async (training: HandWork) => {
+    try {
+      const blob = await api.downloadHandWorkPdf(training.identificator);
+      const fileName = `${training.name}.pdf`.replace(/[\\/:*?"<>|]+/g, "_");
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка скачивания PDF");
+    }
+  };
+
   const handleCopyLink = () => {
     if (!sendDialog) return;
-    navigator.clipboard.writeText(sendDialog.link).then(() => {
+    if (!sendDialog?.webLink) return;
+    navigator.clipboard.writeText(sendDialog.webLink).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   };
 
+  const handleCopyLinkForStudent = (user: User) => {
+    if (!sendDialog?.webLink) return;
+    navigator.clipboard.writeText(sendDialog.webLink).then(() => {
+      toast.success(`Веб-ссылка скопирована. Отправьте её ученику ${user.name}`);
+    });
+  };
+
   const handleSendToUser = async (user: User) => {
-    if (!sendDialog || sending) return;
+    if (!sendDialog || sending || !user.telegram_id) return;
     setSending(user.telegram_id);
     try {
       await api.sendTrainingToUser({
         telegram_id: user.telegram_id,
-        link: sendDialog.link,
+        identificator: sendDialog.identificator,
         name: sendDialog.name,
       });
       toast.success(`Отправлено ${user.name}`);
@@ -197,7 +225,8 @@ export function CreateTraining() {
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      String(u.telegram_id).includes(userSearch)
+      (u.username ?? "").toLowerCase().includes(userSearch.toLowerCase()) ||
+      String(u.telegram_id ?? "").includes(userSearch)
   );
 
   const toggleVolume = (volume: string) => {
@@ -262,7 +291,7 @@ export function CreateTraining() {
                 </CardHeader>
               </button>
 
-              {expandedVolumes.has(volume) && (
+              {(expandedVolumes.has(volume) || hasSelectedTagsInVolume(topicList)) && (
                 <CardContent className="pt-0 space-y-4">
                   {topicList.map((topic) => (
                     <div key={topic.id}>
@@ -440,7 +469,7 @@ export function CreateTraining() {
               <div className="flex gap-2">
                 <Input
                   readOnly
-                  value={sendDialog?.link ?? ""}
+                  value={sendDialog?.webLink ?? ""}
                   className="text-sm min-w-0"
                   onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
@@ -468,27 +497,29 @@ export function CreateTraining() {
                 ) : (
                   filteredUsers.map((user) => (
                     <div
-                      key={user.telegram_id}
+                      key={user.id}
                       className="flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--color-accent)] transition-colors"
                     >
                       <Avatar className="h-7 w-7 shrink-0">
-                        <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} />
+                        {user.telegram_id ? <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} /> : null}
                         <AvatarFallback className="text-[10px] font-semibold">
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm truncate">{user.name}</p>
-                        <p className="text-[10px] text-[var(--color-muted-foreground)]">id{user.telegram_id}</p>
+                        <p className="text-[10px] text-[var(--color-muted-foreground)]">
+                          {user.username ? `@${user.username}` : user.telegram_id ? `id${user.telegram_id}` : "Telegram не привязан"}
+                        </p>
                       </div>
                       <Button
                         size="sm"
                         className="shrink-0"
-                        disabled={sending === user.telegram_id}
-                        onClick={() => handleSendToUser(user)}
+                        disabled={!!user.telegram_id && sending === user.telegram_id}
+                        onClick={() => user.telegram_id ? handleSendToUser(user) : handleCopyLinkForStudent(user)}
                       >
                         <Send className="h-3.5 w-3.5" />
-                        {sending === user.telegram_id ? "..." : "Отправить"}
+                        {user.telegram_id ? (sending === user.telegram_id ? "..." : "Отправить") : "Скопировать ссылку"}
                       </Button>
                     </div>
                   ))
@@ -518,14 +549,22 @@ export function CreateTraining() {
                       {new Date(t.created_at.endsWith("Z") || t.created_at.includes("+") ? t.created_at : t.created_at.replace(" ", "T") + "Z").toLocaleString("ru-RU")} &middot; {t.questions_count} вопр.
                     </p>
                   </div>
-                  {t.link && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => void handleDownloadTrainingPdf(t)}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  {t.web_link && (
                     <>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-7 w-7 shrink-0"
                         onClick={() => {
-                          navigator.clipboard.writeText(t.link!);
+                          navigator.clipboard.writeText(t.web_link!);
                           toast.success("Ссылка скопирована");
                         }}
                       >
@@ -535,7 +574,7 @@ export function CreateTraining() {
                         variant="outline"
                         size="icon"
                         className="h-7 w-7 shrink-0"
-                        onClick={() => setSendDialog({ name: t.name, link: t.link! })}
+                        onClick={() => setSendDialog({ name: t.name, link: t.link, webLink: t.web_link, identificator: t.identificator })}
                       >
                         <Send className="h-3.5 w-3.5" />
                       </Button>

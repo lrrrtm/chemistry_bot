@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save, Pencil, Check } from "lucide-react";
+import { Users, BookOpen, FlaskConical, ExternalLink, Trash2, ChevronLeft, Plus, X, Save, Pencil, Check, Copy } from "lucide-react";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -394,6 +394,10 @@ export function Students() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [inviteDialog, setInviteDialog] = useState<{ name: string; inviteUrl: string; expiresAt: string } | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [works, setWorks] = useState<WorkStat[]>([]);
@@ -423,7 +427,7 @@ export function Students() {
   }, []);
 
   const handleSelectUser = (user: User) => {
-    if (selectedUser?.telegram_id === user.telegram_id) return;
+    if (selectedUser?.id === user.id) return;
     setSelectedUser(user);
     setWorks([]);
     setSelectedWorkId(null);
@@ -431,7 +435,7 @@ export function Students() {
     setWorksLoading(true);
     setMobileStep(1);
     scrollToTop();
-    api.getUserStats(user.telegram_id)
+    api.getUserStats(user.id)
       .then(setWorks)
       .catch(() => toast.error("Ошибка загрузки работ"))
       .finally(() => setWorksLoading(false));
@@ -454,8 +458,8 @@ export function Students() {
     if (!selectedUser) return;
     setDeleting(true);
     try {
-      await api.deleteUser(selectedUser.telegram_id);
-      const updated = users.filter((u) => u.telegram_id !== selectedUser.telegram_id);
+      await api.deleteUser(selectedUser.id);
+      const updated = users.filter((u) => u.id !== selectedUser.id);
       _usersCache = updated;
       setUsers(updated);
       setSelectedUser(null);
@@ -482,11 +486,11 @@ export function Students() {
     if (!selectedUser || !editNameValue.trim()) return;
     setSavingName(true);
     try {
-      await api.renameUser(selectedUser.telegram_id, editNameValue.trim());
+      await api.renameUser(selectedUser.id, editNameValue.trim());
       const newName = editNameValue.trim();
       setSelectedUser({ ...selectedUser, name: newName });
       const updated = users.map((u) =>
-        u.telegram_id === selectedUser.telegram_id ? { ...u, name: newName } : u
+        u.id === selectedUser.id ? { ...u, name: newName } : u
       );
       _usersCache = updated;
       setUsers(updated);
@@ -499,10 +503,40 @@ export function Students() {
     }
   };
 
+  const buildInviteUrl = (inviteUrl: string | null, inviteToken: string) => {
+    if (inviteUrl) return inviteUrl;
+    return `${window.location.origin}/tma/?invite=${encodeURIComponent(inviteToken)}`;
+  };
+
+  const handleCreateStudent = async () => {
+    const name = createName.trim();
+    if (!name) return;
+    setCreatingUser(true);
+    try {
+      const result = await api.createStudent(name);
+      const nextUsers = [...users, result.user].sort((left, right) => left.name.localeCompare(right.name, "ru"));
+      _usersCache = nextUsers;
+      setUsers(nextUsers);
+      setCreateDialogOpen(false);
+      setCreateName("");
+      setInviteDialog({
+        name: result.user.name,
+        inviteUrl: buildInviteUrl(result.invite_url, result.invite_token),
+        expiresAt: result.invite_expires_at,
+      });
+      toast.success("Профиль ученика создан");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ошибка создания ученика");
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const filtered = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
-      String(u.telegram_id).includes(search)
+      (u.username ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      String(u.telegram_id ?? "").includes(search)
   );
 
   const statsUrl = (token: string) =>
@@ -518,7 +552,7 @@ export function Students() {
     <div className="flex flex-col lg:flex-row lg:h-full lg:min-h-0 border rounded-lg overflow-hidden">
       {/* ── Column 1: Student list ─────────────────────────────────────────── */}
       <div className={`${mobileStep !== 0 ? "hidden lg:flex" : "flex"} flex-col lg:w-80 shrink-0 min-h-0 border-b lg:border-b-0 lg:border-r`}>
-        <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px] flex items-center">
+        <div className="px-3 py-2.5 border-b shrink-0 bg-[var(--color-card)] min-h-[48px] flex items-center gap-2">
           <SearchInput
             placeholder="Поиск..."
             value={search}
@@ -526,6 +560,10 @@ export function Students() {
             className="h-7 text-xs"
             wrapperClassName="flex-1"
           />
+          <Button size="sm" className="h-7 shrink-0 px-2" onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Новый
+          </Button>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -534,16 +572,16 @@ export function Students() {
           ) : (
             filtered.map((user) => (
               <div
-                key={user.telegram_id}
+                key={user.id}
                 className={`group flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[var(--color-accent)] transition-colors ${
-                  selectedUser?.telegram_id === user.telegram_id
+                  selectedUser?.id === user.id
                     ? "bg-[var(--color-accent)] font-medium"
                     : ""
                 }`}
                 onClick={() => handleSelectUser(user)}
               >
                 <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} />
+                  {user.telegram_id ? <AvatarImage src={api.imageUrl.user(user.telegram_id)} alt={user.name} /> : null}
                   <AvatarFallback className="text-[10px] font-semibold">
                     {getInitials(user.name)}
                   </AvatarFallback>
@@ -551,7 +589,7 @@ export function Students() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{user.name}</p>
                   <p className="text-[10px] text-[var(--color-muted-foreground)]">
-                    id{user.telegram_id}
+                    {user.username ? `@${user.username}` : user.telegram_id ? `Telegram id${user.telegram_id}` : "Веб-профиль"}
                   </p>
                 </div>
               </div>
@@ -739,6 +777,67 @@ export function Students() {
           <WorkDetailPanel detail={workDetail} loading={detailLoading} />
         </div>
       </div>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Новый ученик</DialogTitle>
+            <DialogDescription>
+              Создадим профиль и сразу выдадим инвайт-ссылку для первого входа.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="student-name">Имя ученика</Label>
+              <Input
+                id="student-name"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                placeholder="Например, Анна Петрова"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void handleCreateStudent();
+                  }
+                }}
+              />
+            </div>
+            <Button className="w-full" disabled={creatingUser || !createName.trim()} onClick={() => void handleCreateStudent()}>
+              {creatingUser ? "Создание..." : "Создать и получить инвайт"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(inviteDialog)} onOpenChange={(open) => !open && setInviteDialog(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Инвайт готов</DialogTitle>
+            <DialogDescription>{inviteDialog?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Ссылка для ученика</Label>
+              <div className="flex gap-2">
+                <Input readOnly value={inviteDialog?.inviteUrl ?? ""} onClick={(event) => (event.target as HTMLInputElement).select()} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (!inviteDialog) return;
+                    navigator.clipboard.writeText(inviteDialog.inviteUrl);
+                    toast.success("Инвайт скопирован");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              После открытия ссылки ученик придумает логин и пароль и дальше будет входить по ним.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

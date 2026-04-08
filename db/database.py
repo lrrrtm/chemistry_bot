@@ -3,7 +3,7 @@ import logging
 import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
-from db.models import Base
+from db.models import Base, Converting, HandWork, Pool, Topic, User, Work, WorkQuestion
 from dotenv import load_dotenv
 from os import getenv
 
@@ -16,10 +16,20 @@ engine = create_engine(
     pool_pre_ping=True
 )
 Session = scoped_session(sessionmaker(bind=engine))
+MIGRATION_LOCK_NAME = "chemistry_bot_schema_migrations"
+LEGACY_TABLES = [
+    Converting.__table__,
+    Pool.__table__,
+    Topic.__table__,
+    User.__table__,
+    Work.__table__,
+    WorkQuestion.__table__,
+    HandWork.__table__,
+]
 
 for _attempt in range(10):
     try:
-        Base.metadata.create_all(engine)
+        Base.metadata.create_all(engine, tables=LEGACY_TABLES)
         break
     except Exception as _e:
         logging.warning("DB not ready (attempt %d/10): %s", _attempt + 1, _e)
@@ -41,7 +51,7 @@ def _add_column_if_not_exists(conn, table: str, column_def: str, column_name: st
             raise
 
 
-def run_migrations():
+def _run_legacy_migrations():
     with engine.connect() as conn:
         _add_column_if_not_exists(
             conn, 'works',
@@ -70,6 +80,37 @@ def run_migrations():
         if rows:
             conn.commit()
             logging.info("Migration: generated share_token for %d old works", len(rows))
+
+
+def _run_alembic_migrations():
+    try:
+        from alembic import command
+        from alembic.config import Config
+    except Exception as exc:
+        logging.warning("Alembic is unavailable, schema migrations skipped: %s", exc)
+        return
+
+    cfg = Config("alembic.ini")
+    command.upgrade(cfg, "head")
+
+
+def run_migrations():
+    with engine.connect() as conn:
+        acquired = conn.execute(
+            text("SELECT GET_LOCK(:lock_name, :timeout_seconds)"),
+            {"lock_name": MIGRATION_LOCK_NAME, "timeout_seconds": 120},
+        ).scalar()
+        if acquired != 1:
+            raise RuntimeError("Could not acquire DB migration lock")
+
+        try:
+            _run_legacy_migrations()
+            _run_alembic_migrations()
+        finally:
+            conn.execute(
+                text("SELECT RELEASE_LOCK(:lock_name)"),
+                {"lock_name": MIGRATION_LOCK_NAME},
+            )
 
 
 run_migrations()

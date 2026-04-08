@@ -1,53 +1,119 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import require_auth
-from db.crud import get_all_users, remove_user, rename_user
-from utils.user_statistics import get_user_statistics
+from api.routers.student_auth.service import (
+    ACCESS_GRANT_PURPOSE_ADMIN_INVITE,
+    generate_one_time_token,
+    hash_one_time_token,
+    invite_expiration,
+)
+from db.crud import (
+    create_invited_user,
+    get_all_users,
+    get_user_by_id,
+    issue_student_access_grant,
+    remove_user,
+    rename_user,
+)
+from utils.mini_app_links import get_tma_invite_url
+from utils.user_statistics import get_user_statistics_by_user_id
 
 router = APIRouter(prefix="/api/admin/users", tags=["users"])
+
+
+def _serialize_user(user):
+    return {
+        "id": user.id,
+        "telegram_id": user.telegram_id,
+        "name": user.name,
+        "username": user.username,
+        "has_credentials": bool(user.username and user.password_hash),
+        "telegram_linked": bool(user.telegram_id),
+    }
+
+
+def _issue_admin_invite(user_id: int) -> dict:
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    raw_token = generate_one_time_token()
+    expires_at = invite_expiration()
+    grant = issue_student_access_grant(
+        user_id=user_id,
+        purpose=ACCESS_GRANT_PURPOSE_ADMIN_INVITE,
+        token_hash=hash_one_time_token(raw_token),
+        expires_at=expires_at,
+        created_by="admin",
+    )
+    if not grant:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    return {
+        "user": _serialize_user(user),
+        "invite_token": raw_token,
+        "invite_url": get_tma_invite_url(raw_token),
+        "invite_expires_at": expires_at.isoformat(),
+    }
 
 
 @router.get("")
 def list_users(_: str = Depends(require_auth)):
     users = get_all_users()
-    return [
-        {"id": u.id, "telegram_id": u.telegram_id, "name": u.name}
-        for u in sorted(users, key=lambda u: u.name)
-    ]
+    return [_serialize_user(user) for user in sorted(users, key=lambda item: item.name.lower())]
 
 
-@router.put("/{telegram_id}")
-def update_user(telegram_id: int, body: dict, _: str = Depends(require_auth)):
+@router.post("")
+def create_user_endpoint(body: dict, _: str = Depends(require_auth)):
     name = (body.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Имя не может быть пустым")
-    rename_user(telegram_id=telegram_id, new_name=name)
+
+    user = create_invited_user(name=name)
+    return _issue_admin_invite(user.id)
+
+
+@router.post("/{user_id}/invite")
+def regenerate_invite(user_id: int, _: str = Depends(require_auth)):
+    return _issue_admin_invite(user_id)
+
+
+@router.put("/{user_id}")
+def update_user(user_id: int, body: dict, _: str = Depends(require_auth)):
+    name = (body.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Имя не может быть пустым")
+    rename_user(user_id=user_id, new_name=name)
     return {"ok": True}
 
 
-@router.delete("/{telegram_id}")
-def delete_user(telegram_id: int, _: str = Depends(require_auth)):
-    remove_user(telegram_id=telegram_id)
+@router.delete("/{user_id}")
+def delete_user(user_id: int, _: str = Depends(require_auth)):
+    remove_user(user_id=user_id)
     return {"ok": True}
 
 
-@router.get("/{telegram_id}/stats")
-def user_stats(telegram_id: int, _: str = Depends(require_auth)):
-    stats = get_user_statistics(telegram_id)
+@router.get("/{user_id}/stats")
+def user_stats(user_id: int, _: str = Depends(require_auth)):
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Ученик не найден")
+
+    stats = get_user_statistics_by_user_id(user_id)
     return [
         {
-            "work_id": s["general"]["work_id"],
-            "share_token": s["general"].get("share_token"),
-            "name": s["general"]["name"],
-            "type": s["general"]["type"],
-            "start": s["general"]["time"]["start"].isoformat(),
-            "end": s["general"]["time"]["end"].isoformat(),
-            "final_mark": s["results"]["final_mark"],
-            "max_mark": s["results"]["max_mark"],
-            "fully": len(s["questions"]["fully"]),
-            "semi": len(s["questions"]["semi"]),
-            "zero": len(s["questions"]["zero"]),
-            "questions_amount": s["general"].get("questions_amount", 0),
+            "work_id": stat["general"]["work_id"],
+            "share_token": stat["general"].get("share_token"),
+            "name": stat["general"]["name"],
+            "type": stat["general"]["type"],
+            "start": stat["general"]["time"]["start"].isoformat(),
+            "end": stat["general"]["time"]["end"].isoformat(),
+            "final_mark": stat["results"]["final_mark"],
+            "max_mark": stat["results"]["max_mark"],
+            "fully": len(stat["questions"]["fully"]),
+            "semi": len(stat["questions"]["semi"]),
+            "zero": len(stat["questions"]["zero"]),
+            "questions_amount": stat["general"].get("questions_amount", 0),
         }
-        for s in stats
+        for stat in stats
     ]

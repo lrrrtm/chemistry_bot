@@ -11,6 +11,7 @@ from anyio.abc import value
 from flet_core import FilePickerUploadFile
 
 from utils.image_converter import image_to_base64
+from utils.mini_app_links import get_tma_share_link
 from utils.move_file import move_image
 from utils.tags_helper import get_random_questions, get_random_questions_for_hard_tags_filter
 
@@ -458,7 +459,7 @@ def main(page: ft.Page):
                     text=f"<b>ℹ️ Сервисные сообщения</b>"
                          f"\n\nВы создали новую персональную тренировку. Отправьте ссылку на неё ученику. "
                          f"\n\n<b>{work.name}</b>"
-                         f"\nhttps://t.me/{getenv('BOT_NAME')}?start=work_{work.identificator}"
+                         f"\n{get_tma_share_link(f'work_{work.identificator}')}"
                 )
 
                 page.snack_bar = ft.SnackBar(
@@ -517,7 +518,7 @@ def main(page: ft.Page):
                     text=f"<b>ℹ️ Сервисные сообщения</b>"
                          f"\n\nВы создали новую персональную тренировку. Отправьте ссылку на неё ученику. "
                          f"\n\n<b>{work.name}</b>"
-                         f"\nhttps://t.me/{getenv('BOT_NAME')}?start=work_{work.identificator}"
+                         f"\n{get_tma_share_link(f'work_{work.identificator}')}"
                 )
 
                 page.snack_bar = ft.SnackBar(

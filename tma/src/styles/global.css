@@ -1,0 +1,480 @@
+/* Safe area custom properties set by initTelegram().
+   Fallbacks keep the app usable in a regular browser too. */
+:root {
+  --tg-safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --tg-safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --tg-safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --tg-safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --tg-content-safe-area-inset-top: 0px;
+  --tg-content-safe-area-inset-bottom: 0px;
+  --tg-content-safe-area-inset-left: 0px;
+  --tg-content-safe-area-inset-right: 0px;
+  --app-safe-top: calc(var(--tg-safe-area-inset-top) + var(--tg-content-safe-area-inset-top));
+  --app-safe-bottom: max(var(--tg-safe-area-inset-bottom), var(--tg-content-safe-area-inset-bottom));
+  --app-safe-left: max(var(--tg-safe-area-inset-left), var(--tg-content-safe-area-inset-left));
+  --app-safe-right: max(var(--tg-safe-area-inset-right), var(--tg-content-safe-area-inset-right));
+  --app-tabbar-safe-bottom: var(--tg-safe-area-inset-bottom);
+  --app-viewport-height: 100dvh;
+  --app-viewport-stable-height: var(--tg-viewport-stable-height, 100dvh);
+  --app-keyboard-offset: 0px;
+  --tabbar-height: 72px;
+  --tabbar-safe-offset: calc(var(--tabbar-height) + var(--app-tabbar-safe-bottom) + 20px);
+  --content-safe-offset: max(calc(16px + var(--app-safe-bottom)), 28px);
+  --footer-safe-offset: max(calc(16px + var(--app-safe-bottom)), 28px);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  font-family:
+    var(--tgui--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  color: var(--tgui--text_color);
+  background: var(--tgui--bg_color);
+}
+
+#root {
+  height: var(--app-viewport-stable-height);
+  min-height: var(--app-viewport-stable-height);
+  overflow: hidden;
+  font-family: inherit;
+  color: inherit;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: var(--app-viewport-stable-height);
+  min-height: var(--app-viewport-stable-height);
+}
+
+.app-shell--web {
+  width: min(100%, 560px);
+  margin: 0 auto;
+}
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: var(--app-viewport-stable-height);
+  min-height: var(--app-viewport-stable-height);
+  padding-top: var(--app-safe-top);
+  padding-left: var(--app-safe-left);
+  padding-right: var(--app-safe-right);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.app-wrapper--web {
+  width: 100%;
+}
+
+.screen-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--tabbar-safe-offset);
+  scroll-padding-bottom: var(--tabbar-safe-offset);
+}
+
+*::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+.flow-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--content-safe-offset);
+}
+
+.question-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.screen-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.screen-layout__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen-footer {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  padding-bottom: var(--footer-safe-offset);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--tgui--bg_color);
+  border-top: 1px solid var(--tgui--divider, rgba(0, 0, 0, 0.08));
+}
+
+.question-header {
+  flex-shrink: 0;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--tgui--divider, rgba(0, 0, 0, 0.08));
+}
+
+.question-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 16px;
+}
+
+.question-footer {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  padding-bottom: var(--footer-safe-offset);
+  border-top: 1px solid var(--tgui--divider, rgba(0, 0, 0, 0.08));
+  background: var(--tgui--bg_color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.app-input-shell > div {
+  padding: 12px 10px 10px !important;
+}
+
+.app-input-shell .app-wide-input {
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+.app-input-shell > div > [class*="tgui-9f9a52f695b85cc9"] {
+  left: 24px !important;
+  max-width: calc(100% - 48px) !important;
+}
+
+.question-skip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.question-skip-button__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.question-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-buttons {
+  display: grid;
+  grid-template-columns: repeat(var(--score-buttons-columns, 5), minmax(0, 1fr));
+  gap: 8px;
+}
+
+.score-buttons__item {
+  min-width: 0;
+}
+
+.app-skeleton-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.app-skeleton-cell + .app-skeleton-cell {
+  border-top: 1px solid var(--tgui--divider, rgba(255, 255, 255, 0.08));
+}
+
+.app-skeleton-cell__before {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-skeleton-cell__content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-skeleton-cell__after {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.app-skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tgui--secondary_bg_color) 82%, var(--tgui--plain_background, #000) 18%);
+}
+
+.app-skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 28%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.05) 72%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: app-skeleton-shimmer 1.7s ease-in-out infinite;
+}
+
+@keyframes app-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.zoomable-image {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: block;
+}
+
+.zoomable-image__img {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+}
+
+.zoomable-image__placeholder {
+  width: 100%;
+}
+
+.zoomable-image__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  padding: 24px 12px;
+  border-radius: 12px;
+  color: var(--tgui--hint_color);
+  background: var(--tgui--tertiary_bg_color);
+}
+
+.zoomable-image__badge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(64px + var(--app-safe-top)) calc(16px + var(--app-safe-right)) calc(24px + var(--app-safe-bottom)) calc(16px + var(--app-safe-left));
+  background: rgba(0, 0, 0, 0.9);
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.image-lightbox__surface {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.image-lightbox__transform,
+.image-lightbox__content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.image-lightbox__transform > div,
+.image-lightbox__content > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  touch-action: none;
+}
+
+.image-lightbox__img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - var(--app-safe-top) - var(--app-safe-bottom) - 104px);
+  margin: 0 auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.state-placeholder {
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.state-placeholder__animation {
+  width: 168px;
+  height: 168px;
+  margin: 0 auto 12px;
+}
+
+.state-placeholder__title {
+  margin: 0 0 8px;
+  font-size: 19px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--tgui--text_color);
+}
+
+.state-placeholder__description {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tgui--hint_color);
+}
+
+.state-placeholder__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.theory-document__title {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.selection-modal__body {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  max-height: calc(var(--app-viewport-stable-height) - var(--app-safe-top) - 96px);
+  overflow-y: auto;
+  padding-top: 4px;
+  padding-bottom: max(16px, var(--app-safe-bottom));
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.selection-modal__meta {
+  color: var(--tgui--hint_color);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.selection-modal__back {
+  padding: 4px 0;
+}
+
+.selection-modal__back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theory-document-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 16px 4px;
+}
+
+.theory-document-modal__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.modal-placeholder {
+  padding: 12px 16px 8px;
+}
+
+.inline-error {
+  padding: 0 2px;
+  color: var(--tgui--destructive_text_color, #e8361e);
+  text-align: center;
+}
+
+[class*="Tabbar__"] {
+  min-height: var(--tabbar-height) !important;
+  background: var(--tgui--bg_color) !important;
+  background-color: var(--tgui--bg_color) !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+.app-tabbar {
+  background: var(--tgui--bg_color) !important;
+  background-color: var(--tgui--bg_color) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  transform: translateY(var(--app-keyboard-offset));
+  will-change: transform;
+  transition: transform 0.2s ease;
+}
+
+.app-tabbar--web {
+  left: 50% !important;
+  right: auto !important;
+  width: min(100%, 560px) !important;
+  transform: translateX(-50%) translateY(var(--app-keyboard-offset));
+}

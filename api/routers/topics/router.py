@@ -9,7 +9,7 @@ from api.routers.topics.schemas import TopicCreate, TopicTagsUpdate
 from db.crud import (
     create_topic,
     deactivate_topic,
-    get_all_pool,
+    get_active_pool_tag_counts,
     get_all_topics,
     get_topics_table,
     insert_topics_data,
@@ -24,12 +24,7 @@ router = APIRouter(prefix="/api/admin/topics", tags=["topics"])
 @router.get("")
 def list_topics(_: str = Depends(require_auth)):
     topics = get_topics_table()
-    pool = get_all_pool(active=True)
-
-    tag_counter: dict = {}
-    for q in pool:
-        for tag in q.tags_list:
-            tag_counter[tag] = tag_counter.get(tag, 0) + 1
+    tag_counter = get_active_pool_tag_counts()
 
     result: dict = {}
     for t in topics:

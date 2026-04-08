@@ -10,6 +10,7 @@ import { StudentDetail } from "@/pages/admin/StudentDetail";
 import { EgeConverting } from "@/pages/admin/EgeConverting";
 import { PoolPage } from "@/pages/admin/Pool";
 import { AddQuestion } from "@/pages/admin/AddQuestion";
+import { TheoryDocuments } from "@/pages/admin/TheoryDocuments";
 import { Topics } from "@/pages/admin/Topics";
 import { RestorePage } from "@/pages/admin/Restore";
 import { StudentViewStats } from "@/pages/student/ViewStats";
@@ -57,10 +58,11 @@ export default function App() {
           <Route index element={<Navigate to="/admin/create-training" replace />} />
           <Route path="create-training" element={<CreateTraining />} />
           <Route path="students" element={<Students />} />
-          <Route path="students/:telegramId" element={<StudentDetail />} />
+          <Route path="students/:userId" element={<StudentDetail />} />
           <Route path="ege-converting" element={<EgeConverting />} />
           <Route path="pool" element={<PoolPage />} />
           <Route path="add-question" element={<AddQuestion />} />
+          <Route path="theory-documents" element={<TheoryDocuments />} />
           <Route path="topics" element={<Topics />} />
           <Route path="restore" element={<RestorePage />} />
         </Route>

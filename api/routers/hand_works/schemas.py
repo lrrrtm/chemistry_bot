@@ -13,5 +13,5 @@ class HandWorkCreate(BaseModel):
 
 class SendTrainingRequest(BaseModel):
     telegram_id: int
-    link: str
+    identificator: str
     name: str
