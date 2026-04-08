@@ -208,6 +208,10 @@ jobs:
             git checkout master
             git reset --hard origin/master
 
+            if [ -n "${{ secrets.GHCR_USERNAME }}" ] && [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            fi
+
             GHCR_IMAGE="$GHCR_IMAGE" \
               docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 
