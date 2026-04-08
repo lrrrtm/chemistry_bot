@@ -1,1 +1,0 @@
-function i(t){return/(?:Z|[+-]\d{2}:\d{2})$/i.test(t)}function o(t){if(!t)return null;const e=t.includes("T")?t:t.replace(" ","T"),n=i(e)?e:`${e}Z`,r=new Date(n);return Number.isNaN(r.getTime())?null:r}function a(t,e){const n=o(t);return n?n.toLocaleString("ru-RU",e):"-"}export{a as f,o as p};

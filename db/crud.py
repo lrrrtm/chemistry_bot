@@ -267,7 +267,9 @@ def create_user(name: str, tid: int) -> User:
         existing_user = session.query(User).filter_by(telegram_id=tid).first()
         if existing_user:
             if existing_user.is_deleted:
-                _purge_user_related_data(session, existing_user.id)
+                existing_user_id = getattr(existing_user, "id", None)
+                if existing_user_id is not None:
+                    _purge_user_related_data(session, existing_user_id)
             existing_user.name = name
             existing_user.is_deleted = 0
             session.commit()
