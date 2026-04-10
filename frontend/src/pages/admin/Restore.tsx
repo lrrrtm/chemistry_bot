@@ -62,6 +62,13 @@ type YadiskBackup = {
   created: string;
 };
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export function RestorePage() {
   // ── Restore state ──────────────────────────────────────────────────────────
   const [file, setFile]           = useState<File | null>(null);
@@ -115,8 +122,8 @@ export function RestorePage() {
         yadisk_token: yadiskToken,
       });
       toast.success("Настройки сохранены");
-    } catch (e: any) {
-      toast.error(e.message || "Ошибка сохранения");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Ошибка сохранения"));
     } finally {
       setSettingsSaving(false);
     }
@@ -129,8 +136,8 @@ export function RestorePage() {
       toast.success(res.message || "Резервная копия создана");
       // Refresh backup list after creating new backup
       setTimeout(loadYadiskBackups, 1500);
-    } catch (e: any) {
-      toast.error(e.message || "Ошибка создания резервной копии");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Ошибка создания резервной копии"));
     } finally {
       setBackupNowLoading(false);
     }
@@ -142,8 +149,8 @@ export function RestorePage() {
     try {
       const res = await api.restoreFromYadisk(backup.path);
       toast.success(res.message || "Восстановлено");
-    } catch (e: any) {
-      toast.error(e.message || "Ошибка восстановления");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Ошибка восстановления"));
     } finally {
       setYadiskRestoring(null);
     }

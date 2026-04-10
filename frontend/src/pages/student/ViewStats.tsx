@@ -8,16 +8,13 @@ import logoImg from "@/assets/logo.png";
 
 export function StudentViewStats() {
   const [params] = useSearchParams();
+  const token = params.get("token");
   const [stats, setStats] = useState<WorkDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(token ? null : "Неверная ссылка");
+  const [loading, setLoading] = useState(Boolean(token));
 
   useEffect(() => {
-    const token = params.get("token");
-
     if (!token) {
-      setError("Неверная ссылка");
-      setLoading(false);
       return;
     }
 
@@ -28,12 +25,12 @@ export function StudentViewStats() {
       })
       .catch(() => setError("Тренировка не найдена или ссылка недействительна"))
       .finally(() => setLoading(false));
-  }, [params]);
+  }, [token]);
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
-      <header className="border-b bg-[var(--color-card)] sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b bg-[var(--color-card)]">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <img src={logoImg} alt="ХимБот" className="h-5 w-5" />
             <span className="font-semibold">ХимБот</span>
@@ -42,10 +39,10 @@ export function StudentViewStats() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      <main className="mx-auto max-w-2xl space-y-5 px-4 py-6">
         {loading && (
-          <div className="text-center py-16 text-[var(--color-muted-foreground)]">
-            <img src={logoImg} alt="" className="h-10 w-10 mx-auto mb-3 opacity-30 animate-pulse" />
+          <div className="py-16 text-center text-[var(--color-muted-foreground)]">
+            <img src={logoImg} alt="" className="mx-auto mb-3 h-10 w-10 animate-pulse opacity-30" />
             <p>Загружаем результаты...</p>
           </div>
         )}

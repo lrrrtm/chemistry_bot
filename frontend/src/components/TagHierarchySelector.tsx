@@ -53,7 +53,7 @@ export function TagHierarchySelector({
   }, []);
 
   const selectedTags = uniqueTags(value);
-  const selectedSet = new Set(selectedTags);
+  const selectedSet = useMemo(() => new Set(selectedTags), [selectedTags]);
   const availableTags = uniqueTags(
     Object.values(topicsTree)
       .flat()

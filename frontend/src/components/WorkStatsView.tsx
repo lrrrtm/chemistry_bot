@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { BookOpen } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";

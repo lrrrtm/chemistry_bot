@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 
 export function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
+    const token = localStorage.getItem("admin_token");
+    return token ? null : false;
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
     if (!token) {
-      setIsAuthenticated(false);
       return;
     }
     api

@@ -34,7 +34,9 @@ async function request<T>(
     try {
       const json = JSON.parse(text);
       detail = json.detail ?? text;
-    } catch {}
+    } catch {
+      // Keep original text when the response is not JSON.
+    }
     throw new Error(detail || `Ошибка ${res.status}`);
   }
   return res.json();
