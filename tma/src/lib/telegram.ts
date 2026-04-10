@@ -92,6 +92,57 @@ export const tg = (): TgWebApp | null =>
 
 let backOverride: (() => boolean | void) | null = null
 
+function hasTelegramLaunchParams() {
+  if (typeof window === 'undefined') return false
+
+  const params = new URLSearchParams(window.location.search)
+  return [
+    'tgWebAppData',
+    'tgWebAppVersion',
+    'tgWebAppPlatform',
+    'tgWebAppThemeParams',
+    'tgWebAppStartParam',
+  ].some(key => params.has(key))
+}
+
+function looksLikeTelegramUserAgent() {
+  if (typeof navigator === 'undefined') return false
+  return /telegram/i.test(navigator.userAgent)
+}
+
+function shouldLoadTelegramSdk() {
+  if (tg()) return false
+  return hasTelegramLaunchParams() || looksLikeTelegramUserAgent()
+}
+
+export async function ensureTelegramSdk() {
+  if (typeof document === 'undefined' || !shouldLoadTelegramSdk()) return
+
+  const existingScript = document.querySelector<HTMLScriptElement>('script[data-telegram-webapp-sdk="true"]')
+  if (existingScript) {
+    if (tg()) return
+    await new Promise<void>((resolve, reject) => {
+      existingScript.addEventListener('load', () => resolve(), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Failed to load Telegram WebApp SDK')), { once: true })
+    }).catch(() => {})
+    return
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://telegram.org/js/telegram-web-app.js'
+    script.async = true
+    script.dataset.telegramWebappSdk = 'true'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Telegram WebApp SDK'))
+    document.head.appendChild(script)
+  }).catch(error => {
+    if (import.meta.env.DEV) {
+      console.warn('[telegram-webapp] sdk load failed', error)
+    }
+  })
+}
+
 function safeWebAppCall(action: () => void) {
   try {
     action()
