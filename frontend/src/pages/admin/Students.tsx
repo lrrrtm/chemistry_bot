@@ -397,7 +397,13 @@ export function Students() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
-  const [inviteDialog, setInviteDialog] = useState<{ name: string; inviteUrl: string; expiresAt: string } | null>(null);
+  const [inviteDialog, setInviteDialog] = useState<{
+    title: string;
+    name: string;
+    inviteUrl: string;
+    expiresAt: string;
+    description: string;
+  } | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [works, setWorks] = useState<WorkStat[]>([]);
@@ -508,6 +514,23 @@ export function Students() {
     return `${window.location.origin}/tma/?invite=${encodeURIComponent(inviteToken)}`;
   };
 
+  const openInviteDialog = (payload: {
+    title: string;
+    name: string;
+    inviteUrl: string | null;
+    inviteToken: string;
+    expiresAt: string;
+    description: string;
+  }) => {
+    setInviteDialog({
+      title: payload.title,
+      name: payload.name,
+      inviteUrl: buildInviteUrl(payload.inviteUrl, payload.inviteToken),
+      expiresAt: payload.expiresAt,
+      description: payload.description,
+    });
+  };
+
   const handleCreateStudent = async () => {
     const name = createName.trim();
     if (!name) return;
@@ -519,16 +542,37 @@ export function Students() {
       setUsers(nextUsers);
       setCreateDialogOpen(false);
       setCreateName("");
-      setInviteDialog({
+      openInviteDialog({
+        title: "Инвайт готов",
         name: result.user.name,
-        inviteUrl: buildInviteUrl(result.invite_url, result.invite_token),
+        inviteUrl: result.invite_url,
+        inviteToken: result.invite_token,
         expiresAt: result.invite_expires_at,
+        description: "После открытия ссылки ученик придумает логин и пароль и дальше будет входить по ним.",
       });
       toast.success("Профиль ученика создан");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Ошибка создания ученика");
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleIssueWebAccessLink = async () => {
+    if (!selectedUser) return;
+    try {
+      const result = await api.issueStudentWebAccessLink(selectedUser.id);
+      openInviteDialog({
+        title: "Ссылка на веб-доступ готова",
+        name: result.user.name,
+        inviteUrl: result.invite_url,
+        inviteToken: result.invite_token,
+        expiresAt: result.invite_expires_at,
+        description: "Отправь эту ссылку ученику в любом мессенджере. После открытия он задаст логин и пароль для входа в веб-версию.",
+      });
+      toast.success("Ссылка на веб-доступ создана");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось создать ссылку на веб-доступ");
     }
   };
 
@@ -565,6 +609,29 @@ export function Students() {
             Новый
           </Button>
         </div>
+
+        {selectedUser && (
+          <div className="border-b px-3 py-3 space-y-2 bg-[var(--color-card)]/50">
+            <div className="flex items-center gap-2 flex-wrap">
+              {selectedUser.telegram_linked ? (
+                <Badge variant="secondary">Telegram привязан</Badge>
+              ) : (
+                <Badge variant="outline">Без Telegram</Badge>
+              )}
+              {selectedUser.has_credentials ? (
+                <Badge variant="secondary">Веб-доступ настроен</Badge>
+              ) : (
+                <Badge variant="outline">Веб-доступ не настроен</Badge>
+              )}
+            </div>
+            {!selectedUser.has_credentials && (
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => void handleIssueWebAccessLink()}>
+                <Copy className="h-4 w-4 mr-2" />
+                Ссылка на веб-доступ
+              </Button>
+            )}
+          </div>
+        )}
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {filtered.length === 0 ? (

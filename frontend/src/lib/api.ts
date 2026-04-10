@@ -80,6 +80,16 @@ export const api = {
       method: "POST",
     }),
 
+  issueStudentWebAccessLink: (userId: number) =>
+    request<{
+      user: { id: number; telegram_id: number | null; name: string; username: string | null; has_credentials: boolean; telegram_linked: boolean };
+      invite_token: string;
+      invite_url: string | null;
+      invite_expires_at: string;
+    }>(`/admin/users/${userId}/web-access-link`, {
+      method: "POST",
+    }),
+
   renameUser: (userId: number, name: string) =>
     request<{ ok: boolean }>(`/admin/users/${userId}`, {
       method: "PUT",

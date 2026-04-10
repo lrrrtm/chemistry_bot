@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from api.dependencies import require_auth
 from api.routers.student_auth.service import (
     ACCESS_GRANT_PURPOSE_ADMIN_INVITE,
+    ACCESS_GRANT_PURPOSE_SELF_WEB_ACCESS,
     generate_one_time_token,
     hash_one_time_token,
     invite_expiration,
@@ -32,19 +33,27 @@ def _serialize_user(user):
     }
 
 
-def _issue_admin_invite(user_id: int) -> dict:
+def _issue_web_access_grant(
+    user_id: int,
+    *,
+    purpose: str,
+    created_by: str,
+    require_missing_credentials: bool = False,
+) -> dict:
     user = get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Ученик не найден")
+    if require_missing_credentials and user.username and user.password_hash:
+        raise HTTPException(status_code=409, detail="Веб-доступ уже настроен")
 
     raw_token = generate_one_time_token()
     expires_at = invite_expiration()
     grant = issue_student_access_grant(
         user_id=user_id,
-        purpose=ACCESS_GRANT_PURPOSE_ADMIN_INVITE,
+        purpose=purpose,
         token_hash=hash_one_time_token(raw_token),
         expires_at=expires_at,
-        created_by="admin",
+        created_by=created_by,
     )
     if not grant:
         raise HTTPException(status_code=404, detail="Ученик не найден")
@@ -55,6 +64,14 @@ def _issue_admin_invite(user_id: int) -> dict:
         "invite_url": get_tma_invite_url(raw_token),
         "invite_expires_at": expires_at.isoformat(),
     }
+
+
+def _issue_admin_invite(user_id: int) -> dict:
+    return _issue_web_access_grant(
+        user_id,
+        purpose=ACCESS_GRANT_PURPOSE_ADMIN_INVITE,
+        created_by="admin",
+    )
 
 
 @router.get("")
@@ -76,6 +93,16 @@ def create_user_endpoint(body: dict, _: str = Depends(require_auth)):
 @router.post("/{user_id}/invite")
 def regenerate_invite(user_id: int, _: str = Depends(require_auth)):
     return _issue_admin_invite(user_id)
+
+
+@router.post("/{user_id}/web-access-link")
+def issue_web_access_link(user_id: int, _: str = Depends(require_auth)):
+    return _issue_web_access_grant(
+        user_id,
+        purpose=ACCESS_GRANT_PURPOSE_SELF_WEB_ACCESS,
+        created_by="admin_web_access",
+        require_missing_credentials=True,
+    )
 
 
 @router.put("/{user_id}")
